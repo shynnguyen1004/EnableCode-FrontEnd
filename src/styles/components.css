@@ -1,70 +1,13 @@
-/* ─── Enable Code — Global Styles (scaled 1.5×) ─── */
-
-:root {
-  --bg-cream: #fff9dc;
-  --bg-dark: #272727;
-  --accent-orange: #ff7700;
-  --accent-green: #3b5a28;
-  --accent-light-green: #74a258;
-  --text-dark: #272727;
-  --text-light: #fff9dc;
-}
-
-/* ─── Lucide icon color utilities ─── */
-
-.icon-green {
-  color: var(--accent-green);
-}
-
-.icon-orange {
-  color: var(--accent-orange);
-}
-
-.icon-light-green {
-  color: var(--accent-light-green);
-}
-
-html {
-  font-size: 150%;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: Montserrat, "Google Sans", sans-serif;
-  color: var(--text-dark);
-  background: var(--bg-cream);
-}
-
-button,
-input,
-select,
-textarea {
-  font-family: inherit;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.container {
-  width: min(1240px, 92vw);
-  margin: 0 auto;
-}
-
-/* ─── Buttons ─── */
-
+/* ─── Button ─── */
 .btn {
   border: 4px solid var(--bg-dark);
   border-radius: 30px;
   padding: 0.9rem 1.2rem;
   font-weight: 800;
   font-size: 1rem;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
   cursor: pointer;
 }
 
@@ -249,7 +192,9 @@ a {
   padding: 0.45rem 0.85rem;
   font-weight: 700;
   font-size: 0.92rem;
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
 }
 
 .footer-links a:hover {
@@ -490,7 +435,10 @@ a {
   border-radius: 18px;
   font-weight: 800;
   font-size: 1.25rem;
-  transition: background 0.15s ease, border 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border 0.15s ease,
+    box-shadow 0.15s ease;
   border: 4px solid transparent;
 }
 
@@ -539,7 +487,9 @@ a {
   font-weight: 800;
   font-size: 0.95rem;
   opacity: 0.8;
-  transition: opacity 0.2s ease, color 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    color 0.2s ease;
 }
 
 .lessons-back-link:hover {
@@ -569,7 +519,9 @@ a {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .lesson-card:hover {
@@ -852,7 +804,9 @@ a {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .workspace-panel-btn:hover {
@@ -913,7 +867,9 @@ a {
   align-items: center;
   gap: 0.6rem;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .block:hover {
@@ -1016,7 +972,9 @@ a {
   align-items: center;
   gap: 0.5rem;
   cursor: grab;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .library-item:hover {
@@ -1228,7 +1186,10 @@ a {
   cursor: pointer;
   background: transparent;
   color: var(--text-dark);
-  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .language-toggle-btn:hover {
@@ -1322,7 +1283,9 @@ a {
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
   box-shadow: 6px 6px 0 #111;
 }
 
@@ -1374,7 +1337,7 @@ a {
   align-items: center;
 }
 
-.profile-slider-wrap input[type="range"] {
+.profile-slider-wrap input[type='range'] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
@@ -1384,15 +1347,17 @@ a {
   cursor: pointer;
   position: relative;
   z-index: 2;
-  background: linear-gradient(to right,
-      var(--accent-green) 0%,
-      var(--accent-green) var(--range-progress, 50%),
-      #fff9dc var(--range-progress, 50%),
-      #fff9dc 100%);
+  background: linear-gradient(
+    to right,
+    var(--accent-green) 0%,
+    var(--accent-green) var(--range-progress, 50%),
+    #fff9dc var(--range-progress, 50%),
+    #fff9dc 100%
+  );
   border: 3px solid #111;
 }
 
-.profile-slider-wrap input[type="range"]::-webkit-slider-thumb {
+.profile-slider-wrap input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 44px;
@@ -1406,7 +1371,7 @@ a {
   z-index: 3;
 }
 
-.profile-slider-wrap input[type="range"]::-moz-range-thumb {
+.profile-slider-wrap input[type='range']::-moz-range-thumb {
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -1416,14 +1381,14 @@ a {
   cursor: pointer;
 }
 
-.profile-slider-wrap input[type="range"]::-moz-range-track {
+.profile-slider-wrap input[type='range']::-moz-range-track {
   height: 16px;
   border-radius: 999px;
   border: 3px solid #111;
   background: #fff9dc;
 }
 
-.profile-slider-wrap input[type="range"]::-moz-range-progress {
+.profile-slider-wrap input[type='range']::-moz-range-progress {
   height: 16px;
   border-radius: 999px 0 0 999px;
   background: var(--accent-green);
@@ -1441,7 +1406,6 @@ a {
   pointer-events: none;
   z-index: 4;
 }
-
 
 /* ─── Responsive ─── */
 

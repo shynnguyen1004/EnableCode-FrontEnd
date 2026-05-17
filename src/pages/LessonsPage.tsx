@@ -1,17 +1,11 @@
-import { Link, Navigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
-import CourseCardGrid, { type CourseCardItem } from "../components/CourseCardGrid";
-import CourseSidebar from "../components/CourseSidebar";
-import { useI18n } from "../i18n/I18nProvider";
-import {
-  getTopicById,
-  getLessonsByTopicId,
-  oid,
-  cardTone,
-  isLessonLocked,
-  isTopicLocked,
-  isLessonCompleted,
-} from "../lib/curriculum";
+import { Link, Navigate, useParams } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+import CourseCardGrid, { type CourseCardItem } from '../components/CourseCardGrid';
+import CourseSidebar from '../components/CourseSidebar';
+import { useI18n } from '../i18n/I18nProvider';
+
+import { getTopicById, getLessonsByTopicId, oid, cardTone } from '../lib/curriculum';
+import { isTopicLocked, isLessonLocked, isLessonCompleted } from '../lib/progress';
 
 export default function LessonsPage() {
   const { topicId } = useParams<{ topicId: string }>();
@@ -51,7 +45,7 @@ export default function LessonsPage() {
         <header className="lessons-header">
           <Link to="/lessons" className="lessons-back-link">
             <ArrowLeft size={24} strokeWidth={3} />
-            {t("nav.allTopics")}
+            {t('nav.allTopics')}
           </Link>
           <h1>{localizedTopic.title}</h1>
           <p>{localizedTopic.description}</p>

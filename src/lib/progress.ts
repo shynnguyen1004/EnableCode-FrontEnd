@@ -1,9 +1,10 @@
-import { getLessonsByTopicId, lessons, oid, type Lesson, type Topic } from "./curriculum";
+import { getLessonsByTopicId, lessons, oid } from './curriculum';
+import type { Lesson, Topic } from './types';
 
-const COMPLETED_LESSONS_KEY = "enablecode.completedLessons";
+const COMPLETED_LESSONS_KEY = 'enablecode.completedLessons';
 
 function readCompletedLessonIds(): Set<string> {
-  if (typeof window === "undefined") {
+  if (typeof window === 'undefined') {
     return new Set();
   }
 
@@ -14,7 +15,7 @@ function readCompletedLessonIds(): Set<string> {
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return new Set();
 
-    return new Set(parsed.filter((id): id is string => typeof id === "string"));
+    return new Set(parsed.filter((id): id is string => typeof id === 'string'));
   } catch {
     return new Set();
   }
@@ -40,7 +41,7 @@ export function markLessonCompleted(lessonId: string) {
 }
 
 export function getTopicLessonIds(topicId: string): string[] {
-  return getLessonsByTopicId(topicId).map((lesson) => oid(lesson._id));
+  return getLessonsByTopicId(topicId).map(lesson => oid(lesson._id));
 }
 
 /** Topic is complete when every active lesson in it is completed. */
@@ -48,7 +49,7 @@ export function isTopicCompleted(topicId: string): boolean {
   const lessonIds = getTopicLessonIds(topicId);
   if (lessonIds.length === 0) return false;
 
-  return lessonIds.every((id) => isLessonCompleted(id));
+  return lessonIds.every(id => isLessonCompleted(id));
 }
 
 /** 0–100 based on completed lessons in the topic. */
@@ -56,7 +57,7 @@ export function getTopicProgressPercent(topicId: string): number {
   const lessonIds = getTopicLessonIds(topicId);
   if (lessonIds.length === 0) return 0;
 
-  const completed = lessonIds.filter((id) => isLessonCompleted(id)).length;
+  const completed = lessonIds.filter(id => isLessonCompleted(id)).length;
   return Math.round((completed / lessonIds.length) * 100);
 }
 
@@ -65,7 +66,7 @@ export function areTopicPrerequisitesMet(topic: Topic): boolean {
     return true;
   }
 
-  return topic.relevant_topic_ids.every((prerequisite) => isTopicCompleted(oid(prerequisite)));
+  return topic.relevant_topic_ids.every(prerequisite => isTopicCompleted(oid(prerequisite)));
 }
 
 export function isTopicLocked(topic: Topic): boolean {
@@ -73,7 +74,7 @@ export function isTopicLocked(topic: Topic): boolean {
 }
 
 export function isLessonLocked(lesson: Lesson, lessonsInTopic: Lesson[]): boolean {
-  const index = lessonsInTopic.findIndex((item) => oid(item._id) === oid(lesson._id));
+  const index = lessonsInTopic.findIndex(item => oid(item._id) === oid(lesson._id));
   if (index <= 0) return false;
 
   const previous = lessonsInTopic[index - 1];
@@ -82,5 +83,5 @@ export function isLessonLocked(lesson: Lesson, lessonsInTopic: Lesson[]): boolea
 
 /** Dev helper: export active lesson ids for quick testing. */
 export function getAllLessonIds(): string[] {
-  return lessons.map((lesson) => oid(lesson._id));
+  return lessons.map(lesson => oid(lesson._id));
 }

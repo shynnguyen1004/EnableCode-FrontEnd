@@ -1,7 +1,8 @@
-import CourseCardGrid, { type CourseCardItem } from "../components/CourseCardGrid";
-import CourseSidebar from "../components/CourseSidebar";
-import { useI18n } from "../i18n/I18nProvider";
-import { topics, oid, cardTone, isTopicLocked, getTopicProgressPercent } from "../lib/curriculum";
+import CourseCardGrid, { type CourseCardItem } from '../components/CourseCardGrid';
+import CourseSidebar from '../components/CourseSidebar';
+import { useI18n } from '../i18n/I18nProvider';
+import { topics, oid, cardTone } from '../lib/curriculum';
+import { isTopicLocked, getTopicProgressPercent } from '../lib/progress';
 
 export default function TopicPage() {
   const { t, localizeTopic, difficultyLabel } = useI18n();
@@ -26,8 +27,8 @@ export default function TopicPage() {
 
       <main className="lessons-content">
         <header className="lessons-header">
-          <h1>{t("topics.dashboardTitle")}</h1>
-          <p>{t("topics.dashboardSubtitle")}</p>
+          <h1>{t('topics.dashboardTitle')}</h1>
+          <p>{t('topics.dashboardSubtitle')}</p>
         </header>
 
         <CourseCardGrid items={items} />
