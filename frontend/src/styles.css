@@ -531,6 +531,28 @@ a {
   opacity: 0.75;
 }
 
+.lessons-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.8rem;
+  font-weight: 800;
+  font-size: 0.95rem;
+  opacity: 0.8;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.lessons-back-link:hover {
+  opacity: 1;
+  color: var(--accent-orange);
+}
+
+.workspace-library-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
 .lesson-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1125,6 +1147,62 @@ a {
   color: #111;
   padding: 2.5rem;
   overflow: auto;
+}
+
+.profile-language-section {
+  margin-bottom: 1.5rem;
+}
+
+.profile-language-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.profile-language-header h2 {
+  margin: 0;
+  font-family: Unbounded, Montserrat, sans-serif;
+  font-size: 1.35rem;
+}
+
+.profile-language-section > p {
+  margin: 0 0 1rem;
+  opacity: 0.75;
+}
+
+.profile-heading-icon-wrap--language {
+  background: var(--accent-green);
+}
+
+.language-toggle {
+  display: inline-flex;
+  gap: 0.5rem;
+  padding: 0.35rem;
+  background: #fff;
+  border: 4px solid var(--bg-dark);
+  border-radius: 999px;
+}
+
+.language-toggle-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.65rem 1.1rem;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-dark);
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.language-toggle-btn:hover {
+  transform: translateY(-2px);
+}
+
+.language-toggle-btn.is-active {
+  background: var(--accent-orange);
+  color: var(--text-light);
 }
 
 .profile-controls-header {

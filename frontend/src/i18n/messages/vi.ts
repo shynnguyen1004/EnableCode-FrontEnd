@@ -1,0 +1,100 @@
+import type { MessageTree } from "./en";
+
+const vi = {
+  brand: {
+    homeAria: "Trang chủ Enable Code",
+    logoLightAlt: "Logo Enable Code nền sáng",
+    logoDarkAlt: "Logo Enable Code nền tối",
+  },
+  nav: {
+    home: "Trang chủ",
+    lessons: "Bài học",
+    settings: "Cài đặt",
+    features: "Tính năng",
+    about: "Giới thiệu",
+    logIn: "Đăng nhập",
+    back: "Quay lại",
+    backToLessons: "Quay lại bài học",
+    allTopics: "Tất cả chủ đề",
+    topics: "Chủ đề",
+    topic: "Chủ đề",
+  },
+  home: {
+    heroTitle: "Lập trình bằng",
+    heroTitleHighlight: "Đôi mắt",
+    heroSubtitle:
+      "Nền tảng học lập trình dễ tiếp cận, điều khiển bằng mắt và khối lệnh trực quan.",
+    getStarted: "Bắt đầu",
+    featuresTitle: "Thiết kế cho",
+    featuresTitleHighlight: "Mọi người",
+    featureEyeTitle: "Điều khiển bằng mắt",
+    featureEyeBody:
+      "Điều hướng, chọn và lập trình hoàn toàn không cần tay. Giao diện tối ưu cho thiết bị theo dõi mắt chính xác cao.",
+    featureDragTitle: "Kéo và thả",
+    featureDragBody:
+      "Ghép các khối lệnh dễ dàng. Vùng thả lớn giúp bạn không bỏ lỡ mục tiêu.",
+    featureLearnTitle: "Học tập hòa nhập",
+    featureLearnBody:
+      "Hướng dẫn từng bước phù hợp nhiều khả năng vận động. Học theo tốc độ của riêng bạn.",
+    privacy: "Quyền riêng tư",
+    terms: "Điều khoản",
+    contact: "Liên hệ",
+  },
+  login: {
+    welcome: "Chào mừng trở lại",
+    subtitle: "Đăng nhập để tiếp tục hành trình lập trình dễ tiếp cận.",
+    email: "Địa chỉ email",
+    password: "Mật khẩu",
+    emailPlaceholder: "xin-chao@vidu.com",
+    login: "Đăng nhập",
+    or: "hoặc",
+    eyeScan: "Đăng nhập bằng quét mắt",
+  },
+  topics: {
+    dashboardTitle: "Bảng khóa học",
+    dashboardSubtitle: "Chọn một chủ đề để xem các bài học bên trong.",
+  },
+  course: {
+    progress: "Tiến độ",
+    locked: "Đã khóa",
+    difficulty: {
+      easy: "Cơ bản",
+      medium: "Trung bình",
+      hard: "Nâng cao",
+    },
+  },
+  workspace: {
+    reset: "Đặt lại",
+    settings: "Cài đặt",
+    objective: "Mục tiêu",
+    needHint: "Cần gợi ý?",
+    runCode: "Chạy code",
+    onStart: "Khi bắt đầu",
+    dropNext: "Thả khối tiếp theo tại đây",
+    blockLibrary: "Thư viện khối",
+    blocklySoon: "Tích hợp Blockly sẽ có trong bản cập nhật tới.",
+  },
+  settings: {
+    title: "Hồ sơ & Cài đặt",
+    avatarAlt: "Ảnh đại diện",
+    memberSince: "Thành viên từ tháng 5/2026 • Cấp 4 Khám phá",
+    exercises: "BÀI TẬP",
+    badges: "HUY HIỆU",
+    streak: "CHUỖI HỌC LIÊN TỤC",
+    streakValue: "15 ngày",
+    languageTitle: "Ngôn ngữ",
+    languageSubtitle: "Chọn ngôn ngữ hiển thị cho ứng dụng và nội dung bài học.",
+    languageEnglish: "Tiếng Anh",
+    languageVietnamese: "Tiếng Việt",
+    eyeTrackingTitle: "Cài đặt theo dõi mắt",
+    calibrationTitle: "HIỆU CHUẨN HỆ THỐNG",
+    calibrationBody: "Hiệu chuẩn lại nếu con trỏ không khớp với ánh nhìn của bạn.",
+    startCalibration: "Bắt đầu hiệu chuẩn",
+    sensitivityTitle: "ĐỘ NHẠY MẮT",
+    sensitivityBody: "Độ nhạy cao hơn giúp con trỏ di chuyển nhanh hơn trên màn hình.",
+    dwellTitle: "THỜI GIAN NHÌN (CLICK)",
+    dwellBody: "Thời gian bạn cần nhìn vào một nút để kích hoạt “click”.",
+  },
+};
+
+export default vi;

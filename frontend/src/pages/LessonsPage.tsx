@@ -1,152 +1,57 @@
-import { Link } from "react-router-dom";
-import { Home, BookOpen, Settings, PlayCircle, CheckCircle, Lock } from "lucide-react";
-
-type Lesson = {
-  id: number;
-  title: string;
-  description: string;
-  progress: number;
-  difficulty: "Beginner" | "Intermediate" | "Advanced";
-  locked: boolean;
-  tone: "green" | "light-green" | "dark";
-};
-
-const lessons: Lesson[] = [
-  {
-    id: 1,
-    title: "1. Logic Basics",
-    description: "Learn how to make decisions in code using simple IF and THEN blocks.",
-    progress: 100,
-    difficulty: "Beginner",
-    locked: false,
-    tone: "green",
-  },
-  {
-    id: 2,
-    title: "2. Variables",
-    description: "Create containers to store and update numbers, words, and states.",
-    progress: 60,
-    difficulty: "Beginner",
-    locked: false,
-    tone: "light-green",
-  },
-  {
-    id: 3,
-    title: "3. Loops",
-    description: "Command the computer to repeat actions automatically.",
-    progress: 0,
-    difficulty: "Intermediate",
-    locked: false,
-    tone: "dark",
-  },
-  {
-    id: 4,
-    title: "4. Functions",
-    description: "Group blocks into reusable actions for complex workflows.",
-    progress: 0,
-    difficulty: "Intermediate",
-    locked: true,
-    tone: "dark",
-  },
-  {
-    id: 5,
-    title: "5. Events",
-    description: "Trigger logic when actions happen, like click or timer events.",
-    progress: 0,
-    difficulty: "Intermediate",
-    locked: true,
-    tone: "dark",
-  },
-  {
-    id: 6,
-    title: "6. Project",
-    description: "Combine all modules to build your first interactive mini app.",
-    progress: 0,
-    difficulty: "Advanced",
-    locked: true,
-    tone: "dark",
-  },
-];
+import { Link, Navigate, useParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+import CourseCardGrid, { type CourseCardItem } from "../components/CourseCardGrid";
+import CourseSidebar from "../components/CourseSidebar";
+import { useI18n } from "../i18n/I18nProvider";
+import {
+  getTopicById,
+  getLessonsByTopicId,
+  oid,
+  cardTone,
+  isLessonLocked,
+} from "../lib/curriculum";
 
 export default function LessonsPage() {
+  const { topicId } = useParams<{ topicId: string }>();
+  const { t, localizeTopic, localizeLesson, difficultyLabel } = useI18n();
+  const topic = topicId ? getTopicById(topicId) : undefined;
+
+  if (!topicId || !topic) {
+    return <Navigate to="/lessons" replace />;
+  }
+
+  const lessonsInTopic = getLessonsByTopicId(topicId);
+  const localizedTopic = localizeTopic(topic);
+
+  const items: CourseCardItem[] = lessonsInTopic.map((lesson, index) => {
+    const localized = localizeLesson(lesson);
+    return {
+      id: oid(lesson._id),
+      title: `${lesson.order}. ${localized.title}`,
+      description: localized.description,
+      progress: 0,
+      difficulty: difficultyLabel(lesson.difficulty),
+      locked: isLessonLocked(lesson, lessonsInTopic),
+      tone: cardTone(index),
+      href: `/workspace/${oid(lesson._id)}`,
+    };
+  });
+
   return (
     <div className="lessons-page">
-      <aside className="lessons-sidebar">
-        <div className="lessons-sidebar-brand">
-          <Link to="/" aria-label="Enable Code Home">
-            <img src="/logo/TL_App_Logo.png" alt="Enable Code logo light mode" className="lessons-logo" />
-          </Link>
-        </div>
-
-        <nav className="lessons-nav">
-          <Link to="/" className="lessons-nav-link">
-            <Home size={28} strokeWidth={2.5} className="nav-icon" />
-            <span>Home</span>
-          </Link>
-          <Link to="/lessons" className="lessons-nav-link is-active">
-            <BookOpen size={28} strokeWidth={2.5} className="nav-icon" />
-            <span>Lessons</span>
-          </Link>
-          <Link to="/settings" className="lessons-nav-link">
-            <Settings size={28} strokeWidth={2.5} className="nav-icon" />
-            <span>Settings</span>
-          </Link>
-        </nav>
-      </aside>
+      <CourseSidebar active="lessons" />
 
       <main className="lessons-content">
         <header className="lessons-header">
-          <h1>Course Dashboard</h1>
-          <p>Select a module to continue learning.</p>
+          <Link to="/lessons" className="lessons-back-link">
+            <ArrowLeft size={24} strokeWidth={3} />
+            {t("nav.allTopics")}
+          </Link>
+          <h1>{localizedTopic.title}</h1>
+          <p>{localizedTopic.description}</p>
         </header>
 
-        <section className="lesson-grid">
-          {lessons.map((lesson) => {
-            const targetPath = lesson.locked ? "#" : "/workspace";
-
-            return (
-              <Link
-                key={lesson.id}
-                to={targetPath}
-                className={`lesson-card tone-${lesson.tone}${lesson.locked ? " is-locked" : ""}`}
-                aria-disabled={lesson.locked}
-              >
-                {lesson.locked && (
-                  <div className="lock-overlay">
-                    <div className="lock-icon-wrap">
-                      <Lock size={40} className="text-white" strokeWidth={2.5} />
-                    </div>
-                    <span>Locked</span>
-                  </div>
-                )}
-
-                <div className="lesson-top">
-                  <span className="lesson-tag">{lesson.difficulty}</span>
-                  <div className="lesson-state-icon">
-                    {lesson.progress === 100 ? (
-                      <CheckCircle size={48} color="#3B5A28" strokeWidth={3} className="state-icon done" />
-                    ) : (
-                      <PlayCircle size={48} color="#FF7700" strokeWidth={3} className="state-icon start" />
-                    )}
-                  </div>
-                </div>
-
-                <h2>{lesson.title}</h2>
-                <p>{lesson.description}</p>
-
-                <div className="lesson-progress-wrap">
-                  <div className="lesson-progress-row">
-                    <span>Progress</span>
-                    <strong>{lesson.progress}%</strong>
-                  </div>
-                  <div className="lesson-progress-track">
-                    <div className="lesson-progress-fill" style={{ width: `${lesson.progress}%` }} />
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </section>
+        <CourseCardGrid items={items} />
       </main>
     </div>
   );
