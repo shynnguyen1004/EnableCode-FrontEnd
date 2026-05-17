@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { ArrowLeft, Play, Lightbulb, ChevronRight, GripVertical, Settings, RefreshCw } from "lucide-react";
 
 export default function WorkspacePage() {
   return (
@@ -6,22 +7,22 @@ export default function WorkspacePage() {
       <header className="workspace-topbar">
         <div className="workspace-left">
           <Link to="/lessons" className="workspace-icon-btn" aria-label="Back to lessons">
-            ←
+            <ArrowLeft size={28} strokeWidth={3} />
           </Link>
           <nav className="workspace-breadcrumbs">
             <Link to="/lessons">Lessons</Link>
-            <span>/</span>
+            <ChevronRight size={24} strokeWidth={4} className="crumb-icon" />
             <span>Loops</span>
-            <span>/</span>
+            <ChevronRight size={24} strokeWidth={4} className="crumb-icon" />
             <strong>Level 1: Introduction to Loops</strong>
           </nav>
         </div>
         <div className="workspace-right">
           <button className="workspace-icon-btn" type="button" aria-label="Reset">
-            ↺
+            <RefreshCw size={28} strokeWidth={3} />
           </button>
           <Link to="/settings" className="workspace-icon-btn" aria-label="Settings">
-            ⚙
+            <Settings size={28} strokeWidth={3} />
           </Link>
         </div>
       </header>
@@ -40,10 +41,12 @@ export default function WorkspacePage() {
           </p>
 
           <div className="workspace-panel-actions">
-            <button type="button" className="workspace-panel-btn hint">
+            <button type="button" className="workspace-panel-btn hint group">
+              <Lightbulb size={36} strokeWidth={3} className="btn-icon text-orange" />
               Need a Hint?
             </button>
-            <button type="button" className="workspace-panel-btn run">
+            <button type="button" className="workspace-panel-btn run group">
+              <Play size={44} strokeWidth={3} className="btn-icon fill-current" />
               Run Code
             </button>
           </div>
@@ -51,15 +54,20 @@ export default function WorkspacePage() {
 
         <main className="workspace-canvas">
           <section className="blocks-zone">
-            <div className="block start">On Start</div>
+            <div className="block start">
+              <div className="drag-handle"><GripVertical size={32} /></div>
+              <span>On Start</span>
+            </div>
             <div className="block repeat">
               <div className="block-row">
+                <div className="drag-handle"><GripVertical size={32} /></div>
                 <span>Repeat</span>
                 <span className="pill">3</span>
                 <span>times</span>
               </div>
               <div className="nested-drop">
                 <div className="block move">
+                  <div className="drag-handle"><GripVertical size={28} /></div>
                   <span>Move Forward</span>
                   <span className="pill">1 step</span>
                 </div>
@@ -70,10 +78,22 @@ export default function WorkspacePage() {
 
           <aside className="workspace-library">
             <h3>Block Library</h3>
-            <div className="library-item green">Move Forward</div>
-            <div className="library-item orange">Repeat (...)</div>
-            <div className="library-item blue">If (...) Then</div>
-            <div className="library-item purple">Calculate</div>
+            <div className="library-item green">
+              <div className="drag-handle small"><GripVertical size={24} /></div>
+              <span>Move Forward</span>
+            </div>
+            <div className="library-item orange">
+              <div className="drag-handle small"><GripVertical size={24} /></div>
+              <span>Repeat (...)</span>
+            </div>
+            <div className="library-item blue">
+              <div className="drag-handle small"><GripVertical size={24} /></div>
+              <span>If (...) Then</span>
+            </div>
+            <div className="library-item purple">
+              <div className="drag-handle small"><GripVertical size={24} /></div>
+              <span>Calculate</span>
+            </div>
           </aside>
         </main>
       </div>

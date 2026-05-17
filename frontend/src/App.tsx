@@ -2,7 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import LessonsPage from "./pages/LessonsPage";
 import LoginPage from "./pages/LoginPage";
-import SettingsPage from "./pages/SettingsPage";
+import ProfilePage from "./pages/ProfilePage";
 import WorkspacePage from "./pages/WorkspacePage";
 
 export default function App() {
@@ -12,7 +12,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/lessons" element={<LessonsPage />} />
       <Route path="/workspace" element={<WorkspacePage />} />
-      <Route path="/settings" element={<SettingsPage />} />
+      <Route path="/settings" element={<ProfilePage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

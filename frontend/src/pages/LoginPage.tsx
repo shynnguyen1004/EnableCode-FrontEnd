@@ -1,5 +1,6 @@
 import { FormEvent } from "react";
 import { Link } from "react-router-dom";
+import { ArrowLeft, LogIn, Eye } from "lucide-react";
 
 export default function LoginPage() {
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -9,8 +10,8 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <header className="login-header container">
-        <Link to="/" className="login-back">
-          <span aria-hidden="true">←</span>
+        <Link to="/" className="login-back group">
+          <ArrowLeft size={28} strokeWidth={3} className="nav-icon" />
           <span>Back</span>
         </Link>
 
@@ -33,8 +34,8 @@ export default function LoginPage() {
             <label htmlFor="password">Password</label>
             <input id="password" type="password" placeholder="••••••••" />
 
-            <Link to="/lessons" className="login-btn login-btn-primary">
-              <span aria-hidden="true">→</span>
+            <Link to="/lessons" className="login-btn login-btn-primary group">
+              <LogIn size={32} strokeWidth={3} className="btn-icon" />
               Login
             </Link>
 
@@ -44,8 +45,8 @@ export default function LoginPage() {
               <span />
             </div>
 
-            <button type="button" className="login-btn login-btn-secondary">
-              <span aria-hidden="true">◉</span>
+            <button type="button" className="login-btn login-btn-secondary group">
+              <Eye size={32} strokeWidth={3} className="btn-icon" />
               Login with Eye-Scan
             </button>
           </form>

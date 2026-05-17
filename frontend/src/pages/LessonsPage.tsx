@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Home, BookOpen, Settings, PlayCircle, CheckCircle, Lock } from "lucide-react";
 
 type Lesson = {
   id: number;
@@ -79,13 +80,16 @@ export default function LessonsPage() {
 
         <nav className="lessons-nav">
           <Link to="/" className="lessons-nav-link">
-            Home
+            <Home size={28} strokeWidth={2.5} className="nav-icon" />
+            <span>Home</span>
           </Link>
           <Link to="/lessons" className="lessons-nav-link is-active">
-            Lessons
+            <BookOpen size={28} strokeWidth={2.5} className="nav-icon" />
+            <span>Lessons</span>
           </Link>
           <Link to="/settings" className="lessons-nav-link">
-            Settings
+            <Settings size={28} strokeWidth={2.5} className="nav-icon" />
+            <span>Settings</span>
           </Link>
         </nav>
       </aside>
@@ -107,11 +111,24 @@ export default function LessonsPage() {
                 className={`lesson-card tone-${lesson.tone}${lesson.locked ? " is-locked" : ""}`}
                 aria-disabled={lesson.locked}
               >
-                {lesson.locked && <div className="lock-overlay">Locked</div>}
+                {lesson.locked && (
+                  <div className="lock-overlay">
+                    <div className="lock-icon-wrap">
+                      <Lock size={40} className="text-white" strokeWidth={2.5} />
+                    </div>
+                    <span>Locked</span>
+                  </div>
+                )}
 
                 <div className="lesson-top">
                   <span className="lesson-tag">{lesson.difficulty}</span>
-                  <span className="lesson-state">{lesson.progress === 100 ? "Done" : "Start"}</span>
+                  <div className="lesson-state-icon">
+                    {lesson.progress === 100 ? (
+                      <CheckCircle size={48} color="#3B5A28" strokeWidth={3} className="state-icon done" />
+                    ) : (
+                      <PlayCircle size={48} color="#FF7700" strokeWidth={3} className="state-icon start" />
+                    )}
+                  </div>
                 </div>
 
                 <h2>{lesson.title}</h2>

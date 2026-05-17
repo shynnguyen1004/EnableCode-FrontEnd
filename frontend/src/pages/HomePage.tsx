@@ -1,22 +1,24 @@
 import { Link } from "react-router-dom";
 
+import { Eye, MousePointerSquareDashed, BookOpenCheck, ArrowRight } from "lucide-react";
+
 const features = [
   {
     title: "Eye Tracking",
-    body: "Navigate and code hands-free with controls optimized for eye-tracking input.",
-    icon: "O",
+    body: "Navigate, select, and code entirely hands-free. Our interface is optimized for high-precision eye-control hardware.",
+    icon: <Eye size={36} strokeWidth={2.5} color="#fff" />,
     theme: "accent-green",
   },
   {
     title: "Drag-and-Drop",
-    body: "Build logic blocks with larger drop targets for accessible interaction.",
-    icon: "[]",
+    body: "Snap logical blocks together with ease. Extra-large drop zones ensure you never miss your target.",
+    icon: <MousePointerSquareDashed size={36} strokeWidth={2.5} color="#fff" />,
     theme: "accent-light-green",
   },
   {
     title: "Inclusive Learning",
-    body: "Follow guided lessons designed for learners with diverse physical abilities.",
-    icon: "B",
+    body: "Step-by-step interactive tutorials adapted for diverse physical abilities. Learn at your own pace comfortably.",
+    icon: <BookOpenCheck size={36} strokeWidth={2.5} color="#fff" />,
     theme: "accent-orange",
   },
 ];
@@ -49,8 +51,9 @@ export default function HomePage() {
           An inclusive platform to build web apps through eye-tracking and intuitive block-based
           interactions.
         </p>
-        <Link to="/lessons" className="btn btn-primary hero-cta">
+        <Link to="/lessons" className="btn btn-primary hero-cta group">
           Get Started
+          <ArrowRight size={32} className="hero-arrow" strokeWidth={3} style={{ marginLeft: '12px' }} />
         </Link>
       </main>
 
