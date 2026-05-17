@@ -1,7 +1,14 @@
 import { Link, Navigate, useParams } from "react-router-dom";
 import { ArrowLeft, Play, Lightbulb, ChevronRight, GripVertical, Settings, RefreshCw } from "lucide-react";
 import { useI18n } from "../i18n/I18nProvider";
-import { getLessonById, getTopicById, oid } from "../lib/curriculum";
+import {
+  getLessonById,
+  getTopicById,
+  getLessonsByTopicId,
+  oid,
+  isTopicLocked,
+  isLessonLocked,
+} from "../lib/curriculum";
 
 export default function WorkspacePage() {
   const { lessonId } = useParams<{ lessonId: string }>();
@@ -13,6 +20,12 @@ export default function WorkspacePage() {
   }
 
   const topic = getTopicById(oid(lesson.topic_id));
+  const lessonsInTopic = topic ? getLessonsByTopicId(oid(topic._id)) : [];
+
+  if (!topic || isTopicLocked(topic) || isLessonLocked(lesson, lessonsInTopic)) {
+    return <Navigate to={topic ? `/lessons/${oid(topic._id)}` : "/lessons"} replace />;
+  }
+
   const topicPath = topic ? `/lessons/${oid(topic._id)}` : "/lessons";
   const localizedLesson = localizeLesson(lesson);
   const localizedTopic = topic ? localizeTopic(topic) : null;

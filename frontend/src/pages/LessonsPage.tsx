@@ -9,6 +9,8 @@ import {
   oid,
   cardTone,
   isLessonLocked,
+  isTopicLocked,
+  isLessonCompleted,
 } from "../lib/curriculum";
 
 export default function LessonsPage() {
@@ -17,6 +19,10 @@ export default function LessonsPage() {
   const topic = topicId ? getTopicById(topicId) : undefined;
 
   if (!topicId || !topic) {
+    return <Navigate to="/lessons" replace />;
+  }
+
+  if (isTopicLocked(topic)) {
     return <Navigate to="/lessons" replace />;
   }
 
@@ -29,7 +35,7 @@ export default function LessonsPage() {
       id: oid(lesson._id),
       title: `${lesson.order}. ${localized.title}`,
       description: localized.description,
-      progress: 0,
+      progress: isLessonCompleted(oid(lesson._id)) ? 100 : 0,
       difficulty: difficultyLabel(lesson.difficulty),
       locked: isLessonLocked(lesson, lessonsInTopic),
       tone: cardTone(index),

@@ -1,7 +1,7 @@
 import CourseCardGrid, { type CourseCardItem } from "../components/CourseCardGrid";
 import CourseSidebar from "../components/CourseSidebar";
 import { useI18n } from "../i18n/I18nProvider";
-import { topics, oid, cardTone, isTopicLocked } from "../lib/curriculum";
+import { topics, oid, cardTone, isTopicLocked, getTopicProgressPercent } from "../lib/curriculum";
 
 export default function TopicPage() {
   const { t, localizeTopic, difficultyLabel } = useI18n();
@@ -12,7 +12,7 @@ export default function TopicPage() {
       id: oid(topic._id),
       title: `${index + 1}. ${localized.title}`,
       description: localized.description,
-      progress: 0,
+      progress: getTopicProgressPercent(oid(topic._id)),
       difficulty: difficultyLabel(topic.difficulty),
       locked: isTopicLocked(topic),
       tone: cardTone(index),

@@ -98,13 +98,12 @@ export function cardTone(index: number): "green" | "light-green" | "dark" {
   return tones[index % tones.length];
 }
 
-/** Topic lock placeholder — wire to progress / prerequisites later. */
-export function isTopicLocked(_topic: Topic): boolean {
-  return false;
-}
-
-/** First lesson in a topic is open; later lessons unlock sequentially (placeholder). */
-export function isLessonLocked(lesson: Lesson, lessonsInTopic: Lesson[]): boolean {
-  const index = lessonsInTopic.findIndex((item) => oid(item._id) === oid(lesson._id));
-  return index > 0;
-}
+export {
+  areTopicPrerequisitesMet,
+  getTopicProgressPercent,
+  isLessonCompleted,
+  isLessonLocked,
+  isTopicCompleted,
+  isTopicLocked,
+  markLessonCompleted,
+} from "./progress";

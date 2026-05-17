@@ -29,19 +29,35 @@ export default function CourseCardGrid({ items }: CourseCardGridProps) {
           className={`lesson-card tone-${item.tone}${item.locked ? " is-locked" : ""}`}
           aria-disabled={item.locked}
         >
+          <LessonCardInner locked={item.locked} item={item} progressLabel={t("course.progress")} />
+
           {item.locked ? (
-            <div className="lock-overlay">
+            <div className="lock-overlay" aria-hidden="true">
               <div className="lock-icon-wrap">
-                <Lock size={40} className="text-white" strokeWidth={2.5} />
+                <Lock size={48} color="#FFFFFF" strokeWidth={2.5} aria-hidden="true" />
               </div>
-              <span>{t("course.locked")}</span>
+              <span className="lock-label">{t("course.locked")}</span>
             </div>
           ) : null}
-
-          <LessonCardBody item={item} progressLabel={t("course.progress")} />
         </Link>
       ))}
     </section>
+  );
+}
+
+function LessonCardInner({
+  locked,
+  item,
+  progressLabel,
+}: {
+  locked: boolean;
+  item: CourseCardItem;
+  progressLabel: string;
+}) {
+  return (
+    <div className={locked ? "lesson-card-inner is-blurred" : "lesson-card-inner"}>
+      <LessonCardBody item={item} progressLabel={progressLabel} />
+    </div>
   );
 }
 
@@ -64,7 +80,7 @@ function LessonCardBody({ item, progressLabel }: { item: CourseCardItem; progres
 
       <div className="lesson-progress-wrap">
         <div className="lesson-progress-row">
-              <span>{progressLabel}</span>
+          <span>{progressLabel}</span>
           <strong>{item.progress}%</strong>
         </div>
         <div className="lesson-progress-track">
