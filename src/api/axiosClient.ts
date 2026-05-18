@@ -35,7 +35,7 @@ axiosClient.interceptors.response.use(
   error => {
     // Centralized error handling
     if (error.response?.status === 401) {
-      console.error('🔒 Token expired or unauthorized access!');
+      console.error('Token expired or unauthorized access!');
 
       // Remove expired token (User needs to re-login since Refresh Token is not yet implemented in M3A)
       localStorage.removeItem('accessToken');
