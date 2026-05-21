@@ -1,44 +1,8 @@
 import axiosClient from './axiosClient';
-
-export interface User {
-  _id: string;
-  email: string;
-  name: string;
-  role: 'student' | 'teacher' | 'admin';
-  avatar?: string;
-  total_score?: number;
-  lessons_completed?: number;
-  streak?: number;
-  level?: number;
-  last_active_date?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface LoginResponse {
-  success: boolean;
-  token: string;
-  user: User;
-}
-
-export interface RegisterRequest {
-  email: string;
-  password: string;
-  name: string;
-  role: 'student' | 'teacher' | 'admin';
-  avatar?: string;
-}
-
-export interface ForgotPasswordRequest {
-  email: string;
-}
-
-export interface ResetPasswordRequest {
-  token: string;
-  new_password: string;
-}
+import { LoginResponse, RegisterRequest, ForgotPasswordRequest, ResetPasswordRequest } from '../types/auth.types';
 
 export const authApi = {
+  // Authenticates a user and stores the token/user data locally upon success
   login: async (email: string, password: string) => {
     const response = await axiosClient.post<unknown, LoginResponse>('/auth/login', { email, password });
 
@@ -48,15 +12,21 @@ export const authApi = {
     }
     return response;
   },
+  // Registers a new user and automatically logs them in by storing the credentials
+  register: async (data: RegisterRequest) => {
+    const response = await axiosClient.post<unknown, LoginResponse>('/auth/register', data);
 
-  register: (data: RegisterRequest) => {
-    return axiosClient.post<unknown, LoginResponse>('/auth/register', data);
+    if (response.token) {
+      localStorage.setItem('accessToken', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
+    }
+    return response;
   },
-
+  // Triggers an email containing a password reset link
   forgotPassword: (data: ForgotPasswordRequest) => {
     return axiosClient.post<unknown, { success: boolean; message: string }>('/auth/forgot-password', data);
   },
-
+  // Resets the user's password using the token sent to their email
   resetPassword: (data: ResetPasswordRequest) => {
     return axiosClient.post<unknown, { success: boolean; message: string }>('/auth/reset-password', data);
   },

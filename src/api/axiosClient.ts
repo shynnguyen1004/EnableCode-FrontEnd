@@ -1,21 +1,18 @@
 import axios from 'axios';
 
-// Create an axios instance with default config
+// Create a base Axios instance using the environment variable for the URL
 const axiosClient = axios.create({
-  baseURL: 'http://localhost:5000/api', // Base URL from Swagger
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // Timeout if the server takes longer than 10s
+  timeout: 10000,
 });
 
-// Request interceptor to attach the Access Token
+// Request interceptor: Automatically attach the JWT access token to every outgoing request
 axiosClient.interceptors.request.use(
   config => {
-    // Retrieve the access token from localStorage
     const token = localStorage.getItem('accessToken');
-
-    // If token exists, attach it to the Authorization header
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -26,20 +23,21 @@ axiosClient.interceptors.request.use(
   },
 );
 
-// Response interceptor to unwrap data and handle token expiration
+// Response interceptor: Extract data and centrally handle authentication/authorization errors
 axiosClient.interceptors.response.use(
   response => {
-    // Extract and return only the 'data' part from the response
     return response.data;
   },
+  // Handle error
   error => {
-    // Centralized error handling
     if (error.response?.status === 401) {
       console.error('Token expired or unauthorized access!');
-
-      // Remove expired token (User needs to re-login since Refresh Token is not yet implemented in M3A)
       localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+    } else if (error.response?.status === 403) {
+      console.error('Forbidden! You do not have permission to access this resource.');
     }
+
     return Promise.reject(error);
   },
 );
