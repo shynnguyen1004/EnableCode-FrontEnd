@@ -1,5 +1,5 @@
 import axiosClient from './axiosClient';
-import { LoginResponse, RegisterRequest, ForgotPasswordRequest, ResetPasswordRequest } from '../types/auth.types';
+import { LoginResponse, RegisterRequest, ForgotPasswordRequest, ResetPasswordRequest } from '../types';
 
 export const authApi = {
   // Authenticates a user and stores the token/user data locally upon success
