@@ -5,9 +5,11 @@ import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
 import TopicPage from "./pages/TopicPage";
 import WorkspacePage from "./pages/WorkspacePage";
+import Mouse from './components/Mouse';
 
 export default function App() {
   return (
+    <>
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
@@ -18,5 +20,7 @@ export default function App() {
       <Route path="/settings" element={<ProfilePage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    <Mouse />
+    </>
   );
 }
