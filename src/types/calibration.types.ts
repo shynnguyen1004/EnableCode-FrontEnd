@@ -10,6 +10,9 @@ export interface CalibrationPreferences {
   run_code_gesture: string;
   cursor_smoothing?: number;
   camera_index?: number;
+  eyeSensitivity: number;
+  dwellTime: number;
+  visualFeedback: boolean;
 }
 
 export interface Calibration {
