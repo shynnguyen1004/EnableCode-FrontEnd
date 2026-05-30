@@ -1,39 +1,108 @@
+import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import CourseCardGrid, { type CourseCardItem } from '../components/CourseCardGrid';
 import CourseSidebar from '../components/CourseSidebar';
 import { useI18n } from '../i18n/I18nProvider';
 
-import { getTopicById, getLessonsByTopicId, oid, cardTone } from '../lib/curriculum';
+import { oid, cardTone } from '../lib/curriculum';
 import { isTopicLocked, isLessonLocked, isLessonCompleted } from '../lib/progress';
+import { lessonApi } from '../api/lessonApi';
+
+// 1. Import các hàm từ Mapper
+import { extractTopics, extractLessons } from '../utils/lessonMapper';
+import { FrontendTopic, FrontendLesson } from '../types';
+
+// Các type kế thừa để đảm bảo TypeScript không báo lỗi với các hàm lib cũ
+type LegacyTopic = Parameters<ReturnType<typeof useI18n>['localizeTopic']>[0];
+type LegacyProgressTopic = Parameters<typeof isTopicLocked>[0];
+
+type LegacyLesson = Parameters<ReturnType<typeof useI18n>['localizeLesson']>[0];
+type LegacyProgressLesson = Parameters<typeof isLessonLocked>[0];
+
+type CompatibleTopic = FrontendTopic & LegacyTopic & LegacyProgressTopic;
+type CompatibleLesson = FrontendLesson & LegacyLesson & LegacyProgressLesson;
 
 export default function LessonsPage() {
   const { topicId } = useParams<{ topicId: string }>();
   const { t, localizeTopic, localizeLesson, difficultyLabel } = useI18n();
-  const topic = topicId ? getTopicById(topicId) : undefined;
 
-  if (!topicId || !topic) {
+  const [topic, setTopic] = useState<CompatibleTopic | null>(null);
+  const [lessons, setLessons] = useState<CompatibleLesson[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isNotFound, setIsNotFound] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!topicId) return;
+
+    const fetchData = async () => {
+      try {
+        const [topicsRes, lessonsRes] = await Promise.all([
+          lessonApi.getTopics(),
+          lessonApi.getLessonsByTopic(topicId),
+        ]);
+
+        // 2. Dùng Mapper siêu gọn, bóc tách và format dữ liệu chỉ trong 2 dòng
+        const formattedTopics = extractTopics(topicsRes);
+        const formattedLessons = extractLessons(lessonsRes, topicId);
+
+        // 3. Tìm Topic hiện tại
+        const currentTopic = formattedTopics.find(t => oid(t._id) === topicId);
+
+        if (!currentTopic) {
+          setIsNotFound(true);
+        } else {
+          // Ép kiểu sang Compatible để tương thích với các hàm legacy
+          setTopic(currentTopic as unknown as CompatibleTopic);
+          setLessons(formattedLessons as unknown as CompatibleLesson[]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch lesson data:', error);
+        setIsNotFound(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [topicId]);
+
+  if (!topicId || isNotFound) {
     return <Navigate to="/lessons" replace />;
   }
 
-  if (isTopicLocked(topic)) {
+  if (topic && isTopicLocked(topic)) {
+    // Ép kiểu tạm thời để bypass lỗi type mismatch (nếu có)
     return <Navigate to="/lessons" replace />;
   }
 
-  const lessonsInTopic = getLessonsByTopicId(topicId);
-  const localizedTopic = localizeTopic(topic);
+  if (isLoading || !topic) {
+    return (
+      <div className="lessons-page">
+        <CourseSidebar active="lessons" />
+        <main className="lessons-content">
+          <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
+            <p>Loading lessons...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
-  const items: CourseCardItem[] = lessonsInTopic.map((lesson, index) => {
-    const localized = localizeLesson(lesson);
+  const localizedTopic = localizeTopic(topic) || topic;
+
+  const items: CourseCardItem[] = lessons.map((lesson, index) => {
+    const localized = localizeLesson(lesson) || lesson;
+
     return {
-      id: oid(lesson._id),
+      id: lesson._id,
       title: `${lesson.order}. ${localized.title}`,
       description: localized.description,
-      progress: isLessonCompleted(oid(lesson._id)) ? 100 : 0,
+      progress: isLessonCompleted(lesson._id) ? 100 : 0,
       difficulty: difficultyLabel(lesson.difficulty),
-      locked: isLessonLocked(lesson, lessonsInTopic),
+      locked: isLessonLocked(lesson, lessons),
       tone: cardTone(index),
-      href: `/workspace/${oid(lesson._id)}`,
+      href: `/workspace/${lesson._id}`,
     };
   });
 
