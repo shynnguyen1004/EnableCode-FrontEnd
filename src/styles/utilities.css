@@ -1,0 +1,11 @@
+.icon-green {
+  color: var(--accent-green);
+}
+
+.icon-orange {
+  color: var(--accent-orange);
+}
+
+.icon-light-green {
+  color: var(--accent-light-green);
+}
