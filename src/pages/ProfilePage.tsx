@@ -25,7 +25,7 @@ export default function ProfilePage() {
           level: parsedUser.level || 1,
           streak: parsedUser.streak || 0,
           lessonsCompleted: parsedUser.lessonsCompleted || 0,
-          badges: 7,
+          badges: parsedUser.badges || 0,
           memberSince: formattedDate,
         };
       } catch (error) {
@@ -47,7 +47,7 @@ export default function ProfilePage() {
   return (
     <div className="profile-page">
       <header className="profile-topbar">
-        <Link to="/lessons" className="profile-back-btn" aria-label={t('nav.backToLessons')}>
+        <Link to="/" className="profile-back-btn" aria-label={t('nav.backToLessons')}>
           <ArrowLeft size={24} strokeWidth={3} />
         </Link>
         <h1>{t('settings.title')}</h1>
