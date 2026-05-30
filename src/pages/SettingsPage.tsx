@@ -82,37 +82,47 @@ const ToggleCheckIcon = () => (
   </svg>
 );
 
-export default function SettingsPage() {
+export default function ProfilePage() {
   const [sensitivity, setSensitivity] = useState(75);
   const [dwellTime, setDwellTime] = useState(40);
   const [visualFeedback, setVisualFeedback] = useState(true);
 
-  // Initialize state directly from localStorage
-  // Removed 'setCurrentUser' because we don't need to update this state locally in this component
+  // Khởi tạo state bằng cách đọc trực tiếp từ localStorage (nơi ta đã lưu lúc Login)
   const [currentUser] = useState(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      return {
-        name: parsedUser.name || 'Guest',
-        level: parsedUser.level || 1,
-        streak: parsedUser.streak || 0,
-        lessonsCompleted: parsedUser.lessonsCompleted || 0,
-        badges: 7,
-        memberSince: 'May 2026',
-      };
+      try {
+        const parsedUser = JSON.parse(storedUser);
+
+        // Đổi chuỗi thời gian của Backend thành định dạng dễ đọc (VD: May 2026)
+        const date = new Date(parsedUser.createdAt || new Date());
+        const formattedDate = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+        return {
+          name: parsedUser.name || 'Guest',
+          level: parsedUser.level || 1,
+          streak: parsedUser.streak || 0,
+          lessonsCompleted: parsedUser.lessonsCompleted || 0,
+          badges: 7, // Bạn có thể map số này sau nếu Backend hỗ trợ
+          memberSince: formattedDate,
+        };
+      } catch (error) {
+        console.error('Lỗi khi đọc thông tin User:', error);
+      }
     }
+
+    // Fallback mặc định nếu chưa đăng nhập hoặc lỗi
     return {
-      name: 'Guest',
+      name: 'Guest User',
       level: 1,
       streak: 0,
       lessonsCompleted: 0,
-      badges: 7,
-      memberSince: 'May 2026',
+      badges: 0,
+      memberSince: '...',
     };
   });
 
-  // Helper to extract initials (e.g., "Nguyen Huu Tri" -> "NH")
+  // Helper để lấy 2 chữ cái đầu làm Avatar (VD: Hung Khoi -> HK)
   const getInitials = (name: string) => {
     const nameParts = name.split(' ');
     if (nameParts.length >= 2) {

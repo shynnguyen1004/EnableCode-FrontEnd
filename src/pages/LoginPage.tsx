@@ -3,10 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, LogIn, Eye } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { authApi } from '../api/authApi';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
   const { t } = useI18n();
-  const navigate = useNavigate(); // Hook for programmatic navigation
+  const navigate = useNavigate();
+  const { login } = useAuth();
 
   // State definitions for form inputs and UI feedback
   const [email, setEmail] = useState('');
@@ -15,24 +17,35 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState('');
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); // Prevent default form submission behavior
-    setErrorMsg(''); // Clear previous error messages
-    setIsLoading(true); // Enable loading state
+    event.preventDefault();
+    setErrorMsg('');
+    setIsLoading(true);
 
     try {
-      // Authenticate user via API (authApi automatically handles localStorage now)
-      await authApi.login(email, password);
+      // 1. Gọi API (Dòng này lúc nãy bạn lỡ tay xóa mất)
+      const response = await authApi.login(email, password);
 
-      // Navigate to the lessons dashboard upon success
+      // 2. Định nghĩa kiểu dữ liệu cho response trả về từ Axios Client
+      const payload = response as unknown as {
+        accessToken: string;
+        user: Record<string, unknown>;
+      };
+
+      // 3. Lấy dữ liệu
+      const { accessToken, user } = payload;
+
+      // 4. Lưu vào Context và LocalStorage
+      if (accessToken) {
+        login(accessToken);
+        localStorage.setItem('user', JSON.stringify(user));
+      }
+
+      // 5. Chuyển hướng
       navigate('/lessons');
     } catch (error) {
-      // Cast the error object to a custom type to satisfy TypeScript without using 'any'
       const err = error as { response?: { data?: { message?: string } } };
-
-      // Extract and display the error message from the backend response
       setErrorMsg(err.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {
-      // Ensure loading state is disabled regardless of outcome
       setIsLoading(false);
     }
   };
@@ -57,7 +70,6 @@ export default function LoginPage() {
             <p>{t('login.subtitle')}</p>
           </div>
 
-          {/* Display error message if authentication fails */}
           {errorMsg && (
             <p style={{ color: '#ff4d4f', textAlign: 'center', fontWeight: 'bold', marginBottom: '1rem' }}>
               {errorMsg}
@@ -70,9 +82,9 @@ export default function LoginPage() {
               id="email"
               type="email"
               placeholder={t('login.emailPlaceholder')}
-              value={email} // Bind state to input value
-              onChange={e => setEmail(e.target.value)} // Update state on change
-              disabled={isLoading} // Disable input during API call
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              disabled={isLoading}
               required
             />
 
@@ -81,18 +93,18 @@ export default function LoginPage() {
               id="password"
               type="password"
               placeholder="••••••••"
-              value={password} // Bind state to input value
-              onChange={e => setPassword(e.target.value)} // Update state on change
-              disabled={isLoading} // Disable input during API call
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              disabled={isLoading}
               required
             />
 
-            {/* Replaced <Link> with a submit <button> to trigger the form action */}
             <button
               type="submit"
               className="login-btn login-btn-primary group"
               disabled={isLoading}
-              style={{ opacity: isLoading ? 0.7 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}>
+              style={{ opacity: isLoading ? 0.7 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
+            >
               <LogIn size={32} strokeWidth={3} className="btn-icon" />
               {isLoading ? 'Processing...' : t('login.login')}
             </button>

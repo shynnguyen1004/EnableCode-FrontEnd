@@ -3,6 +3,9 @@ import { Calibration, CalibrationBounds, CalibrationPreferences } from '../types
 
 export const profileApi = {
   // Fetches the live gamified statistics for the current user
+  getMe: () => {
+    return axiosClient.get<{ _id: string; name: string; email: string; created_at: string }>('/users/me');
+  },
   getUserStats: () => {
     return axiosClient.get<{ total_score: number; streak: number; lessons_completed: number; level: number }>(
       '/users/stats',
