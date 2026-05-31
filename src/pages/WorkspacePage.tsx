@@ -13,7 +13,6 @@ export default function WorkspacePage() {
   const { lessonId } = useParams<{ lessonId: string }>();
   const { t, localizeLesson, localizeTopic } = useI18n();
 
-  // Dùng thẳng type Lesson và Topic
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [topic, setTopic] = useState<Topic | null>(null);
   const [lessonsInTopic, setLessonsInTopic] = useState<Lesson[]>([]);
@@ -34,7 +33,14 @@ export default function WorkspacePage() {
           setIsNotFound(true);
           return;
         }
-        const actualTopicId = fetchedLesson.topic_id;
+
+        const actualTopicId = fetchedLesson.topicId;
+
+        if (!actualTopicId) {
+          console.error(fetchedLesson);
+          setIsNotFound(true);
+          return;
+        }
 
         const [topicsRes, topicLessonsRes] = await Promise.all([
           lessonApi.getTopics(),
@@ -42,7 +48,8 @@ export default function WorkspacePage() {
         ]);
 
         const rawTopics = extractTopics(topicsRes);
-        const rawLessons = extractLessons(topicLessonsRes, actualTopicId);
+        // Cải tiến 2: Bỏ tham số thừa khi gọi extractLessons
+        const rawLessons = extractLessons(topicLessonsRes);
 
         const matchedTopic = rawTopics.find(t => t._id === actualTopicId);
 
@@ -53,7 +60,7 @@ export default function WorkspacePage() {
 
         setLesson(fetchedLesson);
         setTopic(matchedTopic);
-        setLessonsInTopic(rawLessons);
+        setLessonsInTopic(rawLessons.filter(l => l.isActive));
       } catch (error) {
         console.error('Failed to fetch workspace data:', error);
         setIsNotFound(true);
@@ -103,7 +110,7 @@ export default function WorkspacePage() {
     );
   }
 
-  // Xóa hàm oid khi truyền ID vào URL
+  // Khóa bảo vệ bài học
   if (isTopicLocked(topic) || isLessonLocked(lesson, lessonsInTopic)) {
     return <Navigate to={`/lessons/${topic._id}`} replace />;
   }
@@ -141,7 +148,8 @@ export default function WorkspacePage() {
         <aside className="workspace-panel">
           <div className="objective-chip">{t('workspace.objective')}</div>
           <h1>{localizedLesson.title}</h1>
-          <p>{localizedLesson.description}</p>
+          {/* Cải tiến 4: Bọc dự phòng string rỗng để vượt ải Type */}
+          <p>{localizedLesson.description || ''}</p>
 
           <div className="workspace-panel-actions">
             <button type="button" className="workspace-panel-btn hint group">

@@ -2,34 +2,29 @@ import { useEffect, useState } from 'react';
 import CourseCardGrid, { type CourseCardItem } from '../components/CourseCardGrid';
 import CourseSidebar from '../components/CourseSidebar';
 import { useI18n } from '../i18n/I18nProvider';
+
+import type { Topic } from '../lib/types';
 import { cardTone } from '../lib/curriculum';
 import { isTopicLocked, getTopicProgressPercent } from '../lib/progress';
 import { lessonApi } from '../api/lessonApi';
 import { extractTopics } from '../utils/lessonMapper';
-import { FrontendTopic } from '../types';
-
-// Giao thoa type mượt mà
-type LegacyTopic = Parameters<ReturnType<typeof useI18n>['localizeTopic']>[0] & Parameters<typeof isTopicLocked>[0];
-type CompatibleTopic = FrontendTopic & LegacyTopic;
+import { Loader2 } from 'lucide-react';
 
 export default function TopicPage() {
   const { t, localizeTopic, difficultyLabel } = useI18n();
 
-  const [topics, setTopics] = useState<CompatibleTopic[]>([]);
+  const [topics, setTopics] = useState<Topic[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchTopics = async () => {
       try {
-        const response = await lessonApi.getTopics();
+        const res = await lessonApi.getTopics();
+        const formattedTopics = extractTopics(res);
 
-        // Bóc tách bằng Mapper (1 dòng duy nhất)
-        const rawTopics = extractTopics(response);
-
-        // Ép kiểu chuẩn
-        setTopics(rawTopics as unknown as CompatibleTopic[]);
+        setTopics(formattedTopics.filter(topic => topic.isActive));
       } catch (error) {
-        console.error('Failed to fetch topics from server:', error);
+        console.error('Failed to fetch topics:', error);
       } finally {
         setIsLoading(false);
       }
@@ -38,15 +33,26 @@ export default function TopicPage() {
     fetchTopics();
   }, []);
 
+  if (isLoading) {
+    return (
+      <div className="lessons-page">
+        <CourseSidebar active="lessons" />
+        <main className="lessons-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Loader2 size={40} className="animate-spin text-orange-500 mr-3" />
+          <p style={{ color: '#666', fontSize: '1.2rem', fontWeight: 500 }}>Loading topics...</p>
+        </main>
+      </div>
+    );
+  }
+
   const items: CourseCardItem[] = topics.map((topic, index) => {
     const localized = localizeTopic(topic) || topic;
-
     return {
       id: topic._id,
-      title: `${index + 1}. ${localized.title}`,
-      description: localized.description,
+      title: localized.title,
+      description: localized.description || '',
       progress: getTopicProgressPercent(topic._id),
-      difficulty: difficultyLabel(topic.difficulty), // Mapper đã lo vụ này, không cần logic if-else nữa!
+      difficulty: difficultyLabel(topic.difficulty),
       locked: isTopicLocked(topic),
       tone: cardTone(index),
       href: `/lessons/${topic._id}`,
@@ -63,13 +69,7 @@ export default function TopicPage() {
           <p>{t('topics.dashboardSubtitle')}</p>
         </header>
 
-        {isLoading ? (
-          <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
-            <p>Loading curriculum...</p>
-          </div>
-        ) : (
-          <CourseCardGrid items={items} />
-        )}
+        <CourseCardGrid items={items} />
       </main>
     </div>
   );
