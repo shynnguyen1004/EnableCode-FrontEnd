@@ -3,25 +3,20 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Play, Lightbulb, ChevronRight, GripVertical, Settings, RefreshCw, Loader2 } from 'lucide-react';
 
 import { useI18n } from '../i18n/I18nProvider';
-import { oid } from '../lib/curriculum';
 import { isTopicLocked, isLessonLocked, markLessonCompleted } from '../lib/progress';
 import { lessonApi } from '../api/lessonApi';
 import { extractTopics, extractLessons, extractSingleLesson } from '../utils/lessonMapper';
-import { FrontendTopic, FrontendLesson } from '../types';
 
-type LegacyTopic = Parameters<ReturnType<typeof useI18n>['localizeTopic']>[0] & Parameters<typeof isTopicLocked>[0];
-type LegacyLesson = Parameters<ReturnType<typeof useI18n>['localizeLesson']>[0] & Parameters<typeof isLessonLocked>[0];
-
-type CompatibleTopic = FrontendTopic & LegacyTopic;
-type CompatibleLesson = FrontendLesson & LegacyLesson;
+import type { Topic, Lesson } from '../lib/types';
 
 export default function WorkspacePage() {
   const { lessonId } = useParams<{ lessonId: string }>();
   const { t, localizeLesson, localizeTopic } = useI18n();
 
-  const [lesson, setLesson] = useState<CompatibleLesson | null>(null);
-  const [topic, setTopic] = useState<CompatibleTopic | null>(null);
-  const [lessonsInTopic, setLessonsInTopic] = useState<CompatibleLesson[]>([]);
+  // Dùng thẳng type Lesson và Topic
+  const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [topic, setTopic] = useState<Topic | null>(null);
+  const [lessonsInTopic, setLessonsInTopic] = useState<Lesson[]>([]);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isNotFound, setIsNotFound] = useState<boolean>(false);
@@ -32,7 +27,6 @@ export default function WorkspacePage() {
 
     const fetchData = async () => {
       try {
-        // 1. Lấy bài học hiện tại bằng Mapper
         const lessonRes = await lessonApi.getLessonDetails(lessonId);
         const fetchedLesson = extractSingleLesson(lessonRes);
 
@@ -40,30 +34,26 @@ export default function WorkspacePage() {
           setIsNotFound(true);
           return;
         }
+        const actualTopicId = fetchedLesson.topic_id;
 
-        const actualTopicId = oid(fetchedLesson.topic_id);
-
-        // 2. Lấy Topics và Lessons cùng lúc
         const [topicsRes, topicLessonsRes] = await Promise.all([
           lessonApi.getTopics(),
           lessonApi.getLessonsByTopic(actualTopicId),
         ]);
 
-        // 3. Format dữ liệu siêu sạch
         const rawTopics = extractTopics(topicsRes);
         const rawLessons = extractLessons(topicLessonsRes, actualTopicId);
 
-        const matchedTopic = rawTopics.find(t => oid(t._id) === actualTopicId);
+        const matchedTopic = rawTopics.find(t => t._id === actualTopicId);
 
         if (!matchedTopic) {
           setIsNotFound(true);
           return;
         }
 
-        // Ép chuẩn type
-        setLesson(fetchedLesson as unknown as CompatibleLesson);
-        setTopic(matchedTopic as unknown as CompatibleTopic);
-        setLessonsInTopic(rawLessons as unknown as CompatibleLesson[]);
+        setLesson(fetchedLesson);
+        setTopic(matchedTopic);
+        setLessonsInTopic(rawLessons);
       } catch (error) {
         console.error('Failed to fetch workspace data:', error);
         setIsNotFound(true);
@@ -113,12 +103,12 @@ export default function WorkspacePage() {
     );
   }
 
-  // Type-safe 100% không cần dùng 'any'
+  // Xóa hàm oid khi truyền ID vào URL
   if (isTopicLocked(topic) || isLessonLocked(lesson, lessonsInTopic)) {
-    return <Navigate to={`/lessons/${oid(topic._id)}`} replace />;
+    return <Navigate to={`/lessons/${topic._id}`} replace />;
   }
 
-  const topicPath = `/lessons/${oid(topic._id)}`;
+  const topicPath = `/lessons/${topic._id}`;
   const localizedLesson = localizeLesson(lesson) || lesson;
   const localizedTopic = localizeTopic(topic) || topic;
 

@@ -1,5 +1,5 @@
 // src/lib/progress.ts
-import { getLessonsByTopicId, lessons, oid } from './curriculum';
+import { getLessonsByTopicId, lessons } from './curriculum';
 import type { Lesson, Topic } from './types';
 
 const COMPLETED_LESSONS_KEY = 'enablecode.completedLessons';
@@ -36,7 +36,7 @@ export function markLessonCompleted(lessonId: string) {
 }
 
 export function getTopicLessonIds(topicId: string): string[] {
-  return getLessonsByTopicId(topicId).map(lesson => oid(lesson._id));
+  return getLessonsByTopicId(topicId).map(lesson => lesson._id);
 }
 
 export function isTopicCompleted(topicId: string): boolean {
@@ -53,11 +53,9 @@ export function getTopicProgressPercent(topicId: string): number {
 }
 
 export function areTopicPrerequisitesMet(topic: Topic): boolean {
-  // Extract prerequisites from either modern array or legacy array properties safely
-  const prerequisites = topic.relevantTopicIds || topic.relevant_topic_ids || [];
-  if (prerequisites.length === 0) return true;
-
-  return prerequisites.every(prerequisite => isTopicCompleted(oid(prerequisite)));
+  const prerequisites = topic.relevant_topic_ids;
+  if (!prerequisites || prerequisites.length === 0) return true;
+  return prerequisites.every(prerequisite => isTopicCompleted(prerequisite));
 }
 
 export function isTopicLocked(topic: Topic): boolean {
@@ -65,14 +63,14 @@ export function isTopicLocked(topic: Topic): boolean {
 }
 
 export function isLessonLocked(lesson: Lesson, lessonsInTopic: Lesson[]): boolean {
-  const currentId = oid(lesson._id);
-  const index = lessonsInTopic.findIndex(item => oid(item._id) === currentId);
+  const currentId = lesson._id;
+  const index = lessonsInTopic.findIndex(item => item._id === currentId);
   if (index <= 0) return false;
 
   const previous = lessonsInTopic[index - 1];
-  return !isLessonCompleted(oid(previous._id));
+  return !isLessonCompleted(previous._id);
 }
 
 export function getAllLessonIds(): string[] {
-  return lessons.map(lesson => oid(lesson._id));
+  return lessons.map(lesson => lesson._id);
 }
