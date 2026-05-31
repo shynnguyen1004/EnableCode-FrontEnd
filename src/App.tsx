@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import TopicPage from './pages/TopicPage';
 import WorkspacePage from './pages/WorkspacePage';
+import Mouse from './components/Mouse';
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
+      <Mouse />
     </>
   );
 }
