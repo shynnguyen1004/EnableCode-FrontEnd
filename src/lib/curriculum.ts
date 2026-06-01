@@ -1,9 +1,13 @@
-// src/lib/curriculum.ts
 import design from '../mocks/topics_lessons_design.json';
-import type { Topic, Lesson, Difficulty, LocalizedCurriculumText } from './types';
+import type { Topic, Lesson, Difficulty } from './types';
 import curriculumEn from '../i18n/curriculum.en.json';
 import type { Locale } from '../i18n/locale';
 import { translate } from '../i18n/messages';
+
+export interface LocalizedCurriculumText {
+  title: string;
+  description: string | null;
+}
 
 type CurriculumDesign = {
   topics: Topic[];
@@ -12,15 +16,15 @@ type CurriculumDesign = {
 
 const curriculum = design as unknown as CurriculumDesign;
 
-export const topics = curriculum.topics.filter(topic => topic.is_active);
-export const lessons = curriculum.lessons.filter(lesson => lesson.is_active);
+export const topics = curriculum.topics.filter(topic => topic.isActive);
+export const lessons = curriculum.lessons.filter(lesson => lesson.isActive);
 
 export function getTopicById(topicId: string): Topic | undefined {
   return topics.find(topic => topic._id === topicId);
 }
 
 export function getLessonsByTopicId(topicId: string): Lesson[] {
-  return lessons.filter(lesson => lesson.topic_id === topicId).sort((a, b) => a.order - b.order);
+  return lessons.filter(lesson => lesson.topicId === topicId).sort((a, b) => a.order - b.order);
 }
 
 export function getLessonById(lessonId: string): Lesson | undefined {
@@ -51,14 +55,7 @@ export function getLocalizedLesson(lesson: Lesson, locale: Locale): LocalizedCur
 }
 
 export function localizedDifficultyLabel(difficulty: Difficulty, locale: Locale): string {
-  let key = 'easy';
-
-  if (['SSS', 'SS', 'S', 'A'].includes(difficulty)) {
-    key = 'hard';
-  } else if (['B', 'C'].includes(difficulty)) {
-    key = 'medium';
-  }
-
+  const key = difficulty === 'beginner' ? 'easy' : difficulty;
   return translate(locale, `course.difficulty.${key}`);
 }
 

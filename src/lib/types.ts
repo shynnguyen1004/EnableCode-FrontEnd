@@ -148,3 +148,130 @@ export interface AuthResponse {
 export interface MessageResponse {
   message: string;
 }
+
+// ========================================
+// API REQUESTS (PAYLOADS)
+// ========================================
+
+export interface RegisterRequest {
+  email: string;
+  password?: string;
+  name: string;
+  role?: 'student' | 'teacher' | 'admin';
+  avatar?: string | null;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}
+
+export interface SubmitLessonRequest {
+  workspaceState: Record<string, unknown>;
+  pythonCode: string;
+  time: number;
+}
+
+export interface SaveProgressRequest {
+  workspaceState: Record<string, unknown>;
+  time: number;
+}
+
+export interface UpdateCalibrationRequest {
+  bounds?: CalibrationBounds;
+  preferences?: CalibrationPreferences;
+}
+
+export interface UpdateProfileRequest {
+  name?: string;
+  avatar?: string | null;
+}
+
+export interface LoginRequest {
+  email: string;
+  password?: string;
+}
+
+// Dành cho form tạo bài học của Teacher/Admin
+export interface CreateLessonRequest {
+  topicId: ObjectId;
+  title: string;
+  description?: string;
+  order?: number;
+  difficulty?: Difficulty;
+  problemStatement?: string;
+  toolboxConfig?: Record<string, unknown>;
+  initialBlocks?: Record<string, unknown>;
+  solution?: Record<string, unknown>;
+  hint?: Hint[];
+  publicTestcases?: Testcase[];
+  hiddenTestcases?: Testcase[];
+  baseXp?: number;
+  duration?: number;
+  isActive?: boolean;
+}
+
+export type UpdateLessonRequest = Partial<CreateLessonRequest>;
+
+// ========================================
+// EXTENDED API RESPONSES
+// ========================================
+
+export interface SubmitLessonResponse {
+  progress: UserProgress;
+  passed: boolean;
+  points: number;
+  output: string;
+  testcaseResults: Record<string, unknown>[];
+}
+
+export interface HintResponse {
+  hint: Hint;
+  index: number;
+}
+
+export interface PaginatedLessonsResponse {
+  lessons: Lesson[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export interface PaginatedLeaderboardResponse {
+  data: LeaderboardEntry[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface ForgotPasswordResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+}
+
+// Chuẩn hóa cấu trúc lỗi để dùng trong axiosClient.ts hoặc try/catch
+export interface ErrorDetail {
+  field: string;
+  issue: string;
+}
+
+export interface ErrorResponse {
+  success: boolean; // Thường là false
+  error: {
+    code: string;
+    message: string;
+    details?: ErrorDetail[];
+  };
+}

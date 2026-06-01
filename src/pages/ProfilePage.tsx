@@ -9,14 +9,12 @@ export default function ProfilePage() {
   const [sensitivity, setSensitivity] = useState(75);
   const [dwellTime, setDwellTime] = useState(40);
 
-  // --- THÊM LOGIC ĐỌC DỮ LIỆU THẬT Ở ĐÂY ---
   const [currentUser] = useState(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
 
-        // Chuyển đổi ngày tháng cho đẹp
         const date = new Date(parsedUser.createdAt || new Date());
         const formattedDate = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
@@ -61,7 +59,6 @@ export default function ProfilePage() {
               <img src="/images/profilePicture.jpeg" alt={t('settings.avatarAlt')} className="profile-avatar-img" />
             </div>
             <div className="profile-details">
-              {/* Thay ALEX CODER bằng tên thật lấy từ API */}
               <h2>{currentUser.name.toUpperCase()}</h2>
               <p>
                 {t('settings.memberSince')} {currentUser.memberSince}
@@ -74,7 +71,6 @@ export default function ProfilePage() {
               <div className="profile-stat-icon">
                 <CheckCircle size={32} strokeWidth={3} className="icon-green" />
               </div>
-              {/* Thay số 42 bằng số bài học đã hoàn thành */}
               <strong>{currentUser.lessonsCompleted}</strong>
               <span>{t('settings.exercises')}</span>
             </article>
@@ -82,7 +78,6 @@ export default function ProfilePage() {
               <div className="profile-stat-icon">
                 <Award size={32} strokeWidth={3} className="icon-orange" />
               </div>
-              {/* Thay số 7 bằng số badge */}
               <strong>{currentUser.badges}</strong>
               <span>{t('settings.badges')}</span>
             </article>
@@ -90,7 +85,6 @@ export default function ProfilePage() {
               <div className="profile-stat-icon">
                 <Target size={32} strokeWidth={3} className="icon-light-green" />
               </div>
-              {/* Thay bằng chuỗi (streak) thật */}
               <strong>{currentUser.streak}</strong>
               <span>{t('settings.streak')}</span>
             </article>

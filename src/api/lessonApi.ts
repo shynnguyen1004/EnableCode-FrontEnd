@@ -1,37 +1,33 @@
 import axiosClient from './axiosClient';
+import type { Topic, Lesson, UserProgress, SubmitLessonResponse } from '../lib/types';
 
 export const lessonApi = {
-  // Retrieves all chapters/topics available in the Python curriculum
-  getTopics: () => {
+  getTopics: (): Promise<Topic[]> => {
     return axiosClient.get('/topics');
   },
 
-  // Fetches all individual lessons belonging to a specific topic ID
-  getLessonsByTopic: (topicId: string) => {
+  getLessonsByTopic: (topicId: string): Promise<Lesson[]> => {
     return axiosClient.get(`/topics/${topicId}/lessons`);
   },
 
-  // Loads complete workspace configurations and public test cases for a single lesson
-  getLessonDetails: (lessonId: string) => {
+  getLessonDetails: (lessonId: string): Promise<Lesson> => {
     return axiosClient.get(`/lessons/${lessonId}`);
   },
 
-  // Autosaves the student's current Blockly block layout as a draft without triggering grading
-  saveDraftProgress: (lessonId: string, workspaceState: Record<string, unknown>) => {
-    return axiosClient.post(`/lessons/${lessonId}/save-progress`, { workspace_state: workspaceState });
+  saveDraftProgress: (lessonId: string, workspaceState: Record<string, unknown>): Promise<UserProgress> => {
+    return axiosClient.post(`/lessons/${lessonId}/save-progress`, { workspaceState });
   },
 
-  // Compiles and submits Python source code to be executed via Piston and graded against hidden test cases
   submitWorkspace: (
     lessonId: string,
     pythonCode: string,
     workspaceState: Record<string, unknown>,
     timeTaken: number,
-  ) => {
+  ): Promise<SubmitLessonResponse> => {
     return axiosClient.post(`/lessons/${lessonId}/submit`, {
-      python_code: pythonCode,
-      workspace_state: workspaceState,
-      time_taken: timeTaken,
+      pythonCode,
+      workspaceState,
+      time: timeTaken,
     });
   },
 };

@@ -1,12 +1,11 @@
 import { Link } from 'react-router-dom';
 import { Eye, MousePointerSquareDashed, BookOpenCheck, ArrowRight } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
-// 1. Import AuthContext
 import { useAuth } from '../context/AuthContext';
 
 export default function HomePage() {
   const { t } = useI18n();
-  // 2. Lấy trạng thái đăng nhập và hàm đăng xuất
+
   const { isLoggedIn, logout } = useAuth();
 
   const features = [
@@ -37,7 +36,6 @@ export default function HomePage() {
           <img src="/logo/TL_App_Logo.png" alt={t('brand.logoLightAlt')} className="brand-logo" />
         </Link>
 
-        {/* 3. Logic ẩn/hiện nút dựa vào trạng thái isLoggedIn */}
         <nav className="menu">
           <a href="#features" className="btn btn-ghost">
             {t('nav.features')}
@@ -47,7 +45,6 @@ export default function HomePage() {
           </a>
 
           {isLoggedIn ? (
-            // NẾU ĐÃ ĐĂNG NHẬP
             <>
               <Link to="/settings" className="btn btn-ghost">
                 Profile
@@ -57,7 +54,6 @@ export default function HomePage() {
               </button>
             </>
           ) : (
-            // NẾU CHƯA ĐĂNG NHẬP
             <Link to="/login" className="btn btn-primary">
               {t('nav.logIn')}
             </Link>
@@ -71,7 +67,6 @@ export default function HomePage() {
         </h1>
         <p>{t('home.heroSubtitle')}</p>
 
-        {/* Nút CTA lớn ở giữa màn hình cũng có thể dẫn thẳng vào Workspace nếu muốn */}
         <Link to="/lessons" className="btn btn-primary hero-cta group">
           {t('home.getStarted')}
           <ArrowRight size={32} className="hero-arrow" strokeWidth={3} style={{ marginLeft: '12px' }} />

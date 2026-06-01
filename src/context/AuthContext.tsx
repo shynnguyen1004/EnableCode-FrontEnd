@@ -1,42 +1,55 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
+import type { User } from '../lib/types';
 
-// Định nghĩa kiểu dữ liệu cho Context
 interface AuthContextType {
   isLoggedIn: boolean;
   token: string | null;
-  login: (token: string) => void;
+  user: User | null;
+  login: (token: string, userData: User) => void;
   logout: () => void;
 }
 
-// Khởi tạo Context ban đầu với giá trị undefined
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Component Provider để bọc toàn bộ ứng dụng
 export function AuthProvider({ children }: AuthProviderProps) {
-  // Đọc token từ localStorage ngay khi khởi tạo ứng dụng
   const [token, setToken] = useState<string | null>(() => {
     return localStorage.getItem('accessToken');
   });
 
-  // Hàm xử lý khi đăng nhập thành công
-  const login = (newToken: string) => {
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const storedUser = localStorage.getItem('user');
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const login = (newToken: string, userData: User) => {
     setToken(newToken);
+    setUser(userData);
+
     localStorage.setItem('accessToken', newToken);
+    localStorage.setItem('user', JSON.stringify(userData));
   };
 
-  // Hàm xử lý khi đăng xuất
   const logout = () => {
     setToken(null);
+    setUser(null);
+
     localStorage.removeItem('accessToken');
-    localStorage.removeItem('user'); // Xóa luôn thông tin user lưu kèm lúc login
-    window.location.href = '/'; // Chuyển hướng về trang chủ một cách sạch sẽ
+    localStorage.removeItem('user');
+
+    window.location.href = '/';
   };
 
-  return <AuthContext.Provider value={{ isLoggedIn: !!token, token, login, logout }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ isLoggedIn: !!token, token, user, login, logout }}>{children}</AuthContext.Provider>
+  );
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

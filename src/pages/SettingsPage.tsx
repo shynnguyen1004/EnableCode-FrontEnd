@@ -86,15 +86,11 @@ export default function ProfilePage() {
   const [sensitivity, setSensitivity] = useState(75);
   const [dwellTime, setDwellTime] = useState(40);
   const [visualFeedback, setVisualFeedback] = useState(true);
-
-  // Khởi tạo state bằng cách đọc trực tiếp từ localStorage (nơi ta đã lưu lúc Login)
   const [currentUser] = useState(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
-
-        // Đổi chuỗi thời gian của Backend thành định dạng dễ đọc (VD: May 2026)
         const date = new Date(parsedUser.createdAt || new Date());
         const formattedDate = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
@@ -103,7 +99,7 @@ export default function ProfilePage() {
           level: parsedUser.level || 1,
           streak: parsedUser.streak || 0,
           lessonsCompleted: parsedUser.lessonsCompleted || 0,
-          badges: 7, // Bạn có thể map số này sau nếu Backend hỗ trợ
+          badges: parsedUser.badges || 0, // Tạm hardcode badge vì chưa có API
           memberSince: formattedDate,
         };
       } catch (error) {
@@ -111,7 +107,6 @@ export default function ProfilePage() {
       }
     }
 
-    // Fallback mặc định nếu chưa đăng nhập hoặc lỗi
     return {
       name: 'Guest User',
       level: 1,
@@ -122,7 +117,6 @@ export default function ProfilePage() {
     };
   });
 
-  // Helper để lấy 2 chữ cái đầu làm Avatar (VD: Hung Khoi -> HK)
   const getInitials = (name: string) => {
     const nameParts = name.split(' ');
     if (nameParts.length >= 2) {

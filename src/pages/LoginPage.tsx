@@ -1,3 +1,4 @@
+import type { User } from '../lib/types';
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, LogIn, Eye } from 'lucide-react';
@@ -9,8 +10,6 @@ export default function LoginPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { login } = useAuth();
-
-  // State definitions for form inputs and UI feedback
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -20,27 +19,16 @@ export default function LoginPage() {
     event.preventDefault();
     setErrorMsg('');
     setIsLoading(true);
-
     try {
-      // 1. Gọi API (Dòng này lúc nãy bạn lỡ tay xóa mất)
       const response = await authApi.login(email, password);
-
-      // 2. Định nghĩa kiểu dữ liệu cho response trả về từ Axios Client
       const payload = response as unknown as {
         accessToken: string;
-        user: Record<string, unknown>;
+        user: User;
       };
-
-      // 3. Lấy dữ liệu
       const { accessToken, user } = payload;
-
-      // 4. Lưu vào Context và LocalStorage
-      if (accessToken) {
-        login(accessToken);
-        localStorage.setItem('user', JSON.stringify(user));
+      if (accessToken && user) {
+        login(accessToken, user);
       }
-
-      // 5. Chuyển hướng
       navigate('/lessons');
     } catch (error) {
       const err = error as { response?: { data?: { message?: string } } };

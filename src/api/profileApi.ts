@@ -1,24 +1,13 @@
 import axiosClient from './axiosClient';
-import { Calibration, CalibrationBounds, CalibrationPreferences } from '../types';
+import type { User, UserStats, Calibration, UpdateCalibrationRequest } from '../lib/types';
 
 export const profileApi = {
-  // Fetches the live gamified statistics for the current user
-  getMe: () => {
-    return axiosClient.get<{ _id: string; name: string; email: string; created_at: string }>('/users/me');
-  },
-  getUserStats: () => {
-    return axiosClient.get<{ total_score: number; streak: number; lessons_completed: number; level: number }>(
-      '/users/stats',
-    );
-  },
+  getProfile: (): Promise<User> => axiosClient.get('/users/profile') as Promise<User>,
 
-  // Retrieves personalized face mesh boundaries and gesture preferences from the calibrations schema
-  getCalibration: () => {
-    return axiosClient.get<Calibration>('/users/calibration');
-  },
+  getUserStats: (): Promise<UserStats> => axiosClient.get('/users/stats') as Promise<UserStats>,
 
-  // Updates the AI gesture tracking settings (e.g., bounds, gestures mapping) in the database
-  updateCalibration: (data: { bounds: CalibrationBounds; preferences: CalibrationPreferences }) => {
-    return axiosClient.put<Calibration>('/users/calibration', data);
-  },
+  getCalibration: (): Promise<Calibration> => axiosClient.get('/users/calibration') as Promise<Calibration>,
+
+  updateCalibration: (data: UpdateCalibrationRequest): Promise<Calibration> =>
+    axiosClient.put('/users/calibration', data) as Promise<Calibration>,
 };

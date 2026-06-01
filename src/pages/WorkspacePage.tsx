@@ -48,7 +48,6 @@ export default function WorkspacePage() {
         ]);
 
         const rawTopics = extractTopics(topicsRes);
-        // Cải tiến 2: Bỏ tham số thừa khi gọi extractLessons
         const rawLessons = extractLessons(topicLessonsRes);
 
         const matchedTopic = rawTopics.find(t => t._id === actualTopicId);
@@ -110,7 +109,6 @@ export default function WorkspacePage() {
     );
   }
 
-  // Khóa bảo vệ bài học
   if (isTopicLocked(topic) || isLessonLocked(lesson, lessonsInTopic)) {
     return <Navigate to={`/lessons/${topic._id}`} replace />;
   }
@@ -148,7 +146,6 @@ export default function WorkspacePage() {
         <aside className="workspace-panel">
           <div className="objective-chip">{t('workspace.objective')}</div>
           <h1>{localizedLesson.title}</h1>
-          {/* Cải tiến 4: Bọc dự phòng string rỗng để vượt ải Type */}
           <p>{localizedLesson.description || ''}</p>
 
           <div className="workspace-panel-actions">
