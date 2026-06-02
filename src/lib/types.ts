@@ -275,3 +275,11 @@ export interface ErrorResponse {
     details?: ErrorDetail[];
   };
 }
+
+// ========================================
+// I18N TYPES
+// ========================================
+export interface LocalizedCurriculumText {
+  title: string;
+  description: string | null;
+}
