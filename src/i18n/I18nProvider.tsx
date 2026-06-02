@@ -1,28 +1,10 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
-import {
-  DEFAULT_LOCALE,
-  LOCALE_STORAGE_KEY,
-  readStoredLocale,
-  type Locale,
-} from "./locale";
-import { translate, type TranslationKey } from "./messages";
-import {
-  getLocalizedLesson,
-  getLocalizedTopic,
-  localizedDifficultyLabel,
-  type Difficulty,
-  type Lesson,
-  type LocalizedCurriculumText,
-  type Topic,
-} from "../lib/curriculum";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { DEFAULT_LOCALE, LOCALE_STORAGE_KEY, readStoredLocale, type Locale } from './locale';
+import { translate, type TranslationKey } from './messages';
+
+import { getLocalizedLesson, getLocalizedTopic, localizedDifficultyLabel } from '../lib/curriculum';
+
+import type { Difficulty, Lesson, LocalizedCurriculumText, Topic } from '../lib/types';
 
 type I18nContextValue = {
   locale: Locale;
@@ -55,21 +37,21 @@ export function I18nProvider({ children }: I18nProviderProps) {
     () => ({
       locale,
       setLocale,
-      t: (key) => translate(locale, key),
-      localizeTopic: (topic) => getLocalizedTopic(topic, locale),
-      localizeLesson: (lesson) => getLocalizedLesson(lesson, locale),
-      difficultyLabel: (difficulty) => localizedDifficultyLabel(difficulty, locale),
+      t: key => translate(locale, key),
+      localizeTopic: topic => getLocalizedTopic(topic, locale),
+      localizeLesson: lesson => getLocalizedLesson(lesson, locale),
+      difficultyLabel: difficulty => localizedDifficultyLabel(difficulty, locale),
     }),
     [locale, setLocale],
   );
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
-
+/* eslint-disable react-refresh/only-export-components */
 export function useI18n(): I18nContextValue {
   const context = useContext(I18nContext);
   if (!context) {
-    throw new Error("useI18n must be used within I18nProvider");
+    throw new Error('useI18n must be used within I18nProvider');
   }
   return context;
 }

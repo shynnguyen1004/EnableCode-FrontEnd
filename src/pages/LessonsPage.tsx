@@ -1,39 +1,92 @@
+import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import CourseCardGrid, { type CourseCardItem } from '../components/CourseCardGrid';
 import CourseSidebar from '../components/CourseSidebar';
 import { useI18n } from '../i18n/I18nProvider';
 
-import { getTopicById, getLessonsByTopicId, oid, cardTone } from '../lib/curriculum';
+import type { Topic, Lesson } from '../lib/types';
+import { cardTone } from '../lib/curriculum';
 import { isTopicLocked, isLessonLocked, isLessonCompleted } from '../lib/progress';
+import { lessonApi } from '../api/lessonApi';
+import { extractTopics, extractLessons } from '../utils/lessonMapper';
 
 export default function LessonsPage() {
   const { topicId } = useParams<{ topicId: string }>();
   const { t, localizeTopic, localizeLesson, difficultyLabel } = useI18n();
-  const topic = topicId ? getTopicById(topicId) : undefined;
 
-  if (!topicId || !topic) {
+  const [topic, setTopic] = useState<Topic | null>(null);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isNotFound, setIsNotFound] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!topicId) return;
+
+    const fetchData = async () => {
+      try {
+        const [topicsRes, lessonsRes] = await Promise.all([
+          lessonApi.getTopics(),
+          lessonApi.getLessonsByTopic(topicId),
+        ]);
+
+        const formattedTopics = extractTopics(topicsRes);
+
+        const formattedLessons = extractLessons(lessonsRes);
+
+        const currentTopic = formattedTopics.find(t => t._id === topicId);
+
+        if (!currentTopic) {
+          setIsNotFound(true);
+        } else {
+          setTopic(currentTopic);
+          setLessons(formattedLessons.filter(lesson => lesson.isActive));
+        }
+      } catch (error) {
+        console.error('Failed to fetch lesson data:', error);
+        setIsNotFound(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [topicId]);
+
+  if (!topicId || isNotFound) {
     return <Navigate to="/lessons" replace />;
   }
 
-  if (isTopicLocked(topic)) {
+  if (topic && isTopicLocked(topic)) {
     return <Navigate to="/lessons" replace />;
   }
 
-  const lessonsInTopic = getLessonsByTopicId(topicId);
-  const localizedTopic = localizeTopic(topic);
+  if (isLoading || !topic) {
+    return (
+      <div className="lessons-page">
+        <CourseSidebar active="lessons" />
+        <main className="lessons-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Loader2 size={40} className="animate-spin text-orange-500 mr-3" />
+          <p style={{ color: '#666', fontSize: '1.2rem', fontWeight: 500 }}>Loading lessons...</p>
+        </main>
+      </div>
+    );
+  }
 
-  const items: CourseCardItem[] = lessonsInTopic.map((lesson, index) => {
-    const localized = localizeLesson(lesson);
+  const localizedTopic = localizeTopic(topic) || topic;
+
+  const items: CourseCardItem[] = lessons.map((lesson, index) => {
+    const localized = localizeLesson(lesson) || lesson;
+
     return {
-      id: oid(lesson._id),
+      id: lesson._id,
       title: `${lesson.order}. ${localized.title}`,
-      description: localized.description,
-      progress: isLessonCompleted(oid(lesson._id)) ? 100 : 0,
+      description: localized.description || '',
+      progress: isLessonCompleted(lesson._id) ? 100 : 0,
       difficulty: difficultyLabel(lesson.difficulty),
-      locked: isLessonLocked(lesson, lessonsInTopic),
+      locked: isLessonLocked(lesson, lessons),
       tone: cardTone(index),
-      href: `/workspace/${oid(lesson._id)}`,
+      href: `/workspace/${lesson._id}`,
     };
   });
 
@@ -48,7 +101,7 @@ export default function LessonsPage() {
             {t('nav.allTopics')}
           </Link>
           <h1>{localizedTopic.title}</h1>
-          <p>{localizedTopic.description}</p>
+          <p>{localizedTopic.description || ''}</p>
         </header>
 
         <CourseCardGrid items={items} />

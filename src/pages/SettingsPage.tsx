@@ -1,8 +1,7 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 /* ─── Inline SVG Icons ─── */
-
 const CheckCircleIcon = () => (
   <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
     <circle cx="14" cy="14" r="12" stroke="#3b5a28" strokeWidth="2.5" fill="none" />
@@ -13,7 +12,13 @@ const CheckCircleIcon = () => (
 const BadgeIcon = () => (
   <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
     <circle cx="14" cy="11" r="7" stroke="#ff7700" strokeWidth="2.5" fill="none" />
-    <path d="M10 17L8 25L14 22L20 25L18 17" stroke="#ff7700" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    <path
+      d="M10 17L8 25L14 22L20 25L18 17"
+      stroke="#ff7700"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   </svg>
 );
 
@@ -27,7 +32,14 @@ const StreakIcon = () => (
 
 const EyeSettingsIcon = () => (
   <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-    <path d="M16 7C9 7 3 16 3 16C3 16 9 25 16 25C23 25 29 16 29 16C29 16 23 7 16 7Z" stroke="#272727" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    <path
+      d="M16 7C9 7 3 16 3 16C3 16 9 25 16 25C23 25 29 16 29 16C29 16 23 7 16 7Z"
+      stroke="#272727"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+    />
     <circle cx="16" cy="16" r="5" stroke="#272727" strokeWidth="2.5" fill="none" />
     <circle cx="16" cy="16" r="2" fill="#272727" />
   </svg>
@@ -54,7 +66,13 @@ const SlidersIcon = () => (
 
 const CursorClickIcon = () => (
   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <path d="M5 3L5 14L8.5 10.5L12 16L14 15L10.5 9L15 8Z" fill="#fff" stroke="#fff" strokeWidth="1" strokeLinejoin="round" />
+    <path
+      d="M5 3L5 14L8.5 10.5L12 16L14 15L10.5 9L15 8Z"
+      fill="#fff"
+      stroke="#fff"
+      strokeWidth="1"
+      strokeLinejoin="round"
+    />
   </svg>
 );
 
@@ -64,10 +82,48 @@ const ToggleCheckIcon = () => (
   </svg>
 );
 
-export default function SettingsPage() {
+export default function ProfilePage() {
   const [sensitivity, setSensitivity] = useState(75);
   const [dwellTime, setDwellTime] = useState(40);
   const [visualFeedback, setVisualFeedback] = useState(true);
+  const [currentUser] = useState(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        const date = new Date(parsedUser.createdAt || new Date());
+        const formattedDate = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+        return {
+          name: parsedUser.name || 'Guest',
+          level: parsedUser.level || 1,
+          streak: parsedUser.streak || 0,
+          lessonsCompleted: parsedUser.lessonsCompleted || 0,
+          badges: parsedUser.badges || 0, // Tạm hardcode badge vì chưa có API
+          memberSince: formattedDate,
+        };
+      } catch (error) {
+        console.error('Lỗi khi đọc thông tin User:', error);
+      }
+    }
+
+    return {
+      name: 'Guest User',
+      level: 1,
+      streak: 0,
+      lessonsCompleted: 0,
+      badges: 0,
+      memberSince: '...',
+    };
+  });
+
+  const getInitials = (name: string) => {
+    const nameParts = name.split(' ');
+    if (nameParts.length >= 2) {
+      return (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
 
   return (
     <div className="settings-page">
@@ -82,27 +138,35 @@ export default function SettingsPage() {
       <div className="settings-main">
         <aside className="settings-profile">
           <div className="profile-head">
-            <div className="avatar-placeholder">AC</div>
+            <div className="avatar-placeholder">{getInitials(currentUser.name)}</div>
             <div>
-              <h2>ALEX CODER</h2>
-              <p>Member since May 2026 • Level 4 Explorer</p>
+              <h2>{currentUser.name.toUpperCase()}</h2>
+              <p>
+                Member since {currentUser.memberSince} • Level {currentUser.level} Explorer
+              </p>
             </div>
           </div>
 
           <div className="stats-grid">
             <article>
-              <div className="stat-icon"><CheckCircleIcon /></div>
-              <strong>42</strong>
+              <div className="stat-icon">
+                <CheckCircleIcon />
+              </div>
+              <strong>{currentUser.lessonsCompleted}</strong>
               <span>EXERCISES</span>
             </article>
             <article>
-              <div className="stat-icon"><BadgeIcon /></div>
-              <strong>7</strong>
+              <div className="stat-icon">
+                <BadgeIcon />
+              </div>
+              <strong>{currentUser.badges}</strong>
               <span>BADGES</span>
             </article>
             <article className="wide">
-              <div className="stat-icon"><StreakIcon /></div>
-              <strong>15 Days</strong>
+              <div className="stat-icon">
+                <StreakIcon />
+              </div>
+              <strong>{currentUser.streak} Days</strong>
               <span>CURRENT LEARNING STREAK</span>
             </article>
           </div>
@@ -110,7 +174,9 @@ export default function SettingsPage() {
 
         <main className="settings-controls">
           <h3>
-            <span className="settings-heading-icon"><EyeSettingsIcon /></span>
+            <span className="settings-heading-icon">
+              <EyeSettingsIcon />
+            </span>
             Eye-Tracking Settings
           </h3>
 
@@ -135,13 +201,10 @@ export default function SettingsPage() {
                 min={1}
                 max={100}
                 value={sensitivity}
-                onChange={(event) => setSensitivity(Number(event.target.value))}
-                style={{ "--range-progress": `${sensitivity}%` } as React.CSSProperties}
+                onChange={event => setSensitivity(Number(event.target.value))}
+                style={{ '--range-progress': `${sensitivity}%` } as React.CSSProperties}
               />
-              <div
-                className="range-thumb-icon"
-                style={{ left: `calc(${sensitivity}% - 18px)` }}
-              >
+              <div className="range-thumb-icon" style={{ left: `calc(${sensitivity}% - 18px)` }}>
                 <SlidersIcon />
               </div>
             </div>
@@ -159,31 +222,22 @@ export default function SettingsPage() {
                 min={1}
                 max={100}
                 value={dwellTime}
-                onChange={(event) => setDwellTime(Number(event.target.value))}
-                style={{ "--range-progress": `${dwellTime}%` } as React.CSSProperties}
+                onChange={event => setDwellTime(Number(event.target.value))}
+                style={{ '--range-progress': `${dwellTime}%` } as React.CSSProperties}
               />
-              <div
-                className="range-thumb-icon"
-                style={{ left: `calc(${dwellTime}% - 18px)` }}
-              >
+              <div className="range-thumb-icon" style={{ left: `calc(${dwellTime}% - 18px)` }}>
                 <CursorClickIcon />
               </div>
             </div>
           </section>
 
-          <button
-            type="button"
-            className="toggle-card"
-            onClick={() => setVisualFeedback((value) => !value)}
-          >
+          <button type="button" className="toggle-card" onClick={() => setVisualFeedback(value => !value)}>
             <div>
               <h4>VISUAL CLICK FEEDBACK</h4>
               <p>Show an expanding ring animation while dwelling on buttons.</p>
             </div>
-            <div className={`toggle-switch ${visualFeedback ? "on" : "off"}`}>
-              <div className="toggle-knob">
-                {visualFeedback && <ToggleCheckIcon />}
-              </div>
+            <div className={`toggle-switch ${visualFeedback ? 'on' : 'off'}`}>
+              <div className="toggle-knob">{visualFeedback && <ToggleCheckIcon />}</div>
             </div>
           </button>
         </main>
