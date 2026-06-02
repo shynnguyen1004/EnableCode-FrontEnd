@@ -85,7 +85,7 @@ export default function WorkspacePage() {
       if (isPassed) {
         markLessonCompleted(lessonId);
       } else {
-        alert('There is an issue with your code. Let us check again! 🐛');
+        alert('There is an issue with your code. Let us check again!');
       }
     } catch (error) {
       console.error('Submit error:', error);
