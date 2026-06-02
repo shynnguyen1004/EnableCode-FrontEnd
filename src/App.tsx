@@ -10,6 +10,7 @@ import WorkspacePage from './pages/WorkspacePage';
 export default function App() {
   return (
     <AuthProvider>
+      <>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/settings" element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <Mouse />
     </AuthProvider>
   );
 }
