@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { User } from '../lib/types';
 
 interface AuthContextType {
@@ -16,6 +17,8 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
+  const navigate = useNavigate();
+
   const [token, setToken] = useState<string | null>(() => {
     return localStorage.getItem('accessToken');
   });
@@ -35,17 +38,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     localStorage.setItem('accessToken', newToken);
     localStorage.setItem('user', JSON.stringify(userData));
+    navigate('/');
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setToken(null);
     setUser(null);
 
     localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
 
-    window.location.href = '/';
-  };
+    navigate('/login');
+  }, [navigate]);
+
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      logout();
+    };
+
+    window.addEventListener('auth-expired', handleAuthExpired);
+    return () => {
+      window.removeEventListener('auth-expired', handleAuthExpired);
+    };
+  }, [logout]);
 
   return (
     <AuthContext.Provider value={{ isLoggedIn: !!token, token, user, login, logout }}>{children}</AuthContext.Provider>
