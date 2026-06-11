@@ -23,8 +23,12 @@ export function getTopicById(topicId: string): Topic | undefined {
   return topics.find(topic => topic._id === topicId);
 }
 
+function getLessonTopicId(lesson: Lesson & { topic_id?: string }): string {
+  return lesson.topicId ?? lesson.topic_id ?? '';
+}
+
 export function getLessonsByTopicId(topicId: string): Lesson[] {
-  return lessons.filter(lesson => lesson.topicId === topicId).sort((a, b) => a.order - b.order);
+  return lessons.filter(lesson => getLessonTopicId(lesson) === topicId).sort((a, b) => a.order - b.order);
 }
 
 export function getLessonById(lessonId: string): Lesson | undefined {

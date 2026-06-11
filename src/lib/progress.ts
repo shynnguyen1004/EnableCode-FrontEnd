@@ -1,4 +1,5 @@
 import type { Topic, Lesson } from './types';
+import { isMockDataEnabled } from './mockData';
 
 export function isLessonCompleted(lessonId: string): boolean {
   try {
@@ -22,6 +23,7 @@ export function markLessonCompleted(lessonId: string): void {
 }
 
 export function isLessonLocked(lesson: Lesson, lessonsInTopic: Lesson[]): boolean {
+  if (isMockDataEnabled) return false;
   if (lesson.order <= 1) return false;
   const previousLesson = lessonsInTopic.find(l => l.order === lesson.order - 1);
   if (!previousLesson) return false;
@@ -39,6 +41,7 @@ export function areTopicPrerequisitesMet(topic: Topic): boolean {
 }
 
 export function isTopicLocked(topic: Topic): boolean {
+  if (isMockDataEnabled) return false;
   return !areTopicPrerequisitesMet(topic);
 }
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
