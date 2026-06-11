@@ -2,44 +2,56 @@ import type { BlocklyOptions } from 'blockly';
 
 const CATEGORY_BLOCKS: Record<string, string[]> = {
   event: ['controls_start'],
+  loops: ['controls_repeat_ext'],
+  variables: ['variables_set', 'variables_get'],
+  action: ['move_forward'],
+  logic: ['controls_if'],
+  math: ['math_number', 'math_arithmetic'],
   output: ['text_print'],
   text: ['text', 'text_join'],
-  loops: ['controls_repeat_ext'],
-  logic: ['controls_if'],
-  variables: ['variables_set', 'variables_get'],
-  math: ['math_number', 'math_arithmetic'],
-  action: ['move_forward'],
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
   event: 'Events',
+  loops: 'Loops',
+  variables: 'Variables',
+  action: 'Actions',
+  logic: 'Logic',
+  math: 'Math',
   output: 'Output',
   text: 'Text',
-  loops: 'Loops',
-  logic: 'Logic',
-  variables: 'Variables',
-  math: 'Math',
-  action: 'Actions',
 };
 
-/** All 11 block types across 8 toolbox categories. */
-export const ALL_TOOLBOX_CATEGORIES = [
+/** Toolbox display order — rainbow top to bottom. */
+export const RAINBOW_CATEGORY_ORDER = [
   'event',
+  'loops',
+  'variables',
+  'action',
+  'logic',
+  'math',
   'output',
   'text',
-  'loops',
-  'logic',
-  'variables',
-  'math',
-  'action',
 ] as const;
+
+export const ALL_TOOLBOX_CATEGORIES = [...RAINBOW_CATEGORY_ORDER];
 
 const DEFAULT_CATEGORIES = [...ALL_TOOLBOX_CATEGORIES];
 
+function sortCategories(categories: string[]): string[] {
+  const order = new Map(RAINBOW_CATEGORY_ORDER.map((category, index) => [category, index]));
+
+  return [...categories].sort((left, right) => {
+    const leftIndex = order.get(left as (typeof RAINBOW_CATEGORY_ORDER)[number]) ?? 99;
+    const rightIndex = order.get(right as (typeof RAINBOW_CATEGORY_ORDER)[number]) ?? 99;
+    return leftIndex - rightIndex;
+  });
+}
+
 export function buildToolbox(toolboxConfig: Record<string, unknown> | undefined): BlocklyOptions['toolbox'] {
-  const categories = Array.isArray(toolboxConfig?.categories)
-    ? (toolboxConfig.categories as string[])
-    : DEFAULT_CATEGORIES;
+  const categories = sortCategories(
+    Array.isArray(toolboxConfig?.categories) ? (toolboxConfig.categories as string[]) : DEFAULT_CATEGORIES,
+  );
 
   return {
     kind: 'categoryToolbox',

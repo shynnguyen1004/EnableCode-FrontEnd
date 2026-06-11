@@ -17,10 +17,25 @@ type BlocklyEditorProps = {
   toolboxConfig?: Record<string, unknown>;
   initialBlocks?: Record<string, unknown>;
   lessonKey: string;
+  toolboxTitle?: string;
 };
 
+function ensureToolboxTitle(host: HTMLElement, title: string): void {
+  const toolbox = host.querySelector('.blocklyToolboxDiv');
+  if (!toolbox) return;
+
+  let heading = toolbox.querySelector<HTMLDivElement>('.blockly-toolbox-title');
+  if (!heading) {
+    heading = document.createElement('div');
+    heading.className = 'blockly-toolbox-title';
+    toolbox.prepend(heading);
+  }
+
+  heading.textContent = title;
+}
+
 const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(function BlocklyEditor(
-  { toolboxConfig, initialBlocks, lessonKey },
+  { toolboxConfig, initialBlocks, lessonKey, toolboxTitle = 'Block Library' },
   ref,
 ) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -76,9 +91,11 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
 
     workspaceRef.current = workspace;
     loadLessonIntoWorkspace(workspace, initialBlocksRef.current);
+    ensureToolboxTitle(hostRef.current, toolboxTitle);
 
     const resize = () => {
       Blockly.svgResize(workspace);
+      if (hostRef.current) ensureToolboxTitle(hostRef.current, toolboxTitle);
     };
 
     resize();
@@ -92,7 +109,7 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
       workspace.dispose();
       workspaceRef.current = null;
     };
-  }, [lessonKey, toolboxConfig]);
+  }, [lessonKey, toolboxConfig, toolboxTitle]);
 
   return <div ref={hostRef} className="blockly-editor-host" aria-label="Blockly workspace" />;
 });

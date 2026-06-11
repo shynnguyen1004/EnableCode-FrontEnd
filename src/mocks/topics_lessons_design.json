@@ -82,7 +82,7 @@
       "order": 1,
       "difficulty": "easy",
       "toolbox_config": {
-        "categories": ["event", "output", "text", "loops", "logic", "variables", "math", "action"],
+        "categories": ["event", "loops", "variables", "action", "logic", "math", "output", "text"],
         "sandbox": true
       },
       "initial_blocks": {

@@ -4,8 +4,9 @@ import { ArrowLeft, Play, Lightbulb, ChevronRight, Settings, RefreshCw, Loader2 
 import * as Blockly from 'blockly';
 
 import BlocklyEditor, { type BlocklyEditorHandle } from '../components/BlocklyEditor';
+import WorkspaceOutputPanel from '../components/WorkspaceOutputPanel';
 import { useI18n } from '../i18n/I18nProvider';
-import { evaluateWorkspaceOutput } from '../blockly/evaluateWorkspace';
+import { evaluateWorkspaceRun, type LogLine } from '../blockly/evaluateWorkspace';
 import { isTopicLocked, isLessonLocked, markLessonCompleted } from '../lib/progress';
 import { lessonApi } from '../api/lessonApi';
 import { extractTopics, extractLessons, extractSingleLesson } from '../utils/lessonMapper';
@@ -25,7 +26,9 @@ export default function WorkspacePage() {
   const [isNotFound, setIsNotFound] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hintIndex, setHintIndex] = useState(0);
-  const [runMessage, setRunMessage] = useState<string | null>(null);
+  const [outputLines, setOutputLines] = useState<LogLine[]>([]);
+  const [outputOpen, setOutputOpen] = useState(false);
+  const [hasRun, setHasRun] = useState(false);
   const [runPassed, setRunPassed] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -57,7 +60,9 @@ export default function WorkspacePage() {
         setTopic(matchedTopic);
         setLessonsInTopic(extractLessons(topicLessonsRes).filter(item => item.isActive));
         setHintIndex(0);
-        setRunMessage(null);
+        setOutputLines([]);
+        setOutputOpen(false);
+        setHasRun(false);
         setRunPassed(null);
       } catch (error) {
         console.error('Failed to fetch workspace data:', error);
@@ -72,7 +77,16 @@ export default function WorkspacePage() {
 
   const handleReset = () => {
     editorRef.current?.resetWorkspace();
-    setRunMessage(null);
+    setOutputLines([]);
+    setOutputOpen(false);
+    setHasRun(false);
+    setRunPassed(null);
+  };
+
+  const handleClearOutput = () => {
+    setOutputLines([]);
+    setOutputOpen(false);
+    setHasRun(false);
     setRunPassed(null);
   };
 
@@ -88,36 +102,43 @@ export default function WorkspacePage() {
     if (!workspace) return;
 
     setIsSubmitting(true);
-    setRunMessage(null);
+    setOutputLines([]);
     setRunPassed(null);
+    setHasRun(true);
+    setOutputOpen(true);
 
     try {
-      const output = evaluateWorkspaceOutput(workspace);
+      const { output, logs } = evaluateWorkspaceRun(workspace);
       const isSandbox = lesson.toolboxConfig?.sandbox === true;
       const expected = lesson.publicTestcases[0]?.expectedOutput ?? '';
       const passed = isSandbox ? true : output.trim() === String(expected).trim();
 
+      const resultLogs: LogLine[] = [...logs];
       if (passed) {
+        resultLogs.push({
+          id: 'result-pass',
+          text: isSandbox ? t('workspace.outputSandboxDone') : t('workspace.outputPassedLine'),
+          type: 'success',
+        });
         if (!isSandbox) markLessonCompleted(lessonId);
         setRunPassed(true);
-        setRunMessage(
-          isSandbox
-            ? output.trim()
-              ? `${t('workspace.sandboxRan')}\n${output}`
-              : t('workspace.sandboxNoOutput')
-            : t('workspace.passed'),
-        );
       } else {
+        resultLogs.push({
+          id: 'result-fail',
+          text: t('workspace.outputFailedLine'),
+          type: 'error',
+        });
         setRunPassed(false);
-        setRunMessage(t('workspace.failed'));
       }
+
+      setOutputLines(resultLogs);
 
       const workspaceState = Blockly.serialization.workspaces.save(workspace);
       await lessonApi.submitWorkspace(lessonId, output, workspaceState, 0);
     } catch (error) {
       console.error('Submit error:', error);
       setRunPassed(false);
-      setRunMessage(t('workspace.runError'));
+      setOutputLines([{ id: 'run-error', text: t('workspace.runError'), type: 'error' }]);
     } finally {
       setIsSubmitting(false);
     }
@@ -188,14 +209,6 @@ export default function WorkspacePage() {
                 <p>{activeHint.text}</p>
               </div>
             )}
-
-            {runMessage && (
-              <p
-                className={`workspace-run-message${runPassed ? ' workspace-run-message--pass' : ' workspace-run-message--fail'}`}
-              >
-                {runMessage}
-              </p>
-            )}
           </div>
 
           <div className="workspace-panel-actions">
@@ -221,11 +234,29 @@ export default function WorkspacePage() {
 
         <main className="workspace-stage">
           <div className="workspace-grid-bg" aria-hidden="true" />
-          <BlocklyEditor
-            ref={editorRef}
-            lessonKey={lesson._id}
-            toolboxConfig={lesson.toolboxConfig}
-            initialBlocks={lesson.initialBlocks}
+          <div className="workspace-canvas">
+            <BlocklyEditor
+              ref={editorRef}
+              lessonKey={lesson._id}
+              toolboxConfig={lesson.toolboxConfig}
+              initialBlocks={lesson.initialBlocks}
+              toolboxTitle={t('workspace.blockLibrary')}
+            />
+          </div>
+          <WorkspaceOutputPanel
+            lines={outputLines}
+            isOpen={outputOpen}
+            isRunning={isSubmitting}
+            hasRun={hasRun}
+            passed={runPassed}
+            title={t('workspace.outputTitle')}
+            runningLabel={t('workspace.running')}
+            passedLabel={t('workspace.outputPassed')}
+            errorLabel={t('workspace.outputError')}
+            placeholder={t('workspace.outputPlaceholder')}
+            clearLabel={t('workspace.outputClear')}
+            onToggleOpen={() => setOutputOpen(open => !open)}
+            onClear={handleClearOutput}
           />
         </main>
       </div>
