@@ -107,6 +107,13 @@ export default function LoginPage() {
               <Eye size={32} strokeWidth={3} className="btn-icon" />
               {t('login.eyeScan')}
             </button>
+
+            <p className="register-sign-in">
+              {t('login.noAccount')}{' '}
+              <Link to="/register" className="register-sign-in-link">
+                {t('login.register')}
+              </Link>
+            </p>
           </form>
         </section>
       </main>

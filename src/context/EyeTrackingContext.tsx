@@ -6,6 +6,7 @@ const STORAGE_KEY = 'enablecode.eyeTrackingEnabled';
 interface EyeTrackingContextType {
   isEnabled: boolean;
   toggle: () => void;
+  setEnabled: (enabled: boolean) => void;
   shortcutLabel: string;
 }
 
@@ -21,6 +22,11 @@ export function EyeTrackingProvider({ children }: EyeTrackingProviderProps) {
   });
 
   const shortcutLabel = getEyeTrackingShortcutLabel();
+
+  const setEnabled = useCallback((enabled: boolean) => {
+    setIsEnabled(enabled);
+    localStorage.setItem(STORAGE_KEY, String(enabled));
+  }, []);
 
   const toggle = useCallback(() => {
     setIsEnabled(prev => {
@@ -47,7 +53,9 @@ export function EyeTrackingProvider({ children }: EyeTrackingProviderProps) {
   }, [toggle]);
 
   return (
-    <EyeTrackingContext.Provider value={{ isEnabled, toggle, shortcutLabel }}>{children}</EyeTrackingContext.Provider>
+    <EyeTrackingContext.Provider value={{ isEnabled, toggle, setEnabled, shortcutLabel }}>
+      {children}
+    </EyeTrackingContext.Provider>
   );
 }
 
