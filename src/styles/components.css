@@ -67,6 +67,47 @@
   align-items: center;
 }
 
+.face-control-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  color: var(--bg-dark);
+  padding: 0.65rem 1rem;
+  line-height: 1.2;
+}
+
+.face-control-toggle-main {
+  white-space: nowrap;
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.face-control-toggle-hint {
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.65rem;
+  opacity: 0.6;
+  letter-spacing: 0.02em;
+}
+
+.face-control-dev-label {
+  opacity: 0.65;
+  font-size: 0.85em;
+}
+
+.face-control-state {
+  margin-left: 0.35rem;
+  font-weight: 800;
+  font-size: 0.85em;
+  letter-spacing: 0.04em;
+}
+
+.face-control-toggle--on {
+  background: rgba(59, 90, 40, 0.15);
+  color: var(--accent-green);
+}
+
 .hero {
   text-align: center;
   padding: 4rem 0 5rem;
@@ -89,6 +130,14 @@
   margin: 1.3rem auto 2rem;
   font-size: clamp(1.05rem, 2.3vw, 1.6rem);
   opacity: 0.85;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
 }
 
 .hero-cta {
