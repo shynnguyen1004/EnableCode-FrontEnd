@@ -137,6 +137,11 @@ const en = {
     visualFeedbackTitle: 'VISUAL CLICK FEEDBACK',
     visualFeedbackBody: 'Show an expanding ring animation while dwelling on buttons.',
   },
+  mobile: {
+    title: 'Please use a desktop',
+    message:
+      'Enable Code relies on eye tracking and is not available on mobile. Please switch to a desktop or laptop to continue.',
+  },
 } as const;
 
 export default en;

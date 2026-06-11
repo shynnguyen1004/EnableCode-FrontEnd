@@ -137,6 +137,11 @@ const vi = {
     visualFeedbackTitle: 'PHẢN HỒI CLICK TRỰC QUAN',
     visualFeedbackBody: 'Hiển thị vòng tròn mở rộng khi bạn nhìn giữ vào các nút.',
   },
+  mobile: {
+    title: 'Vui lòng dùng máy tính',
+    message:
+      'Enable Code dùng theo dõi mắt và không hỗ trợ trên điện thoại. Hãy chuyển sang desktop hoặc laptop để tiếp tục.',
+  },
 } as const;
 
 export default vi;

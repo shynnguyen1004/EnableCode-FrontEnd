@@ -10,29 +10,45 @@ import ProfilePage from './pages/ProfilePage';
 import TopicPage from './pages/TopicPage';
 import WorkspacePage from './pages/WorkspacePage';
 import Mouse from './components/Mouse';
+import MobileUnsupported from './components/MobileUnsupported';
+import { useIsMobile } from './hooks/useIsMobile';
 
 function EyeTrackingLayer() {
   const { isEnabled } = useEyeTracking();
   return isEnabled ? <Mouse /> : null;
 }
 
+function AppRoutes() {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return <MobileUnsupported />;
+  }
+
+  return (
+    <>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/lessons" element={<TopicPage />} />
+        <Route path="/lessons/:topicId" element={<LessonsPage />} />
+        <Route path="/workspace/:lessonId" element={<WorkspacePage />} />
+        <Route path="/workspace" element={<Navigate to="/lessons" replace />} />
+        <Route path="/settings" element={<ProfilePage />} />
+        <Route path="/calibration" element={<CalibrationPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      <EyeTrackingLayer />
+    </>
+  );
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <EyeTrackingProvider>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/lessons" element={<TopicPage />} />
-          <Route path="/lessons/:topicId" element={<LessonsPage />} />
-          <Route path="/workspace/:lessonId" element={<WorkspacePage />} />
-          <Route path="/workspace" element={<Navigate to="/lessons" replace />} />
-          <Route path="/settings" element={<ProfilePage />} />
-          <Route path="/calibration" element={<CalibrationPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        <EyeTrackingLayer />
+        <AppRoutes />
       </EyeTrackingProvider>
     </AuthProvider>
   );

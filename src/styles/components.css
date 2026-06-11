@@ -2079,3 +2079,54 @@
     border-bottom: 4px solid #111;
   }
 }
+
+/* ─── Mobile unsupported gate ─── */
+
+.mobile-unsupported {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: var(--bg-dark);
+  color: var(--text-light);
+}
+
+.mobile-unsupported-card {
+  width: min(520px, 100%);
+  border: 5px solid #111;
+  border-radius: 32px;
+  background: var(--bg-cream);
+  color: #111;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  box-shadow: 12px 12px 0 #111;
+}
+
+.mobile-unsupported-icon {
+  width: 112px;
+  height: 112px;
+  margin: 0 auto 1.25rem;
+  border-radius: 24px;
+  border: 5px solid #111;
+  background: var(--bg-dark);
+  color: var(--accent-orange);
+  display: grid;
+  place-items: center;
+  box-shadow: 8px 8px 0 #111;
+}
+
+.mobile-unsupported-card h1 {
+  margin: 0 0 0.75rem;
+  font-family: Unbounded, Montserrat, sans-serif;
+  font-size: clamp(1.4rem, 6vw, 2rem);
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.mobile-unsupported-card p {
+  margin: 0;
+  font-size: clamp(1rem, 4.2vw, 1.15rem);
+  font-weight: 500;
+  line-height: 1.5;
+  opacity: 0.85;
+}
