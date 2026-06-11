@@ -6,6 +6,7 @@ import { useI18n } from '../i18n/I18nProvider';
 import { authApi } from '../api/authApi';
 import { useAuth } from '../context/AuthContext';
 import { useEyeTracking } from '../context/EyeTrackingContext';
+import PageScale from '../components/PageScale';
 
 export default function RegisterPage() {
   const { t } = useI18n();
@@ -55,7 +56,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="login-page">
+    <PageScale scale={0.75} className="login-page">
       <header className="login-header container">
         <Link to="/login" className="login-back group">
           <ArrowLeft size={28} strokeWidth={3} className="nav-icon" />
@@ -174,6 +175,6 @@ export default function RegisterPage() {
           </form>
         </section>
       </main>
-    </div>
+    </PageScale>
   );
 }

@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Target, Award, MousePointer2, Eye, SlidersHorizontal } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
+import PageScale from '../components/PageScale';
 
 function BrutalistSlider({
   value,
@@ -73,7 +74,7 @@ export default function ProfilePage() {
   });
 
   return (
-    <div className="profile-page">
+    <PageScale scale={0.8} className="profile-page">
       <header className="profile-topbar">
         <Link to="/lessons" className="profile-back-btn" aria-label={t('nav.backToLessons')}>
           <ArrowLeft size={32} strokeWidth={3} />
@@ -192,6 +193,6 @@ export default function ProfilePage() {
           </div>
         </main>
       </div>
-    </div>
+    </PageScale>
   );
 }

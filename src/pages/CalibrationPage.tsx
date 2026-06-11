@@ -5,6 +5,7 @@ import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
 import { useEyeTracking } from '../context/EyeTrackingContext';
 import { profileApi } from '../api/profileApi';
+import PageScale from '../components/PageScale';
 
 const CAL_POINTS = [
   { x: 10, y: 10 },
@@ -104,7 +105,7 @@ export default function CalibrationPage() {
   const captured = completedPoints.includes(pointIndex);
 
   return (
-    <div className="calibration-page">
+    <PageScale scale={0.75} className="calibration-page">
       {step === 'intro' && (
         <>
           <header className="login-header container">
@@ -287,6 +288,6 @@ export default function CalibrationPage() {
           </main>
         </>
       )}
-    </div>
+    </PageScale>
   );
 }

@@ -5,6 +5,7 @@ import { ArrowLeft, LogIn, Eye } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { authApi } from '../api/authApi';
 import { useAuth } from '../context/AuthContext';
+import PageScale from '../components/PageScale';
 
 export default function LoginPage() {
   const { t } = useI18n();
@@ -39,7 +40,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="login-page">
+    <PageScale scale={0.75} className="login-page">
       <header className="login-header container">
         <Link to="/" className="login-back group">
           <ArrowLeft size={28} strokeWidth={3} className="nav-icon" />
@@ -117,6 +118,6 @@ export default function LoginPage() {
           </form>
         </section>
       </main>
-    </div>
+    </PageScale>
   );
 }

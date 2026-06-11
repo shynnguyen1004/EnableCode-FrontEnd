@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Eye, MousePointerSquareDashed, BookOpenCheck, ArrowRight } from 'lucide-react';
 import FaceControlToggle from '../components/FaceControlToggle';
+import PageScale from '../components/PageScale';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
 
@@ -31,7 +32,7 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="home-wrap">
+    <PageScale scale={1.1} className="home-wrap">
       <header className="top-nav container">
         <Link to="/" className="brand-link" aria-label={t('brand.homeAria')}>
           <img src="/logo/TL_App_Logo.png" alt={t('brand.logoLightAlt')} className="brand-logo" />
@@ -106,6 +107,6 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
-    </div>
+    </PageScale>
   );
 }
