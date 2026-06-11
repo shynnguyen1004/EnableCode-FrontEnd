@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage';
 import LessonsPage from './pages/LessonsPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import CalibrationPage from './pages/CalibrationPage';
 import ProfilePage from './pages/ProfilePage';
 import TopicPage from './pages/TopicPage';
 import WorkspacePage from './pages/WorkspacePage';
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/workspace/:lessonId" element={<WorkspacePage />} />
           <Route path="/workspace" element={<Navigate to="/lessons" replace />} />
           <Route path="/settings" element={<ProfilePage />} />
+          <Route path="/calibration" element={<CalibrationPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <EyeTrackingLayer />
