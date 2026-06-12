@@ -1,33 +1,51 @@
 import axiosClient from './axiosClient';
-import type { Topic, Lesson, UserProgress, SubmitLessonResponse } from '../lib/types';
+import type {
+  Lesson,
+  UserProgress,
+  SubmitLessonResponse,
+  PaginatedLessonsResponse,
+  HintResponse,
+  CreateLessonRequest,
+  UpdateLessonRequest,
+  MessageResponse,
+  SaveProgressRequest,
+  SubmitLessonRequest,
+} from '../lib/types';
 
 export const lessonApi = {
-  getTopics: (): Promise<Topic[]> => {
-    return axiosClient.get('/topics');
-  },
+  // ==========================================
+  // STUDENT ACTIONS
+  // ==========================================
 
-  getLessonsByTopic: (topicId: string): Promise<Lesson[]> => {
-    return axiosClient.get(`/topics/${topicId}/lessons`);
-  },
+  getLessons: (params?: { topicId?: string; difficulty?: string; isActive?: boolean; page?: number; limit?: number }) =>
+    axiosClient.get<unknown, PaginatedLessonsResponse>('/lessons', { params }),
 
-  getLessonDetails: (lessonId: string): Promise<Lesson> => {
-    return axiosClient.get(`/lessons/${lessonId}`);
-  },
+  getLessonDetails: (lessonId: string) => axiosClient.get<unknown, Lesson>(`/lessons/${lessonId}`),
 
-  saveDraftProgress: (lessonId: string, workspaceState: Record<string, unknown>): Promise<UserProgress> => {
-    return axiosClient.post(`/lessons/${lessonId}/save-progress`, { workspaceState });
-  },
+  getLessonProgress: (lessonId: string) => axiosClient.get<unknown, UserProgress>(`/lessons/${lessonId}/progress`),
 
-  submitWorkspace: (
-    lessonId: string,
-    pythonCode: string,
-    workspaceState: Record<string, unknown>,
-    timeTaken: number,
-  ): Promise<SubmitLessonResponse> => {
-    return axiosClient.post(`/lessons/${lessonId}/submit`, {
-      pythonCode,
-      workspaceState,
-      time: timeTaken,
-    });
-  },
+  saveDraftProgress: (lessonId: string, data: SaveProgressRequest) =>
+    axiosClient.post<unknown, UserProgress>(`/lessons/${lessonId}/save-progress`, data),
+
+  submitWorkspace: (lessonId: string, data: SubmitLessonRequest) =>
+    axiosClient.post<unknown, SubmitLessonResponse>(`/lessons/${lessonId}/submit`, data),
+
+  getHint: (lessonId: string, index: number = 0) =>
+    axiosClient.get<unknown, HintResponse>(`/lessons/${lessonId}/hint`, { params: { index } }),
+
+  viewSolution: (lessonId: string) =>
+    axiosClient.post<unknown, { solution: Record<string, unknown> }>(`/lessons/${lessonId}/view-solution`),
+
+  // ==========================================
+  // ADMIN / TEACHER ACTIONS
+  // ==========================================
+
+  createLesson: (data: CreateLessonRequest) => axiosClient.post<unknown, Lesson>('/lessons', data),
+
+  updateLesson: (lessonId: string, data: UpdateLessonRequest) =>
+    axiosClient.put<unknown, Lesson>(`/lessons/${lessonId}`, data),
+
+  deleteLesson: (lessonId: string) => axiosClient.delete<unknown, MessageResponse>(`/lessons/${lessonId}`),
+
+  toggleActive: (lessonId: string) => axiosClient.patch<unknown, Lesson>(`/lessons/${lessonId}/toggle-active`),
 };

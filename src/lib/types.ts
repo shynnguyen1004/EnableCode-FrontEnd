@@ -9,7 +9,7 @@ export type Difficulty = 'beginner' | 'easy' | 'medium' | 'hard';
 // CORE DATA MODELS
 // ========================================
 
-export interface User {
+export interface UserProfileResponse {
   _id: ObjectId;
   email: string;
   role: 'student' | 'teacher' | 'admin';
@@ -19,9 +19,7 @@ export interface User {
   lessonsCompleted: number;
   streak: number;
   level: number;
-  resetPasswordToken: string | null;
-  resetPasswordExpires: string | null;
-  lastActiveDate: string | null;
+  lastActiveDate?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -104,6 +102,7 @@ export interface CalibrationBounds {
 export interface CalibrationPreferences {
   mouthDragThreshold?: number;
   trackingSensitivity?: number;
+  visualFeedback?: boolean;
 }
 
 export interface Calibration {
@@ -131,8 +130,8 @@ export interface LeaderboardEntry {
   userId: ObjectId;
   name: string;
   avatar: string | null;
-  totalScore?: number;
-  lessonsCompleted?: number;
+  totalScore: number;
+  lessonsCompleted: number;
 }
 
 // ========================================
@@ -142,7 +141,7 @@ export interface LeaderboardEntry {
 export interface AuthResponse {
   success: boolean;
   accessToken?: string;
-  user?: User;
+  user?: UserProfileResponse;
 }
 
 export interface MessageResponse {
@@ -155,7 +154,7 @@ export interface MessageResponse {
 
 export interface RegisterRequest {
   email: string;
-  password?: string;
+  password: string;
   name: string;
   role?: 'student' | 'teacher' | 'admin';
   avatar?: string | null;
@@ -193,7 +192,7 @@ export interface UpdateProfileRequest {
 
 export interface LoginRequest {
   email: string;
-  password?: string;
+  password: string;
 }
 
 // Dành cho form tạo bài học của Teacher/Admin
@@ -227,6 +226,11 @@ export interface SubmitLessonResponse {
   points: number;
   output: string;
   testcaseResults: Record<string, unknown>[];
+}
+
+export interface RefreshTokenResponse {
+  success: boolean;
+  accessToken: string;
 }
 
 export interface HintResponse {

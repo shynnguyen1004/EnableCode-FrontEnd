@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Play, Lightbulb, ChevronRight, GripVertical, Settings, RefreshCw, Loader2 } from 'lucide-react';
-
+import { isAxiosError } from 'axios';
 import { useI18n } from '../i18n/I18nProvider';
-import { isTopicLocked, isLessonLocked, markLessonCompleted } from '../lib/progress';
+import { isTopicLocked, isLessonLocked } from '../lib/progress';
 import { lessonApi } from '../api/lessonApi';
+import { topicApi } from '../api/topicApi';
+import { progressApi } from '../api/progressApi';
 import { extractTopics, extractLessons, extractSingleLesson } from '../utils/lessonMapper';
 
-import type { Topic, Lesson } from '../lib/types';
+import type { Topic, Lesson, UserProgress } from '../lib/types';
 
 export default function WorkspacePage() {
   const { lessonId } = useParams<{ lessonId: string }>();
@@ -16,6 +18,7 @@ export default function WorkspacePage() {
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [topic, setTopic] = useState<Topic | null>(null);
   const [lessonsInTopic, setLessonsInTopic] = useState<Lesson[]>([]);
+  const [userProgressList, setUserProgressList] = useState<UserProgress[]>([]);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isNotFound, setIsNotFound] = useState<boolean>(false);
@@ -24,27 +27,22 @@ export default function WorkspacePage() {
   useEffect(() => {
     if (!lessonId) return;
 
-    const fetchData = async () => {
+    const fetchWorkspaceData = async () => {
       try {
         const lessonRes = await lessonApi.getLessonDetails(lessonId);
         const fetchedLesson = extractSingleLesson(lessonRes);
 
-        if (!fetchedLesson) {
+        if (!fetchedLesson || !fetchedLesson.topicId) {
           setIsNotFound(true);
           return;
         }
 
         const actualTopicId = fetchedLesson.topicId;
 
-        if (!actualTopicId) {
-          console.error(fetchedLesson);
-          setIsNotFound(true);
-          return;
-        }
-
-        const [topicsRes, topicLessonsRes] = await Promise.all([
-          lessonApi.getTopics(),
-          lessonApi.getLessonsByTopic(actualTopicId),
+        const [topicsRes, topicLessonsRes, progressRes] = await Promise.all([
+          topicApi.getAllTopics(),
+          topicApi.getLessonsByTopic(actualTopicId),
+          progressApi.getAllUserProgress(),
         ]);
 
         const rawTopics = extractTopics(topicsRes);
@@ -60,6 +58,7 @@ export default function WorkspacePage() {
         setLesson(fetchedLesson);
         setTopic(matchedTopic);
         setLessonsInTopic(rawLessons.filter(l => l.isActive));
+        setUserProgressList(progressRes);
       } catch (error) {
         console.error('Failed to fetch workspace data:', error);
         setIsNotFound(true);
@@ -68,7 +67,7 @@ export default function WorkspacePage() {
       }
     };
 
-    fetchData();
+    fetchWorkspaceData();
   }, [lessonId]);
 
   const handleRunCode = async () => {
@@ -76,20 +75,34 @@ export default function WorkspacePage() {
 
     setIsSubmitting(true);
     try {
-      const generatedCode = "print('Hello Enable Code!')";
-      console.log('Submitting string code payload:', generatedCode);
+      // TODO: Replace with real data from the Blockly Workspace later
+      const currentWorkspaceState = {};
+      const generatedPythonCode = "print('Hello Enable Code!')";
+      const timeTakenInSeconds = 120; // Mock time taken
 
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const isPassed = true;
+      console.log('Sending payload to judging server...');
 
-      if (isPassed) {
-        markLessonCompleted(lessonId);
+      const response = await lessonApi.submitWorkspace(lessonId, {
+        workspaceState: currentWorkspaceState,
+        pythonCode: generatedPythonCode,
+        time: timeTakenInSeconds,
+      });
+
+      if (response.passed) {
+        alert(`Excellent! You earned ${response.points} points.`);
+
+        const updatedProgress = await progressApi.getAllUserProgress();
+        setUserProgressList(updatedProgress);
       } else {
-        alert('There is an issue with your code. Let us check again!');
+        alert("The code did not pass the test cases. Let's check it again!\n\nOutput: " + response.output);
       }
     } catch (error) {
       console.error('Submit error:', error);
-      alert('An error occurred while connecting to the judging server.');
+      if (isAxiosError(error)) {
+        alert(error.response?.data?.error?.message || 'Connection error to the Piston judging server.');
+      } else {
+        alert('An unknown error occurred while grading the submission.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -109,7 +122,7 @@ export default function WorkspacePage() {
     );
   }
 
-  if (isTopicLocked(topic) || isLessonLocked(lesson, lessonsInTopic)) {
+  if (isTopicLocked(topic) || isLessonLocked(lesson, lessonsInTopic, userProgressList)) {
     return <Navigate to={`/lessons/${topic._id}`} replace />;
   }
 

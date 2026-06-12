@@ -1,47 +1,68 @@
-import type { Topic, Lesson } from './types';
+import type { Topic, Lesson, UserProgress } from './types';
 
-export function isLessonCompleted(lessonId: string): boolean {
-  try {
-    const completed = JSON.parse(localStorage.getItem('enablecode_completed_lessons') || '[]');
-    return completed.includes(lessonId);
-  } catch {
-    return false;
-  }
-}
+export const isLessonCompleted = (lessonId: string, userProgressList: UserProgress[] = []): boolean => {
+  // Guard clause: Return early if inputs are invalid or empty
+  if (!lessonId || !userProgressList.length) return false;
 
-export function markLessonCompleted(lessonId: string): void {
-  try {
-    const completed = JSON.parse(localStorage.getItem('enablecode_completed_lessons') || '[]');
-    if (!completed.includes(lessonId)) {
-      completed.push(lessonId);
-      localStorage.setItem('enablecode_completed_lessons', JSON.stringify(completed));
-    }
-  } catch (error) {
-    console.error('Failed to save progress locally:', error);
-  }
-}
+  const lessonProgress = userProgressList.find(progress => progress.lessonId === lessonId);
+  return lessonProgress?.status === 'completed';
+};
 
-export function isLessonLocked(lesson: Lesson, lessonsInTopic: Lesson[]): boolean {
-  if (lesson.order <= 1) return false;
-  const previousLesson = lessonsInTopic.find(l => l.order === lesson.order - 1);
+/**
+ * Determines if a lesson should be locked in the UI.
+ * Rule: Lesson 1 is always unlocked. Lesson N is locked if Lesson N-1 is incomplete.
+ */
+export const isLessonLocked = (
+  currentLesson: Lesson,
+  topicLessons: Lesson[],
+  userProgressList: UserProgress[] = [],
+): boolean => {
+  // Guard clause: The first lesson is never locked
+  if (currentLesson.order <= 1) return false;
+
+  // Find the directly preceding lesson based on the 'order' property
+  const previousLesson = topicLessons.find(lesson => lesson.order === currentLesson.order - 1);
+
+  // Guard clause: If the previous lesson doesn't exist in the data, default to unlocked to prevent soft-locks
   if (!previousLesson) return false;
-  return !isLessonCompleted(previousLesson._id);
-}
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function isTopicCompleted(_topicId: string): boolean {
-  return false;
-}
 
-export function areTopicPrerequisitesMet(topic: Topic): boolean {
+  return !isLessonCompleted(previousLesson._id, userProgressList);
+};
+
+/**
+ * Calculates the completion percentage of a topic based on its lessons.
+ * Useful for rendering progress bars in the UI.
+ */
+export const calculateTopicCompletionPercentage = (
+  topicLessons: Lesson[],
+  userProgressList: UserProgress[] = [],
+): number => {
+  if (!topicLessons.length) return 0;
+
+  const completedLessonsCount = topicLessons.filter(lesson => isLessonCompleted(lesson._id, userProgressList)).length;
+
+  return Math.round((completedLessonsCount / topicLessons.length) * 100);
+};
+
+/**
+ * Checks if all prerequisite topics for a given topic are met.
+ * Pending Backend support: Currently permissive as there is no specific API for topic-level progress.
+ */
+export const areTopicPrerequisitesMet = (topic: Topic): boolean => {
   const prerequisites = topic.relevantTopicIds;
-  if (!prerequisites || prerequisites.length === 0) return true;
-  return prerequisites.every(prerequisiteId => isTopicCompleted(prerequisiteId));
-}
 
-export function isTopicLocked(topic: Topic): boolean {
+  // Guard clause: If there are no prerequisites, it's automatically met
+  if (!prerequisites || prerequisites.length === 0) return true;
+
+  // TODO (Tech Debt): To implement strict topic locking, we would need to fetch all lessons
+  // for each prerequisite topic and check if their completion percentage is 100%.
+  // For now, we return true to prevent UI blockage.
+  return true;
+};
+
+/**
+ * Determines if an entire topic is locked based on its prerequisites.
+ */
+export const isTopicLocked = (topic: Topic): boolean => {
   return !areTopicPrerequisitesMet(topic);
-}
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function getTopicProgressPercent(topicId: string): number {
-  return 0;
-}
+};
