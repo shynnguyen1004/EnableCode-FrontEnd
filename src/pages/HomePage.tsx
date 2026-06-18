@@ -1,14 +1,28 @@
 import { Link } from 'react-router-dom';
-import { Eye, MousePointerSquareDashed, BookOpenCheck, ArrowRight } from 'lucide-react';
+import { Eye, MousePointerSquareDashed, BookOpenCheck, ArrowRight, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 import FaceControlToggle from '../components/FaceControlToggle';
 import PageScale from '../components/PageScale';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
+import { authApi } from '../api/authApi';
 
 export default function HomePage() {
   const { t } = useI18n();
-
   const { isLoggedIn, logout } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await authApi.logout();
+    } catch (error) {
+      console.error('Failed to logout from server:', error);
+    } finally {
+      setIsLoggingOut(false);
+      logout();
+    }
+  };
 
   const features = [
     {
@@ -49,10 +63,21 @@ export default function HomePage() {
           {isLoggedIn ? (
             <>
               <Link to="/settings" className="btn btn-ghost">
-                Profile
+                {t('nav.profile') || 'Profile'}
               </Link>
-              <button onClick={logout} className="btn btn-primary" style={{ cursor: 'pointer' }}>
-                Log Out
+              <button
+                onClick={handleLogout}
+                className="btn btn-primary"
+                style={{
+                  cursor: isLoggingOut ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut && <Loader2 size={18} className="animate-spin" />}
+                {t('nav.logOut') || 'Log Out'}
               </button>
             </>
           ) : (

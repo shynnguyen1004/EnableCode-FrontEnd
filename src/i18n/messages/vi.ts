@@ -7,6 +7,10 @@ const vi = {
     logoLightAlt: 'Logo Enable Code nền sáng',
     logoDarkAlt: 'Logo Enable Code nền tối',
   },
+  common: {
+    on: 'BẬT',
+    off: 'TẮT',
+  },
   nav: {
     home: 'Trang chủ',
     lessons: 'Bài học',
@@ -19,6 +23,8 @@ const vi = {
     allTopics: 'Tất cả chủ đề',
     topics: 'Chủ đề',
     topic: 'Chủ đề',
+    profile: 'Hồ sơ',
+    logOut: 'Đăng xuất',
   },
   home: {
     heroTitle: 'Lập trình bằng',
@@ -152,6 +158,11 @@ const vi = {
     dwellBody: 'Thời gian bạn cần nhìn vào một nút để kích hoạt “click”.',
     visualFeedbackTitle: 'PHẢN HỒI CLICK TRỰC QUAN',
     visualFeedbackBody: 'Hiển thị vòng tròn mở rộng khi bạn nhìn giữ vào các nút.',
+    languageTitle: 'Ngôn ngữ',
+    languageSubtitle: 'Chọn ngôn ngữ giao diện ưa thích của bạn.',
+    languageEnglish: 'English',
+    languageVietnamese: 'Tiếng Việt',
+    saveSettings: 'Lưu Cài Đặt',
   },
   mobile: {
     title: 'Vui lòng dùng máy tính',

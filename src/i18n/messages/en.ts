@@ -4,6 +4,10 @@ const en = {
     logoLightAlt: 'Enable Code logo light mode',
     logoDarkAlt: 'Enable Code logo dark mode',
   },
+  common: {
+    on: 'ON',
+    off: 'OFF',
+  },
   nav: {
     home: 'Home',
     lessons: 'Lessons',
@@ -16,6 +20,8 @@ const en = {
     allTopics: 'All Topics',
     topics: 'Topics',
     topic: 'Topic',
+    profile: 'Profile',
+    logOut: 'Log Out',
   },
   home: {
     heroTitle: 'Code with your',
@@ -152,6 +158,11 @@ const en = {
     dwellBody: 'How long you need to stare at a button to trigger a "click".',
     visualFeedbackTitle: 'VISUAL CLICK FEEDBACK',
     visualFeedbackBody: 'Show an expanding ring animation while dwelling on buttons.',
+    languageTitle: 'Language',
+    languageSubtitle: 'Choose your preferred interface language.',
+    languageEnglish: 'English',
+    languageVietnamese: 'Tiếng Việt',
+    saveSettings: 'Save Settings',
   },
   mobile: {
     title: 'Please use a desktop',

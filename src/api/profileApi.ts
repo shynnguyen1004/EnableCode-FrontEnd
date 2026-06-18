@@ -1,13 +1,24 @@
 import axiosClient from './axiosClient';
-import type { User, UserStats, Calibration, UpdateCalibrationRequest } from '../lib/types';
+import type {
+  UserProfileResponse,
+  UserStats,
+  Calibration,
+  UpdateCalibrationRequest,
+  UpdateProfileRequest,
+  MessageResponse,
+} from '../lib/types';
 
 export const profileApi = {
-  getProfile: (): Promise<User> => axiosClient.get('/users/profile') as Promise<User>,
+  getProfile: () => axiosClient.get<unknown, UserProfileResponse>('/users/profile'),
 
-  getUserStats: (): Promise<UserStats> => axiosClient.get('/users/stats') as Promise<UserStats>,
+  updateProfile: (data: UpdateProfileRequest) => axiosClient.put<unknown, UserProfileResponse>('/users/profile', data),
 
-  getCalibration: (): Promise<Calibration> => axiosClient.get('/users/calibration') as Promise<Calibration>,
+  deleteAccount: () => axiosClient.delete<unknown, MessageResponse>('/users/profile'),
 
-  updateCalibration: (data: UpdateCalibrationRequest): Promise<Calibration> =>
-    axiosClient.put('/users/calibration', data) as Promise<Calibration>,
+  getUserStats: () => axiosClient.get<unknown, UserStats>('/users/stats'),
+
+  getCalibration: () => axiosClient.get<unknown, Calibration>('/users/calibration'),
+
+  updateCalibration: (data: UpdateCalibrationRequest) =>
+    axiosClient.put<unknown, Calibration>('/users/calibration', data),
 };

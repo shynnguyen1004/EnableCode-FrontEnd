@@ -1,12 +1,12 @@
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { User } from '../lib/types';
+import type { UserProfileResponse } from '../lib/types';
 
 interface AuthContextType {
   isLoggedIn: boolean;
-  token: string | null;
-  user: User | null;
-  login: (token: string, userData: User) => void;
+  accessToken: string | null;
+  user: UserProfileResponse | null;
+  login: (newAccessToken: string, userData: UserProfileResponse) => void;
   logout: () => void;
 }
 
@@ -19,11 +19,11 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const navigate = useNavigate();
 
-  const [token, setToken] = useState<string | null>(() => {
+  const [accessToken, setAccessToken] = useState<string | null>(() => {
     return localStorage.getItem('accessToken');
   });
 
-  const [user, setUser] = useState<User | null>(() => {
+  const [user, setUser] = useState<UserProfileResponse | null>(() => {
     try {
       const storedUser = localStorage.getItem('user');
       return storedUser ? JSON.parse(storedUser) : null;
@@ -32,17 +32,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   });
 
-  const login = (newToken: string, userData: User) => {
-    setToken(newToken);
+  const login = (newAccessToken: string, userData: UserProfileResponse) => {
+    setAccessToken(newAccessToken);
     setUser(userData);
 
-    localStorage.setItem('accessToken', newToken);
+    localStorage.setItem('accessToken', newAccessToken);
     localStorage.setItem('user', JSON.stringify(userData));
-    navigate('/');
   };
 
   const logout = useCallback(() => {
-    setToken(null);
+    setAccessToken(null);
     setUser(null);
 
     localStorage.removeItem('accessToken');
@@ -63,7 +62,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [logout]);
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!token, token, user, login, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ isLoggedIn: !!accessToken, accessToken, user, login, logout }}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 

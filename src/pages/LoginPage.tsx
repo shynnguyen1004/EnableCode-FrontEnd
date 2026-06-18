@@ -1,16 +1,18 @@
-import type { User } from '../lib/types';
+import type { UserProfileResponse } from '../lib/types';
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, LogIn, Eye } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { authApi } from '../api/authApi';
 import { useAuth } from '../context/AuthContext';
+import { isAxiosError } from 'axios';
 import PageScale from '../components/PageScale';
 
 export default function LoginPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { login } = useAuth();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -20,20 +22,26 @@ export default function LoginPage() {
     event.preventDefault();
     setErrorMsg('');
     setIsLoading(true);
+
     try {
-      const response = await authApi.login(email, password);
-      const payload = response as unknown as {
-        accessToken: string;
-        user: User;
-      };
-      const { accessToken, user } = payload;
+      const response = await authApi.login({ email, password });
+
+      const { accessToken, user } = response;
+
       if (accessToken && user) {
-        login(accessToken, user);
+        login(accessToken, user as unknown as UserProfileResponse);
       }
+
       navigate('/lessons');
     } catch (error) {
-      const err = error as { response?: { data?: { message?: string } } };
-      setErrorMsg(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      console.error('Login failed:', error);
+
+      if (isAxiosError(error)) {
+        const backendMessage = error.response?.data?.error?.message;
+        setErrorMsg(backendMessage || 'Login failed. Please check your credentials.');
+      } else {
+        setErrorMsg('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }

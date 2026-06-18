@@ -1,4 +1,4 @@
-import type { User } from '../lib/types';
+import type { UserProfileResponse } from '../lib/types';
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, UserPlus, Eye, CheckCircle } from 'lucide-react';
@@ -7,6 +7,7 @@ import { authApi } from '../api/authApi';
 import { useAuth } from '../context/AuthContext';
 import { useEyeTracking } from '../context/EyeTrackingContext';
 import PageScale from '../components/PageScale';
+import { isAxiosError } from 'axios';
 
 export default function RegisterPage() {
   const { t } = useI18n();
@@ -34,22 +35,26 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       const response = await authApi.register({ name, email, password, role: 'student' });
-      const payload = response as unknown as {
-        accessToken: string;
-        user: User;
-      };
-      const { accessToken, user } = payload;
+
+      const { accessToken, user } = response;
 
       if (accessToken && user) {
         if (enableEyeTracking) {
           setEyeTrackingEnabled(true);
         }
-        login(accessToken, user);
+        login(accessToken, user as unknown as UserProfileResponse);
       }
+
       navigate('/lessons');
     } catch (error) {
-      const err = error as Error;
-      setErrorMsg(err.message || t('register.failed'));
+      console.error('Registration failed:', error);
+
+      if (isAxiosError(error)) {
+        const backendMessage = error.response?.data?.error?.message;
+        setErrorMsg(backendMessage || t('register.failed') || 'Registration failed. Please try again.');
+      } else {
+        setErrorMsg(t('register.failed') || 'An unexpected error occurred.');
+      }
     } finally {
       setIsLoading(false);
     }

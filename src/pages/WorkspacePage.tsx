@@ -1,17 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Play, Lightbulb, ChevronRight, Settings, RefreshCw, Loader2 } from 'lucide-react';
+import { isAxiosError } from 'axios';
 import * as Blockly from 'blockly';
 
 import BlocklyEditor, { type BlocklyEditorHandle } from '../components/BlocklyEditor';
 import WorkspaceOutputPanel from '../components/WorkspaceOutputPanel';
 import { useI18n } from '../i18n/I18nProvider';
 import { evaluateWorkspaceRun, type LogLine } from '../blockly/evaluateWorkspace';
-import { isTopicLocked, isLessonLocked, markLessonCompleted } from '../lib/progress';
+import { isTopicLocked, isLessonLocked } from '../lib/progress';
 import { lessonApi } from '../api/lessonApi';
+import { topicApi } from '../api/topicApi';
+import { progressApi } from '../api/progressApi';
 import { extractTopics, extractLessons, extractSingleLesson } from '../utils/lessonMapper';
 
-import type { Topic, Lesson } from '../lib/types';
+import type { Topic, Lesson, UserProgress } from '../lib/types';
 
 export default function WorkspacePage() {
   const { lessonId } = useParams<{ lessonId: string }>();
@@ -21,6 +24,7 @@ export default function WorkspacePage() {
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [topic, setTopic] = useState<Topic | null>(null);
   const [lessonsInTopic, setLessonsInTopic] = useState<Lesson[]>([]);
+  const [userProgressList, setUserProgressList] = useState<UserProgress[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isNotFound, setIsNotFound] = useState(false);
@@ -34,7 +38,7 @@ export default function WorkspacePage() {
   useEffect(() => {
     if (!lessonId) return;
 
-    const fetchData = async () => {
+    const fetchWorkspaceData = async () => {
       try {
         const lessonRes = await lessonApi.getLessonDetails(lessonId);
         const fetchedLesson = extractSingleLesson(lessonRes);
@@ -44,12 +48,17 @@ export default function WorkspacePage() {
           return;
         }
 
-        const [topicsRes, topicLessonsRes] = await Promise.all([
-          lessonApi.getTopics(),
-          lessonApi.getLessonsByTopic(fetchedLesson.topicId),
+        const actualTopicId = fetchedLesson.topicId;
+
+        const [topicsRes, topicLessonsRes, progressRes] = await Promise.all([
+          topicApi.getAllTopics(),
+          topicApi.getLessonsByTopic(actualTopicId),
+          progressApi.getAllUserProgress(),
         ]);
 
-        const matchedTopic = extractTopics(topicsRes).find(item => item._id === fetchedLesson.topicId);
+        const rawTopics = extractTopics(topicsRes);
+        const rawLessons = extractLessons(topicLessonsRes);
+        const matchedTopic = rawTopics.find(item => item._id === actualTopicId);
 
         if (!matchedTopic) {
           setIsNotFound(true);
@@ -58,7 +67,8 @@ export default function WorkspacePage() {
 
         setLesson(fetchedLesson);
         setTopic(matchedTopic);
-        setLessonsInTopic(extractLessons(topicLessonsRes).filter(item => item.isActive));
+        setLessonsInTopic(rawLessons.filter(item => item.isActive));
+        setUserProgressList(progressRes);
         setHintIndex(0);
         setOutputLines([]);
         setOutputOpen(false);
@@ -72,7 +82,7 @@ export default function WorkspacePage() {
       }
     };
 
-    fetchData();
+    fetchWorkspaceData();
   }, [lessonId]);
 
   const handleReset = () => {
@@ -109,36 +119,54 @@ export default function WorkspacePage() {
 
     try {
       const { output, logs } = evaluateWorkspaceRun(workspace);
+      const workspaceState = Blockly.serialization.workspaces.save(workspace);
       const isSandbox = lesson.toolboxConfig?.sandbox === true;
-      const expected = lesson.publicTestcases[0]?.expectedOutput ?? '';
-      const passed = isSandbox ? true : output.trim() === String(expected).trim();
+
+      const response = await lessonApi.submitWorkspace(lessonId, {
+        workspaceState,
+        pythonCode: output,
+        time: 0,
+      });
 
       const resultLogs: LogLine[] = [...logs];
+      const passed = isSandbox
+        ? true
+        : response.passed ??
+          output.trim() === String(lesson.publicTestcases[0]?.expectedOutput ?? '').trim();
+
       if (passed) {
         resultLogs.push({
           id: 'result-pass',
-          text: isSandbox ? t('workspace.outputSandboxDone') : t('workspace.outputPassedLine'),
+          text: isSandbox
+            ? t('workspace.outputSandboxDone')
+            : `${t('workspace.outputPassedLine')}${response.points ? ` (+${response.points} pts)` : ''}`,
           type: 'success',
         });
-        if (!isSandbox) markLessonCompleted(lessonId);
         setRunPassed(true);
+
+        const updatedProgress = await progressApi.getAllUserProgress();
+        setUserProgressList(updatedProgress);
       } else {
         resultLogs.push({
           id: 'result-fail',
-          text: t('workspace.outputFailedLine'),
+          text: response.output
+            ? `${t('workspace.outputFailedLine')}\n${response.output}`
+            : t('workspace.outputFailedLine'),
           type: 'error',
         });
         setRunPassed(false);
       }
 
       setOutputLines(resultLogs);
-
-      const workspaceState = Blockly.serialization.workspaces.save(workspace);
-      await lessonApi.submitWorkspace(lessonId, output, workspaceState, 0);
     } catch (error) {
       console.error('Submit error:', error);
       setRunPassed(false);
-      setOutputLines([{ id: 'run-error', text: t('workspace.runError'), type: 'error' }]);
+
+      const message = isAxiosError(error)
+        ? String(error.response?.data?.error?.message ?? t('workspace.runError'))
+        : t('workspace.runError');
+
+      setOutputLines([{ id: 'run-error', text: message, type: 'error' }]);
     } finally {
       setIsSubmitting(false);
     }
@@ -155,7 +183,7 @@ export default function WorkspacePage() {
     );
   }
 
-  if (isTopicLocked(topic) || isLessonLocked(lesson, lessonsInTopic)) {
+  if (isTopicLocked(topic) || isLessonLocked(lesson, lessonsInTopic, userProgressList)) {
     return <Navigate to={`/lessons/${topic._id}`} replace />;
   }
 

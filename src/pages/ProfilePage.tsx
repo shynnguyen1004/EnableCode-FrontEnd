@@ -1,6 +1,19 @@
-import { useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Target, Award, MousePointer2, Eye, SlidersHorizontal } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, Navigate } from 'react-router-dom';
+import {
+  ArrowLeft,
+  CheckCircle,
+  Target,
+  Award,
+  Eye,
+  SlidersHorizontal,
+  MousePointer2,
+  Languages,
+  Loader2,
+  Save,
+} from 'lucide-react';
+import LanguageToggle from '../components/LanguageToggle';
+import { ReactNode } from 'react';
 import { useI18n } from '../i18n/I18nProvider';
 import PageScale from '../components/PageScale';
 
@@ -36,42 +49,88 @@ function BrutalistSlider({
   );
 }
 
+import { useAuth } from '../context/AuthContext';
+import { profileApi } from '../api/profileApi';
+import type { UserProfileResponse, Calibration } from '../lib/types';
+
 export default function ProfilePage() {
   const { t } = useI18n();
+  const { isLoggedIn } = useAuth();
+
+  const [profileData, setProfileData] = useState<UserProfileResponse | null>(null);
+  const [calibration, setCalibration] = useState<Calibration | null>(null);
+
   const [sensitivity, setSensitivity] = useState(75);
   const [dwellTime, setDwellTime] = useState(40);
   const [visualFeedback, setVisualFeedback] = useState(true);
 
-  const [currentUser] = useState(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const fetchProfileAndSettings = async () => {
       try {
-        const parsedUser = JSON.parse(storedUser);
-        const date = new Date(parsedUser.createdAt || new Date());
-        const formattedDate = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        const [profileRes, calibrationRes] = await Promise.all([profileApi.getProfile(), profileApi.getCalibration()]);
 
-        return {
-          name: parsedUser.name || 'Guest',
-          level: parsedUser.level || 1,
-          streak: parsedUser.streak || 0,
-          lessonsCompleted: parsedUser.lessonsCompleted || 0,
-          badges: parsedUser.badges || 0,
-          memberSince: formattedDate,
-        };
+        setProfileData(profileRes);
+        setCalibration(calibrationRes);
+
+        if (calibrationRes?.preferences) {
+          setSensitivity(calibrationRes.preferences.trackingSensitivity || 75);
+          setDwellTime(calibrationRes.preferences.mouthDragThreshold || 40);
+        }
       } catch (error) {
-        console.error('Failed to read user from storage:', error);
+        console.error('Error fetching profile and settings:', error);
+      } finally {
+        setIsLoading(false);
       }
-    }
-
-    return {
-      name: 'Guest User',
-      level: 1,
-      streak: 0,
-      lessonsCompleted: 0,
-      badges: 0,
-      memberSince: '...',
     };
-  });
+
+    fetchProfileAndSettings();
+  }, [isLoggedIn]);
+
+  const handleSaveSettings = async () => {
+    if (!calibration) return;
+    setIsSaving(true);
+    try {
+      await profileApi.updateCalibration({
+        ...calibration,
+        preferences: {
+          ...calibration.preferences,
+          trackingSensitivity: sensitivity,
+          mouthDragThreshold: dwellTime,
+        },
+      });
+      alert('Profile settings saved successfully!');
+    } catch (error) {
+      console.error('Error saving profile settings:', error);
+      alert('Failed to save profile settings. Please try again later.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (!isLoggedIn) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (isLoading || !profileData) {
+    return (
+      <div
+        className="profile-page"
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}
+      >
+        <Loader2 size={40} className="animate-spin text-orange-500 mr-3" />
+        <p style={{ color: '#666', fontSize: '1.2rem', fontWeight: 500 }}>Profile is loading...</p>
+      </div>
+    );
+  }
+
+  const memberSinceStr = profileData.createdAt
+    ? new Date(profileData.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    : '...';
 
   return (
     <PageScale scale={0.8} className="profile-page">
@@ -87,13 +146,17 @@ export default function ProfilePage() {
         <aside className="profile-sidebar">
           <div className="profile-user-info">
             <div className="profile-avatar-wrap">
-              <img src="/images/profilePicture.jpeg" alt={t('settings.avatarAlt')} className="profile-avatar-img" />
+              <img
+                src={profileData.avatar || '/images/profilePicture.jpeg'}
+                alt={t('settings.avatarAlt')}
+                className="profile-avatar-img"
+              />
             </div>
             <div className="profile-details">
-              <h2>{currentUser.name.toUpperCase()}</h2>
+              <h2>{profileData.name?.toUpperCase() || 'STUDENT'}</h2>
               <p>
-                {t('settings.memberSincePrefix')} {currentUser.memberSince} • {t('settings.levelPrefix')}{' '}
-                {currentUser.level} {t('settings.explorer')}
+                {t('settings.memberSincePrefix')} {memberSinceStr} • {t('settings.levelPrefix')}{' '}
+                {profileData.level || 1} {t('settings.explorer')}
               </p>
             </div>
           </div>
@@ -101,18 +164,18 @@ export default function ProfilePage() {
           <div className="profile-stats-grid">
             <article className="profile-stat-card" tabIndex={0}>
               <CheckCircle size={52} strokeWidth={3} className="icon-green" />
-              <strong>{currentUser.lessonsCompleted}</strong>
+              <strong>{profileData.lessonsCompleted || 0}</strong>
               <span>{t('settings.exercises')}</span>
             </article>
             <article className="profile-stat-card" tabIndex={0}>
               <Award size={52} strokeWidth={3} className="icon-orange" />
-              <strong>{currentUser.badges}</strong>
+              <strong>{profileData.badges || 0}</strong>
               <span>{t('settings.badges')}</span>
             </article>
             <article className="profile-stat-card wide" tabIndex={0}>
               <Target size={52} strokeWidth={3} className="icon-light-green" />
               <strong>
-                {currentUser.streak} {t('settings.streakDays')}
+                {profileData.streak || 0} {t('settings.streakDays')}
               </strong>
               <span>{t('settings.streak')}</span>
             </article>
@@ -120,12 +183,43 @@ export default function ProfilePage() {
         </aside>
 
         <main className="profile-controls">
+          <section className="profile-language-section" style={{ marginBottom: '2rem' }}>
+            <div className="profile-language-header" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className="profile-heading-icon-wrap profile-heading-icon-wrap--language">
+                <Languages size={28} strokeWidth={2.5} color="#FFF9DC" />
+              </div>
+              <h2>{t('settings.languageTitle')}</h2>
+            </div>
+            <p>{t('settings.languageSubtitle')}</p>
+            <LanguageToggle />
+          </section>
           <div className="profile-controls-inner">
             <div className="profile-controls-header">
               <div className="profile-heading-icon-wrap">
                 <Eye size={44} strokeWidth={2.5} color="#FFF9DC" />
               </div>
               <h2>{t('settings.eyeTrackingTitle')}</h2>
+            </div>
+
+            <div
+              className="profile-controls-header"
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className="profile-heading-icon-wrap">
+                  <Eye size={28} strokeWidth={2.5} color="#FFF9DC" />
+                </div>
+                <h2>{t('settings.eyeTrackingTitle')}</h2>
+              </div>
+              <button
+                onClick={handleSaveSettings}
+                disabled={isSaving}
+                className="btn btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.9rem' }}
+              >
+                {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                {t('settings.saveSettings')}
+              </button>
             </div>
 
             <div className="profile-settings-stack">

@@ -1,8 +1,10 @@
 import type { Difficulty, Hint, Lesson, Testcase, Topic } from '../lib/types';
 
-interface ApiWrapper<T> {
-  topics?: T[];
-  lessons?: T[];
+interface ApiResponse {
+  topics?: Topic[];
+  lessons?: Lesson[];
+  lesson?: Lesson;
+  data?: unknown;
 }
 
 function normalizeDifficulty(value: unknown): Difficulty {
@@ -80,8 +82,10 @@ export function extractTopics(apiResponse: unknown): Topic[] {
     return apiResponse.map(topic => normalizeTopic(topic as unknown as Record<string, unknown>));
   }
 
-  const res = apiResponse as ApiWrapper<Record<string, unknown>>;
-  return Array.isArray(res.topics) ? res.topics.map(topic => normalizeTopic(topic)) : [];
+  const res = apiResponse as ApiResponse;
+  return Array.isArray(res.topics)
+    ? res.topics.map(topic => normalizeTopic(topic as unknown as Record<string, unknown>))
+    : [];
 }
 
 export function extractLessons(apiResponse: unknown): Lesson[] {
@@ -91,16 +95,19 @@ export function extractLessons(apiResponse: unknown): Lesson[] {
     return apiResponse.map(lesson => normalizeLesson(lesson as unknown as Record<string, unknown>));
   }
 
-  const res = apiResponse as ApiWrapper<Record<string, unknown>>;
-  return Array.isArray(res.lessons) ? res.lessons.map(lesson => normalizeLesson(lesson)) : [];
+  const res = apiResponse as ApiResponse;
+  return Array.isArray(res.lessons)
+    ? res.lessons.map(lesson => normalizeLesson(lesson as unknown as Record<string, unknown>))
+    : [];
 }
 
 export function extractSingleLesson(apiResponse: unknown): Lesson | null {
-  if (!apiResponse) return null;
+  if (!apiResponse || typeof apiResponse !== 'object') return null;
 
-  const res = apiResponse as Record<string, unknown>;
-  const raw = (res.lesson || res.data || res) as Record<string, unknown>;
-  if (!raw || typeof raw._id !== 'string') return null;
+  const res = apiResponse as ApiResponse;
+  const raw = (res.lesson || res.data || apiResponse) as Record<string, unknown>;
+
+  if (!raw || typeof raw !== 'object' || typeof raw._id !== 'string') return null;
 
   return normalizeLesson(raw);
 }
