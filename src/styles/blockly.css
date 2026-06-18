@@ -1,0 +1,120 @@
+.blockly-editor-host {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.blockly-editor-host .blocklySvg {
+  background: transparent !important;
+}
+
+.blockly-editor-host .blocklyMainBackground {
+  fill: transparent !important;
+  stroke: none !important;
+}
+
+/* ── Block Library toolbox (Figma Make parity) ── */
+
+.blocklyToolboxDiv {
+  width: 300px !important;
+  border: 4px solid #111 !important;
+  border-radius: 32px !important;
+  margin: 1rem !important;
+  padding: 1rem 0.75rem 0.85rem !important;
+  box-shadow: 12px 12px 0 #111 !important;
+  background: rgba(17, 17, 17, 0.92) !important;
+  backdrop-filter: blur(12px);
+}
+
+.blockly-toolbox-title {
+  font-family: Unbounded, Montserrat, sans-serif;
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #fff9dc;
+  text-align: center;
+  padding: 0.25rem 0.75rem 1rem;
+  margin: 0 0.35rem 0.65rem;
+  border-bottom: 3px solid rgba(255, 249, 220, 0.2);
+  letter-spacing: 0.01em;
+}
+
+.blocklyTreeRoot {
+  padding: 0 !important;
+}
+
+.blocklyTreeRow {
+  min-height: 58px !important;
+  height: auto !important;
+  border-radius: 18px !important;
+  margin: 0.4rem 0.35rem !important;
+  padding: 0.7rem 0.85rem !important;
+  line-height: 1.2 !important;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.blocklyTreeRowContentContainer {
+  align-items: center !important;
+  min-height: 42px !important;
+}
+
+.blocklyTreeIcon {
+  width: 14px !important;
+  height: 38px !important;
+  border-radius: 8px !important;
+  margin-right: 0.85rem !important;
+  border: 3px solid rgba(17, 17, 17, 0.35) !important;
+  box-shadow: 2px 2px 0 rgba(17, 17, 17, 0.45) !important;
+}
+
+.blocklyTreeLabel {
+  font-family: Unbounded, Montserrat, sans-serif !important;
+  font-size: 1.05rem !important;
+  font-weight: 900 !important;
+  color: #fff9dc !important;
+  letter-spacing: 0.01em;
+  padding: 0.15rem 0 !important;
+}
+
+.blocklyTreeRow:hover {
+  background: rgba(255, 249, 220, 0.08) !important;
+  transform: translateX(-2px);
+}
+
+.blocklyTreeSelected .blocklyTreeRow {
+  background: rgba(255, 119, 0, 0.2) !important;
+  box-shadow: inset 0 0 0 3px rgba(255, 119, 0, 0.45) !important;
+}
+
+.blocklyTreeSelected .blocklyTreeLabel {
+  color: #fff !important;
+}
+
+.blocklyFlyoutBackground {
+  fill: rgba(17, 17, 17, 0.96) !important;
+}
+
+.blocklyFlyout {
+  border-left: 4px solid #111 !important;
+}
+
+.blocklyFlyout .blocklyBlockCanvas {
+  transform-origin: top left;
+}
+
+.blocklyFlyoutButton {
+  fill: rgba(255, 249, 220, 0.12) !important;
+}
+
+.blocklyScrollbarHandle {
+  fill: rgba(255, 249, 220, 0.45) !important;
+}
+
+.blocklyWidgetDiv .blocklyHtmlInput {
+  border: 3px solid #111 !important;
+  border-radius: 12px !important;
+  font-family: Montserrat, sans-serif !important;
+  font-weight: 700 !important;
+}

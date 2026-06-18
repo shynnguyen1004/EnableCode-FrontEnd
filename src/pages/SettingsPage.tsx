@@ -1,5 +1,9 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, Navigate } from 'react-router-dom';
+
+import { useAuth } from '../context/AuthContext';
+import { profileApi } from '../api/profileApi';
+import type { UserProfileResponse, Calibration } from '../lib/types';
 
 /* ─── Inline SVG Icons ─── */
 const CheckCircleIcon = () => (
@@ -82,48 +86,95 @@ const ToggleCheckIcon = () => (
   </svg>
 );
 
-export default function ProfilePage() {
+export default function SettingsPage() {
+  const { isLoggedIn } = useAuth();
+
+  // State for server data
+  const [profileData, setProfileData] = useState<UserProfileResponse | null>(null);
+  const [calibration, setCalibration] = useState<Calibration | null>(null);
+
   const [sensitivity, setSensitivity] = useState(75);
   const [dwellTime, setDwellTime] = useState(40);
   const [visualFeedback, setVisualFeedback] = useState(true);
-  const [currentUser] = useState(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const fetchSettingsData = async () => {
       try {
-        const parsedUser = JSON.parse(storedUser);
-        const date = new Date(parsedUser.createdAt || new Date());
-        const formattedDate = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        const [profileRes, calibrationRes] = await Promise.all([profileApi.getProfile(), profileApi.getCalibration()]);
 
-        return {
-          name: parsedUser.name || 'Guest',
-          level: parsedUser.level || 1,
-          streak: parsedUser.streak || 0,
-          lessonsCompleted: parsedUser.lessonsCompleted || 0,
-          badges: parsedUser.badges || 0, // Tạm hardcode badge vì chưa có API
-          memberSince: formattedDate,
-        };
+        setProfileData(profileRes);
+        setCalibration(calibrationRes);
+
+        // Map backend preferences to local state
+        if (calibrationRes?.preferences) {
+          setSensitivity(calibrationRes.preferences.trackingSensitivity || 75);
+          setDwellTime(calibrationRes.preferences.mouthDragThreshold || 40);
+          setVisualFeedback(calibrationRes.preferences.visualFeedback ?? true);
+        }
       } catch (error) {
-        console.error('Lỗi khi đọc thông tin User:', error);
+        console.error('Error fetching settings data:', error);
+      } finally {
+        setIsLoading(false);
       }
-    }
-
-    return {
-      name: 'Guest User',
-      level: 1,
-      streak: 0,
-      lessonsCompleted: 0,
-      badges: 0,
-      memberSince: '...',
     };
-  });
+
+    fetchSettingsData();
+  }, [isLoggedIn]);
+
+  const handleSaveConfig = async () => {
+    if (!calibration) return;
+    setIsSaving(true);
+    try {
+      await profileApi.updateCalibration({
+        ...calibration,
+        preferences: {
+          ...calibration.preferences,
+          trackingSensitivity: sensitivity,
+          mouthDragThreshold: dwellTime,
+          visualFeedback: visualFeedback,
+        },
+      });
+      alert('Eye-tracking settings saved successfully!');
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      alert('Failed to save settings. Please try again later.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const getInitials = (name: string) => {
+    if (!name) return 'GU';
     const nameParts = name.split(' ');
     if (nameParts.length >= 2) {
       return (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
     }
     return name.substring(0, 2).toUpperCase();
   };
+
+  if (!isLoggedIn) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (isLoading || !profileData) {
+    return (
+      <div
+        className="settings-page"
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}
+      >
+        <p style={{ color: '#666', fontSize: '1.2rem', fontWeight: 500 }}>Loading settings...</p>
+      </div>
+    );
+  }
+
+  const memberSinceStr = profileData.createdAt
+    ? new Date(profileData.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    : '...';
 
   return (
     <div className="settings-page">
@@ -132,17 +183,32 @@ export default function ProfilePage() {
           ←
         </Link>
         <h1>Profile & Settings</h1>
-        <div style={{ width: 48 }} />
+
+        <button
+          onClick={handleSaveConfig}
+          disabled={isSaving}
+          style={{
+            background: '#ff7700',
+            color: '#fff',
+            border: 'none',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            cursor: isSaving ? 'not-allowed' : 'pointer',
+            fontWeight: 'bold',
+          }}
+        >
+          {isSaving ? 'Saving...' : 'Save Changes'}
+        </button>
       </header>
 
       <div className="settings-main">
         <aside className="settings-profile">
           <div className="profile-head">
-            <div className="avatar-placeholder">{getInitials(currentUser.name)}</div>
+            <div className="avatar-placeholder">{getInitials(profileData.name || '')}</div>
             <div>
-              <h2>{currentUser.name.toUpperCase()}</h2>
+              <h2>{profileData.name?.toUpperCase() || 'GUEST USER'}</h2>
               <p>
-                Member since {currentUser.memberSince} • Level {currentUser.level} Explorer
+                Member since {memberSinceStr} • Level {profileData.level || 1} Explorer
               </p>
             </div>
           </div>
@@ -152,21 +218,21 @@ export default function ProfilePage() {
               <div className="stat-icon">
                 <CheckCircleIcon />
               </div>
-              <strong>{currentUser.lessonsCompleted}</strong>
+              <strong>{profileData.lessonsCompleted || 0}</strong>
               <span>EXERCISES</span>
             </article>
             <article>
               <div className="stat-icon">
                 <BadgeIcon />
               </div>
-              <strong>{currentUser.badges}</strong>
+              <strong>{0}</strong>
               <span>BADGES</span>
             </article>
             <article className="wide">
               <div className="stat-icon">
                 <StreakIcon />
               </div>
-              <strong>{currentUser.streak} Days</strong>
+              <strong>{profileData.streak || 0} Days</strong>
               <span>CURRENT LEARNING STREAK</span>
             </article>
           </div>

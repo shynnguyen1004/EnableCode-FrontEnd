@@ -77,27 +77,52 @@
     {
       "_id": "664b00000000000000000001",
       "topic_id": "664a00000000000000000001",
-      "title": "Giao diện Blockly là gì?",
-      "description": "Giới thiệu màn hình làm việc Blockly: vùng kéo thả, hộp công cụ và vùng kết quả.",
+      "title": "Sân chơi khối Blockly (Dev Test)",
+      "description": "Bài sandbox để thử toàn bộ 11 loại khối: Events, Output, Text, Loops, Logic, Variables, Math và Actions. Kéo khối từ hộp công cụ bên phải, gắn vào khối On Start, rồi nhấn Run Code.",
       "order": 1,
       "difficulty": "easy",
       "toolbox_config": {
-        "categories": ["output", "text"]
+        "categories": ["event", "loops", "variables", "action", "logic", "math", "output", "text"],
+        "sandbox": true
       },
       "initial_blocks": {
         "blocks": []
       },
       "hint": [
-        { "step": 1, "text": "Nhìn vào bên trái màn hình — đó là hộp công cụ chứa các khối lệnh." },
-        { "step": 2, "text": "Kéo khối màu tím 'in ra' vào vùng trắng ở giữa." }
+        { "step": 1, "text": "Events (đỏ): On Start — khối mũ, chương trình bắt đầu từ đây." },
+        { "step": 2, "text": "Output (tím): print — in giá trị ra màn hình." },
+        { "step": 3, "text": "Text (tím): text, join — tạo và nối chuỗi." },
+        { "step": 4, "text": "Loops (cam): Repeat — lặp khối bên trong N lần." },
+        {
+          "step": 5,
+          "text": "Logic (xanh dương): if — chạy nhánh khi điều kiện đúng (số khác 0 hoặc chuỗi không rỗng)."
+        },
+        { "step": 6, "text": "Variables (cam): set / get — gán và đọc biến." },
+        { "step": 7, "text": "Math (tím): number, phép + − × ÷." },
+        { "step": 8, "text": "Actions (xanh lá): Move Forward — khối hành động (chưa có mô phỏng)." }
       ],
       "solution": {
-        "blocks": [{ "type": "text_print", "fields": { "TEXT": "Xin chào Blockly!" } }]
+        "blocks": [
+          {
+            "type": "text_print",
+            "value": {
+              "type": "text_join",
+              "values": {
+                "A": { "type": "text", "fields": { "TEXT": "Hello " } },
+                "B": { "type": "text", "fields": { "TEXT": "Blockly!" } }
+              }
+            }
+          }
+        ]
       },
       "public_testcases": [
-        { "input": null, "expected_output": "Xin chào Blockly!", "description": "Chương trình in đúng câu chào" }
+        {
+          "input": null,
+          "expected_output": "",
+          "description": "Sandbox — Run Code hiển thị kết quả, không cần đúng testcase"
+        }
       ],
-      "hidden_testcases": [{ "input": null, "expected_output": "Xin chào Blockly!" }],
+      "hidden_testcases": [{ "input": null, "expected_output": "" }],
       "base_xp": 30,
       "duration": 5,
       "isActive": true
