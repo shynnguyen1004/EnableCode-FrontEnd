@@ -13,7 +13,41 @@ import {
   Save,
 } from 'lucide-react';
 import LanguageToggle from '../components/LanguageToggle';
+import { ReactNode } from 'react';
 import { useI18n } from '../i18n/I18nProvider';
+import PageScale from '../components/PageScale';
+
+function BrutalistSlider({
+  value,
+  onChange,
+  fillClass,
+  icon,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  fillClass: 'profile-slider-fill--green' | 'profile-slider-fill--light-green';
+  icon: ReactNode;
+}) {
+  return (
+    <div className="profile-brutal-slider">
+      <input
+        type="range"
+        min={1}
+        max={100}
+        value={value}
+        onChange={event => onChange(Number(event.target.value))}
+        aria-valuenow={value}
+        aria-valuemin={1}
+        aria-valuemax={100}
+      />
+      <div className="profile-brutal-slider-track" />
+      <div className={`profile-brutal-slider-fill ${fillClass}`} style={{ width: `${value}%` }} />
+      <div className="profile-brutal-slider-thumb" style={{ left: `calc(${value}% - 36px)` }}>
+        {icon}
+      </div>
+    </div>
+  );
+}
 
 import { useAuth } from '../context/AuthContext';
 import { profileApi } from '../api/profileApi';
@@ -28,6 +62,7 @@ export default function ProfilePage() {
 
   const [sensitivity, setSensitivity] = useState(75);
   const [dwellTime, setDwellTime] = useState(40);
+  const [visualFeedback, setVisualFeedback] = useState(true);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -98,10 +133,10 @@ export default function ProfilePage() {
     : '...';
 
   return (
-    <div className="profile-page">
+    <PageScale scale={0.8} className="profile-page">
       <header className="profile-topbar">
-        <Link to="/" className="profile-back-btn" aria-label={t('nav.backToLessons')}>
-          <ArrowLeft size={24} strokeWidth={3} />
+        <Link to="/lessons" className="profile-back-btn" aria-label={t('nav.backToLessons')}>
+          <ArrowLeft size={32} strokeWidth={3} />
         </Link>
         <h1>{t('settings.title')}</h1>
         <div className="profile-topbar-spacer" />
@@ -120,39 +155,36 @@ export default function ProfilePage() {
             <div className="profile-details">
               <h2>{profileData.name?.toUpperCase() || 'STUDENT'}</h2>
               <p>
-                {t('settings.memberSince')} {memberSinceStr}
+                {t('settings.memberSincePrefix')} {memberSinceStr} • {t('settings.levelPrefix')}{' '}
+                {profileData.level || 1} {t('settings.explorer')}
               </p>
             </div>
           </div>
 
           <div className="profile-stats-grid">
-            <article className="profile-stat-card">
-              <div className="profile-stat-icon">
-                <CheckCircle size={32} strokeWidth={3} className="icon-green" />
-              </div>
+            <article className="profile-stat-card" tabIndex={0}>
+              <CheckCircle size={52} strokeWidth={3} className="icon-green" />
               <strong>{profileData.lessonsCompleted || 0}</strong>
               <span>{t('settings.exercises')}</span>
             </article>
-            <article className="profile-stat-card">
-              <div className="profile-stat-icon">
-                <Award size={32} strokeWidth={3} className="icon-orange" />
-              </div>
-              <strong>{0}</strong>
+            <article className="profile-stat-card" tabIndex={0}>
+              <Award size={52} strokeWidth={3} className="icon-orange" />
+              <strong>{profileData.badges || 0}</strong>
               <span>{t('settings.badges')}</span>
             </article>
-            <article className="profile-stat-card wide">
-              <div className="profile-stat-icon">
-                <Target size={32} strokeWidth={3} className="icon-light-green" />
-              </div>
-              <strong>{profileData.streak || 0}</strong>
+            <article className="profile-stat-card wide" tabIndex={0}>
+              <Target size={52} strokeWidth={3} className="icon-light-green" />
+              <strong>
+                {profileData.streak || 0} {t('settings.streakDays')}
+              </strong>
               <span>{t('settings.streak')}</span>
             </article>
           </div>
         </aside>
 
         <main className="profile-controls">
-          <section className="profile-language-section">
-            <div className="profile-language-header">
+          <section className="profile-language-section" style={{ marginBottom: '2rem' }}>
+            <div className="profile-language-header" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div className="profile-heading-icon-wrap profile-heading-icon-wrap--language">
                 <Languages size={28} strokeWidth={2.5} color="#FFF9DC" />
               </div>
@@ -161,80 +193,100 @@ export default function ProfilePage() {
             <p>{t('settings.languageSubtitle')}</p>
             <LanguageToggle />
           </section>
-
-          <div
-            className="profile-controls-header"
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="profile-controls-inner">
+            <div className="profile-controls-header">
               <div className="profile-heading-icon-wrap">
-                <Eye size={28} strokeWidth={2.5} color="#FFF9DC" />
+                <Eye size={44} strokeWidth={2.5} color="#FFF9DC" />
               </div>
               <h2>{t('settings.eyeTrackingTitle')}</h2>
             </div>
-            <button
-              onClick={handleSaveSettings}
-              disabled={isSaving}
-              className="btn btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.9rem' }}
+
+            <div
+              className="profile-controls-header"
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
             >
-              {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-              {t('settings.saveSettings')}
-            </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className="profile-heading-icon-wrap">
+                  <Eye size={28} strokeWidth={2.5} color="#FFF9DC" />
+                </div>
+                <h2>{t('settings.eyeTrackingTitle')}</h2>
+              </div>
+              <button
+                onClick={handleSaveSettings}
+                disabled={isSaving}
+                className="btn btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.9rem' }}
+              >
+                {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                {t('settings.saveSettings')}
+              </button>
+            </div>
+
+            <div className="profile-settings-stack">
+              <section className="profile-calibration-section">
+                <h4>{t('settings.calibrationTitle')}</h4>
+                <p>{t('settings.calibrationBody')}</p>
+                <Link to="/calibration" className="profile-action-btn group">
+                  <Target size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
+                  {t('settings.startCalibration')}
+                </Link>
+              </section>
+
+              <section className="profile-control-card">
+                <div className="profile-control-row">
+                  <h4>{t('settings.sensitivityTitle')}</h4>
+                  <span className="profile-badge-orange">{sensitivity}%</span>
+                </div>
+                <p>{t('settings.sensitivityBody')}</p>
+                <BrutalistSlider
+                  value={sensitivity}
+                  onChange={setSensitivity}
+                  fillClass="profile-slider-fill--green"
+                  icon={<SlidersHorizontal size={32} strokeWidth={3} color="#FFF9DC" />}
+                />
+              </section>
+
+              <section className="profile-control-card">
+                <div className="profile-control-row">
+                  <h4>{t('settings.dwellTitle')}</h4>
+                  <span className="profile-badge-green">{(dwellTime / 10).toFixed(1)}s</span>
+                </div>
+                <p>{t('settings.dwellBody')}</p>
+                <BrutalistSlider
+                  value={dwellTime}
+                  onChange={setDwellTime}
+                  fillClass="profile-slider-fill--light-green"
+                  icon={<MousePointer2 size={32} strokeWidth={3} color="#FFF9DC" />}
+                />
+              </section>
+
+              <button
+                type="button"
+                className="profile-toggle-card"
+                role="switch"
+                aria-checked={visualFeedback}
+                onClick={() => setVisualFeedback(prev => !prev)}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setVisualFeedback(prev => !prev);
+                  }
+                }}
+              >
+                <div className="profile-toggle-copy">
+                  <h4>{t('settings.visualFeedbackTitle')}</h4>
+                  <p>{t('settings.visualFeedbackBody')}</p>
+                </div>
+                <div className={`profile-toggle-switch${visualFeedback ? ' profile-toggle-switch--on' : ''}`}>
+                  <div className="profile-toggle-knob">
+                    {visualFeedback && <CheckCircle size={28} strokeWidth={4} className="icon-green" />}
+                  </div>
+                </div>
+              </button>
+            </div>
           </div>
-
-          <section className="profile-calibration-section">
-            <h4>{t('settings.calibrationTitle')}</h4>
-            <p>{t('settings.calibrationBody')}</p>
-            <button className="profile-action-btn" type="button">
-              <Target size={24} strokeWidth={3} color="#FFF9DC" />
-              {t('settings.startCalibration')}
-            </button>
-          </section>
-
-          <section className="profile-control-card">
-            <div className="profile-control-row">
-              <h4>{t('settings.sensitivityTitle')}</h4>
-              <span className="profile-badge-orange">{sensitivity}%</span>
-            </div>
-            <p>{t('settings.sensitivityBody')}</p>
-            <div className="profile-slider-wrap">
-              <input
-                type="range"
-                min={1}
-                max={100}
-                value={sensitivity}
-                onChange={event => setSensitivity(Number(event.target.value))}
-                style={{ '--range-progress': `${sensitivity}%` } as React.CSSProperties}
-              />
-              <div className="profile-range-thumb-icon" style={{ left: `calc(${sensitivity}% - 22px)` }}>
-                <SlidersHorizontal size={20} strokeWidth={3} color="#FFF9DC" />
-              </div>
-            </div>
-          </section>
-
-          <section className="profile-control-card">
-            <div className="profile-control-row">
-              <h4>{t('settings.dwellTitle')}</h4>
-              <span className="profile-badge-green">{(dwellTime / 10).toFixed(1)}s</span>
-            </div>
-            <p>{t('settings.dwellBody')}</p>
-            <div className="profile-slider-wrap">
-              <input
-                type="range"
-                min={1}
-                max={100}
-                value={dwellTime}
-                onChange={event => setDwellTime(Number(event.target.value))}
-                style={{ '--range-progress': `${dwellTime}%` } as React.CSSProperties}
-              />
-              <div className="profile-range-thumb-icon" style={{ left: `calc(${dwellTime}% - 22px)` }}>
-                <MousePointer2 size={20} strokeWidth={3} color="#FFF9DC" />
-              </div>
-            </div>
-          </section>
         </main>
       </div>
-    </div>
+    </PageScale>
   );
 }

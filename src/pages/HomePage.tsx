@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Eye, MousePointerSquareDashed, BookOpenCheck, ArrowRight, Loader2 } from 'lucide-react';
 import { useState } from 'react';
-
+import FaceControlToggle from '../components/FaceControlToggle';
+import PageScale from '../components/PageScale';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/authApi';
@@ -45,7 +46,7 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="home-wrap">
+    <PageScale scale={1.1} className="home-wrap">
       <header className="top-nav container">
         <Link to="/" className="brand-link" aria-label={t('brand.homeAria')}>
           <img src="/logo/TL_App_Logo.png" alt={t('brand.logoLightAlt')} className="brand-logo" />
@@ -93,10 +94,13 @@ export default function HomePage() {
         </h1>
         <p>{t('home.heroSubtitle')}</p>
 
-        <Link to="/lessons" className="btn btn-primary hero-cta group">
-          {t('home.getStarted')}
-          <ArrowRight size={32} className="hero-arrow" strokeWidth={3} style={{ marginLeft: '12px' }} />
-        </Link>
+        <div className="hero-actions">
+          <FaceControlToggle />
+          <Link to="/lessons" className="btn btn-primary hero-cta group">
+            {t('home.getStarted')}
+            <ArrowRight size={32} className="hero-arrow" strokeWidth={3} style={{ marginLeft: '12px' }} />
+          </Link>
+        </div>
       </main>
 
       <section id="features" className="features-section">
@@ -128,6 +132,6 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
-    </div>
+    </PageScale>
   );
 }

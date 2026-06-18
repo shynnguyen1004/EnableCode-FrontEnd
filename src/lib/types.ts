@@ -17,6 +17,7 @@ export interface UserProfileResponse {
   avatar: string | null;
   totalScore: number;
   lessonsCompleted: number;
+  badges: number;
   streak: number;
   level: number;
   lastActiveDate?: string | null;
