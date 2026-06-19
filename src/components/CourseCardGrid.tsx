@@ -1,6 +1,7 @@
-import { Link } from "react-router-dom";
-import { PlayCircle, CheckCircle, Lock } from "lucide-react";
-import { useI18n } from "../i18n/I18nProvider";
+import { Link } from 'react-router-dom';
+import { PlayCircle, CheckCircle, Lock } from 'lucide-react';
+import { useI18n } from '../i18n/I18nProvider';
+import ReactMarkdown from 'react-markdown';
 
 export type CourseCardItem = {
   id: string;
@@ -9,7 +10,7 @@ export type CourseCardItem = {
   progress: number;
   difficulty: string;
   locked: boolean;
-  tone: "green" | "light-green" | "dark";
+  tone: 'green' | 'light-green' | 'dark';
   href: string;
 };
 
@@ -22,21 +23,21 @@ export default function CourseCardGrid({ items }: CourseCardGridProps) {
 
   return (
     <section className="lesson-grid">
-      {items.map((item) => (
+      {items.map(item => (
         <Link
           key={item.id}
-          to={item.locked ? "#" : item.href}
-          className={`lesson-card tone-${item.tone}${item.locked ? " is-locked" : ""}`}
+          to={item.locked ? '#' : item.href}
+          className={`lesson-card tone-${item.tone}${item.locked ? ' is-locked' : ''}`}
           aria-disabled={item.locked}
         >
-          <LessonCardInner locked={item.locked} item={item} progressLabel={t("course.progress")} />
+          <LessonCardInner locked={item.locked} item={item} progressLabel={t('course.progress')} />
 
           {item.locked ? (
             <div className="lock-overlay" aria-hidden="true">
               <div className="lock-icon-wrap">
                 <Lock size={48} color="#FFFFFF" strokeWidth={2.5} aria-hidden="true" />
               </div>
-              <span className="lock-label">{t("course.locked")}</span>
+              <span className="lock-label">{t('course.locked')}</span>
             </div>
           ) : null}
         </Link>
@@ -55,7 +56,7 @@ function LessonCardInner({
   progressLabel: string;
 }) {
   return (
-    <div className={locked ? "lesson-card-inner is-blurred" : "lesson-card-inner"}>
+    <div className={locked ? 'lesson-card-inner is-blurred' : 'lesson-card-inner'}>
       <LessonCardBody item={item} progressLabel={progressLabel} />
     </div>
   );
@@ -76,7 +77,7 @@ function LessonCardBody({ item, progressLabel }: { item: CourseCardItem; progres
       </div>
 
       <h2>{item.title}</h2>
-      <p>{item.description}</p>
+      <ReactMarkdown>{item.description}</ReactMarkdown>
 
       <div className="lesson-progress-wrap">
         <div className="lesson-progress-row">

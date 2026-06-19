@@ -261,7 +261,7 @@ export default function SettingsPage() {
               <span className="control-value-badge">{sensitivity}%</span>
             </div>
             <p className="control-desc">Higher sensitivity makes the cursor move faster across the screen.</p>
-            <div className="custom-range-wrap">
+            <div id="draggable" className="custom-range-wrap">
               <input
                 type="range"
                 min={1}
@@ -282,7 +282,7 @@ export default function SettingsPage() {
               <span className="control-value-badge">{(dwellTime / 10).toFixed(1)}s</span>
             </div>
             <p className="control-desc">How long you need to stare at a button to trigger a "click".</p>
-            <div className="custom-range-wrap">
+            <div id="draggable" className="custom-range-wrap">
               <input
                 type="range"
                 min={1}
