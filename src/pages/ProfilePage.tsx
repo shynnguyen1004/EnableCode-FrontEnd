@@ -219,19 +219,21 @@ export default function ProfilePage() {
         </aside>
 
         <main className="profile-controls">
-          <section className="profile-language-section" style={{ marginBottom: '2.5rem' }}>
-            <div
-              className="profile-language-header"
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}
-            >
-              <div className="profile-heading-icon-wrap profile-heading-icon-wrap--language">
-                <Languages size={28} strokeWidth={2.5} color="#FFF9DC" />
+          <div className="profile-controls-inner">
+            <section className="profile-language-section" style={{ marginBottom: '2.5rem' }}>
+              <div
+                className="profile-language-header"
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}
+              >
+                <div className="profile-heading-icon-wrap profile-heading-icon-wrap--language">
+                  <Languages size={28} strokeWidth={2.5} color="#FFF9DC" />
+                </div>
+                <h3>{t('settings.languageTitle')}</h3>
               </div>
-              <h3>{t('settings.languageTitle')}</h3>
-            </div>
-            <p style={{ marginBottom: '1rem', color: '#666' }}>{t('settings.languageSubtitle')}</p>
-            <LanguageToggle />
-          </section>
+              <p style={{ marginBottom: '1rem', color: '#666' }}>{t('settings.languageSubtitle')}</p>
+              <LanguageToggle />
+            </section>
+          </div>
 
           <div className="profile-controls-inner">
             <div
