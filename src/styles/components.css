@@ -1602,7 +1602,7 @@
 }
 
 .workspace-output-badge--passed {
-  color: var(--accent-green);
+  color: var(--accent-light-green);
 }
 
 .workspace-output-badge--error {
@@ -1684,7 +1684,7 @@
 }
 
 .workspace-output-line--success {
-  color: var(--accent-green);
+  color: var(--accent-light-green);
 }
 
 .workspace-output-line--error {
