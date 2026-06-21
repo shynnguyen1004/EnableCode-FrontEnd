@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Eye, MousePointerSquareDashed, BookOpenCheck, ArrowRight, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import FaceControlToggle from '../components/FaceControlToggle';
@@ -12,6 +12,8 @@ export default function HomePage() {
   const { isLoggedIn, logout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  const navigate = useNavigate();
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
@@ -21,6 +23,7 @@ export default function HomePage() {
     } finally {
       setIsLoggingOut(false);
       logout();
+      navigate('/');
     }
   };
 
@@ -74,8 +77,7 @@ export default function HomePage() {
                   alignItems: 'center',
                   gap: '8px',
                 }}
-                disabled={isLoggingOut}
-              >
+                disabled={isLoggingOut}>
                 {isLoggingOut && <Loader2 size={18} className="animate-spin" />}
                 {t('nav.logOut') || 'Log Out'}
               </button>
