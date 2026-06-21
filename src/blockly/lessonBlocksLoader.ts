@@ -81,11 +81,9 @@ function getChainTail(block: BlockSvg): BlockSvg {
 
 const WORKSPACE_BLOCK_PADDING = 56;
 
-function layoutStartBlockTopRight(workspace: Blockly.WorkspaceSvg, startBlock: BlockSvg): void {
+function layoutStartBlockTopLeft(workspace: Blockly.WorkspaceSvg, startBlock: BlockSvg): void {
   Blockly.svgResize(workspace);
-  const metrics = workspace.getMetrics();
-  const { width } = startBlock.getHeightWidth();
-  const targetX = Math.max(WORKSPACE_BLOCK_PADDING, metrics.viewWidth - width - WORKSPACE_BLOCK_PADDING);
+  const targetX = WORKSPACE_BLOCK_PADDING;
   const targetY = WORKSPACE_BLOCK_PADDING;
   const { x, y } = startBlock.getRelativeToSurfaceXY();
   startBlock.moveBy(targetX - x, targetY - y);
@@ -159,5 +157,5 @@ export function loadLessonIntoWorkspace(
     previous = getChainTail(block);
   }
 
-  layoutStartBlockTopRight(workspace, startBlock);
+  layoutStartBlockTopLeft(workspace, startBlock);
 }
