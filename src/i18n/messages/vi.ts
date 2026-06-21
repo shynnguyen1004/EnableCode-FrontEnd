@@ -155,6 +155,8 @@ const vi = {
     calibrationTitle: 'HIỆU CHUẨN HỆ THỐNG',
     calibrationBody: 'Hiệu chuẩn lại nếu con trỏ không theo cử chỉ đầu của bạn chính xác.',
     startCalibration: 'Bắt đầu hiệu chuẩn',
+    setupFaceLogin: 'Thiết lập đăng nhập khuôn mặt',
+    logoutAccount: 'Đăng xuất tài khoản',
     sensitivityTitle: 'ĐỘ NHẠY CON TRỎ',
     sensitivityBody: 'Độ nhạy cao hơn giúp con trỏ phản hồi mạnh hơn với cử chỉ đầu.',
     dwellTitle: 'THỜI GIAN GIỮ',

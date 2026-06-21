@@ -154,6 +154,8 @@ const en = {
     calibrationTitle: 'SYSTEM CALIBRATION',
     calibrationBody: "Recalibrate if the cursor isn't following your head movement accurately.",
     startCalibration: 'Start Calibration',
+    setupFaceLogin: 'Setup Face Login',
+    logoutAccount: 'Log Out Account',
     sensitivityTitle: 'CURSOR SENSITIVITY',
     sensitivityBody: 'Higher sensitivity makes the cursor respond more to head movement.',
     dwellTitle: 'HOLD DURATION',

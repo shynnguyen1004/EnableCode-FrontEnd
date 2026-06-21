@@ -1988,6 +1988,32 @@
   transform: scale(1.1);
 }
 
+.profile-action-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.profile-action-stack .profile-action-btn {
+  margin-top: 0;
+}
+
+.profile-action-btn--face-login {
+  background: #74a258;
+}
+
+.profile-action-btn--logout {
+  background: #e53a36;
+}
+
+.profile-action-btn--logout:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 12px 12px 0 #111;
+}
+
 .profile-control-card,
 .profile-toggle-card {
   width: 100%;

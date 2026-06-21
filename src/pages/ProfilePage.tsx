@@ -1,22 +1,35 @@
 // 1. TẤT CẢ IMPORT PHẢI NẰM Ở ĐÂY
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Target, Award, Eye, Languages, Loader2, AlertTriangle } from 'lucide-react';
+import {
+  ArrowLeft,
+  CheckCircle,
+  Target,
+  Award,
+  Eye,
+  Languages,
+  Loader2,
+  AlertTriangle,
+  ScanFace,
+  LogOut,
+} from 'lucide-react';
 import LanguageToggle from '../components/LanguageToggle';
 import PageScale from '../components/PageScale';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
 import { profileApi } from '../api/profileApi';
+import { authApi } from '../api/authApi';
 import type { UserProfileResponse } from '../lib/types';
 
 export default function ProfilePage() {
   const { t } = useI18n();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, logout } = useAuth();
 
   // Chỉ giữ lại state quản lý dữ liệu Profile và trạng thái tải trang
   const [profileData, setProfileData] = useState<UserProfileResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -38,6 +51,18 @@ export default function ProfilePage() {
 
     fetchProfileData();
   }, [isLoggedIn]);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await authApi.logout();
+    } catch (error) {
+      console.error('Failed to logout from server:', error);
+    } finally {
+      setIsLoggingOut(false);
+      logout();
+    }
+  };
 
   if (!isLoggedIn) {
     return <Navigate to="/login" replace />;
@@ -84,7 +109,7 @@ export default function ProfilePage() {
     : '...';
 
   return (
-    <PageScale scale={0.8} className="profile-page">
+    <PageScale scale={0.9} className="profile-page">
       <header className="profile-topbar">
         <Link to="/lessons" className="profile-back-btn" aria-label={t('nav.backToLessons')}>
           <ArrowLeft size={32} strokeWidth={3} />
@@ -174,10 +199,29 @@ export default function ProfilePage() {
               <section className="profile-calibration-section">
                 <h4>{t('settings.calibrationTitle')}</h4>
                 <p>{t('settings.calibrationBody')}</p>
-                <Link to="/calibration" className="profile-action-btn group">
-                  <Target size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
-                  {t('settings.startCalibration')}
-                </Link>
+                <div className="profile-action-stack">
+                  <Link to="/calibration" className="profile-action-btn group">
+                    <Target size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
+                    {t('settings.startCalibration')}
+                  </Link>
+                  <Link to="/login" className="profile-action-btn profile-action-btn--face-login group">
+                    <ScanFace size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
+                    {t('settings.setupFaceLogin')}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="profile-action-btn profile-action-btn--logout group"
+                  >
+                    {isLoggingOut ? (
+                      <Loader2 size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon animate-spin" />
+                    ) : (
+                      <LogOut size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
+                    )}
+                    {t('settings.logoutAccount')}
+                  </button>
+                </div>
               </section>
             </div>
           </div>
