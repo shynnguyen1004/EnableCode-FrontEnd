@@ -7,6 +7,7 @@ interface AuthContextType {
   accessToken: string | null;
   user: UserProfileResponse | null;
   login: (newAccessToken: string, userData: UserProfileResponse) => void;
+  updateUser: (userData: UserProfileResponse) => void;
   logout: () => void;
 }
 
@@ -40,6 +41,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
+  const updateUser = (userData: UserProfileResponse) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
+
   const logout = useCallback(() => {
     setAccessToken(null);
     setUser(null);
@@ -62,7 +68,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [logout]);
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!accessToken, accessToken, user, login, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn: !!accessToken, accessToken, user, login, updateUser, logout }}>
       {children}
     </AuthContext.Provider>
   );
