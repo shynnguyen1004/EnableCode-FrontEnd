@@ -30,9 +30,15 @@ export default function LoginPage() {
 
       if (accessToken && user) {
         login(accessToken, user as unknown as UserProfileResponse);
-      }
 
-      navigate('/lessons');
+        if ((user as unknown as UserProfileResponse).isCalibrated) {
+          navigate('/lessons');
+        } else {
+          navigate('/calibration');
+        }
+      } else {
+        navigate('/calibration');
+      }
     } catch (error) {
       console.error('Login failed:', error);
 

@@ -45,7 +45,7 @@ export default function RegisterPage() {
         login(accessToken, user as unknown as UserProfileResponse);
       }
 
-      navigate('/lessons');
+      navigate('/calibration');
     } catch (error) {
       console.error('Registration failed:', error);
 
