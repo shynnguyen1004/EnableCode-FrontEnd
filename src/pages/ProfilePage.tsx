@@ -1,134 +1,48 @@
-// 1. TẤT CẢ IMPORT PHẢI NẰM Ở ĐÂY
-import { useEffect, useState, ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import {
-  ArrowLeft,
-  CheckCircle,
-  Target,
-  Award,
-  Eye,
-  SlidersHorizontal,
-  MousePointer2,
-  Languages,
-  Loader2,
-  Save,
-  AlertTriangle,
-} from 'lucide-react';
+import { ArrowLeft, CheckCircle, Target, Award, Eye, Languages, Loader2, AlertTriangle } from 'lucide-react';
 import LanguageToggle from '../components/LanguageToggle';
 import PageScale from '../components/PageScale';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
 import { profileApi } from '../api/profileApi';
-import type { UserProfileResponse, Calibration } from '../lib/types';
+import type { UserProfileResponse } from '../lib/types';
 
-// 2. KHAI BÁO COMPONENT CON SAU KHI ĐÃ IMPORT XONG
-function BrutalistSlider({
-  value,
-  onChange,
-  fillClass,
-  icon,
-}: {
-  value: number;
-  onChange: (value: number) => void;
-  fillClass: 'profile-slider-fill--green' | 'profile-slider-fill--light-green';
-  icon: ReactNode;
-}) {
-  return (
-    <div className="profile-brutal-slider">
-      <input
-        type="range"
-        min={1}
-        max={100}
-        value={value}
-        onChange={event => onChange(Number(event.target.value))}
-        aria-valuenow={value}
-        aria-valuemin={1}
-        aria-valuemax={100}
-      />
-      <div className="profile-brutal-slider-track" />
-      <div className={`profile-brutal-slider-fill ${fillClass}`} style={{ width: `${value}%` }} />
-      <div className="profile-brutal-slider-thumb" style={{ left: `calc(${value}% - 36px)` }}>
-        {icon}
-      </div>
-    </div>
-  );
-}
-
-// 3. COMPONENT CHÍNH CỦA TRANG
 export default function ProfilePage() {
   const { t } = useI18n();
   const { isLoggedIn } = useAuth();
 
+  // Chỉ giữ lại state quản lý dữ liệu Profile và trạng thái tải trang
   const [profileData, setProfileData] = useState<UserProfileResponse | null>(null);
-  const [calibration, setCalibration] = useState<Calibration | null>(null);
-
-  const [sensitivity, setSensitivity] = useState(75);
-  const [dwellTime, setDwellTime] = useState(40);
-  const [visualFeedback, setVisualFeedback] = useState(true);
-
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn) return;
 
-    const fetchProfileAndSettings = async () => {
+    const fetchProfileData = async () => {
       setIsLoading(true);
       setFetchError(false);
       try {
-        const [profileRes, calibrationRes] = await Promise.all([
-          profileApi.getProfile(),
-          profileApi.getCalibration().catch(() => {
-            console.warn('Error fetching calibration data, returning null.');
-            return null; // Bỏ qua lỗi 404 của Calibration
-          }),
-        ]);
-
+        // Chỉ gọi API lấy thông tin user
+        const profileRes = await profileApi.getProfile();
         setProfileData(profileRes);
-        setCalibration(calibrationRes);
-
-        if (calibrationRes?.preferences) {
-          setSensitivity(calibrationRes.preferences.trackingSensitivity || 75);
-          setDwellTime(calibrationRes.preferences.mouthDragThreshold || 40);
-        }
       } catch (error) {
-        console.error('Error fetching profile and settings:', error);
-        setFetchError(true); // Đánh dấu là có lỗi nghiêm trọng khi lấy Profile
+        console.error('Error fetching profile:', error);
+        setFetchError(true);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchProfileAndSettings();
+    fetchProfileData();
   }, [isLoggedIn]);
-
-  const handleSaveSettings = async () => {
-    if (!calibration) return;
-    setIsSaving(true);
-    try {
-      await profileApi.updateCalibration({
-        ...calibration,
-        preferences: {
-          ...calibration.preferences,
-          trackingSensitivity: sensitivity,
-          mouthDragThreshold: dwellTime,
-        },
-      });
-      alert('Profile settings saved successfully!');
-    } catch (error) {
-      console.error('Error saving profile settings:', error);
-      alert('Failed to save profile settings. Please try again later.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   if (!isLoggedIn) {
     return <Navigate to="/login" replace />;
   }
 
-  // Xử lý khi đang tải
+  // Xử lý hiển thị loading
   if (isLoading) {
     return (
       <div
@@ -141,7 +55,7 @@ export default function ProfilePage() {
     );
   }
 
-  // Xử lý khi server lỗi thật sự (không lấy được Profile)
+  // Xử lý khi server lỗi
   if (fetchError || !profileData) {
     return (
       <div
@@ -219,6 +133,7 @@ export default function ProfilePage() {
         </aside>
 
         <main className="profile-controls">
+          {/* Cài đặt Ngôn ngữ */}
           <div className="profile-controls-inner">
             <section className="profile-language-section" style={{ marginBottom: '2.5rem' }}>
               <div
@@ -228,13 +143,14 @@ export default function ProfilePage() {
                 <div className="profile-heading-icon-wrap profile-heading-icon-wrap--language">
                   <Languages size={28} strokeWidth={2.5} color="#FFF9DC" />
                 </div>
-                <h3>{t('settings.languageTitle')}</h3>
+                <h3 style={{ margin: 0 }}>{t('settings.languageTitle')}</h3>
               </div>
               <p style={{ marginBottom: '1rem', color: '#666' }}>{t('settings.languageSubtitle')}</p>
               <LanguageToggle />
             </section>
           </div>
 
+          {/* Cài đặt Eye Tracking */}
           <div className="profile-controls-inner">
             <div
               className="profile-controls-header"
@@ -249,18 +165,8 @@ export default function ProfilePage() {
                 <div className="profile-heading-icon-wrap">
                   <Eye size={28} strokeWidth={2.5} color="#FFF9DC" />
                 </div>
-                <h3>{t('settings.eyeTrackingTitle')}</h3>
+                <h3 style={{ margin: 0 }}>{t('settings.eyeTrackingTitle')}</h3>
               </div>
-
-              <button
-                onClick={handleSaveSettings}
-                disabled={isSaving}
-                className="btn btn-primary"
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.9rem' }}
-              >
-                {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                {t('settings.saveSettings')}
-              </button>
             </div>
 
             <div className="profile-settings-stack">
@@ -272,58 +178,6 @@ export default function ProfilePage() {
                   {t('settings.startCalibration')}
                 </Link>
               </section>
-
-              <section className="profile-control-card">
-                <div className="profile-control-row">
-                  <h4>{t('settings.sensitivityTitle')}</h4>
-                  <span className="profile-badge-orange">{sensitivity}%</span>
-                </div>
-                <p>{t('settings.sensitivityBody')}</p>
-                <BrutalistSlider
-                  value={sensitivity}
-                  onChange={setSensitivity}
-                  fillClass="profile-slider-fill--green"
-                  icon={<SlidersHorizontal size={32} strokeWidth={3} color="#FFF9DC" />}
-                />
-              </section>
-
-              <section className="profile-control-card">
-                <div className="profile-control-row">
-                  <h4>{t('settings.dwellTitle')}</h4>
-                  <span className="profile-badge-green">{(dwellTime / 10).toFixed(1)}s</span>
-                </div>
-                <p>{t('settings.dwellBody')}</p>
-                <BrutalistSlider
-                  value={dwellTime}
-                  onChange={setDwellTime}
-                  fillClass="profile-slider-fill--light-green"
-                  icon={<MousePointer2 size={32} strokeWidth={3} color="#FFF9DC" />}
-                />
-              </section>
-
-              <button
-                type="button"
-                className="profile-toggle-card"
-                role="switch"
-                aria-checked={visualFeedback}
-                onClick={() => setVisualFeedback(prev => !prev)}
-                onKeyDown={event => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    setVisualFeedback(prev => !prev);
-                  }
-                }}
-              >
-                <div className="profile-toggle-copy">
-                  <h4>{t('settings.visualFeedbackTitle')}</h4>
-                  <p>{t('settings.visualFeedbackBody')}</p>
-                </div>
-                <div className={`profile-toggle-switch${visualFeedback ? ' profile-toggle-switch--on' : ''}`}>
-                  <div className="profile-toggle-knob">
-                    {visualFeedback && <CheckCircle size={28} strokeWidth={4} className="icon-green" />}
-                  </div>
-                </div>
-              </button>
             </div>
           </div>
         </main>
