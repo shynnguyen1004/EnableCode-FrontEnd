@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, ArrowLeft, CheckCircle, RefreshCw, Target, Crosshair, ArrowRight } from 'lucide-react';
+import { Eye, ArrowLeft, CheckCircle, RefreshCw, Target, Crosshair, ArrowRight, CircleX } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
 import { useEyeTracking } from '../context/EyeTrackingContext';
@@ -165,10 +165,8 @@ export default function CalibrationPage() {
                   {t('calibration.begin')}
                 </button>
 
-                <Link
-                  to="/lessons"
-                  className="calibration-primary-btn group"
-                  style={{ background: '#E53A36', color: '#fff' }}>
+                <Link to="/lessons" className="calibration-primary-btn group" style={{ background: '#E53A36' }}>
+                  <CircleX size={32} strokeWidth={3} className="btn-icon" />
                   {t('calibration.cancel')}
                 </Link>
               </div>
