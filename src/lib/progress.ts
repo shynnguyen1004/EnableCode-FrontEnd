@@ -4,7 +4,7 @@ export const isLessonCompleted = (lessonId: string, userProgressList: UserProgre
   // Guard clause: Return early if inputs are invalid or empty
   if (!lessonId || !userProgressList.length) return false;
 
-  const lessonProgress = userProgressList.find(progress => progress.lessonId === lessonId);
+  const lessonProgress = userProgressList.find(progress => String(progress.lessonId) === String(lessonId));
   return lessonProgress?.status === 'completed';
 };
 

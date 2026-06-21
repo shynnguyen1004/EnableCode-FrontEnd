@@ -76,23 +76,21 @@ export default function WorkspacePage() {
           topicApi.getAllTopics(),
           topicApi.getLessonsByTopic(actualTopicId),
           progressApi.getAllUserProgress(),
-          progressApi.getUserLessonProgress(lessonId).catch(() => null),
+          progressApi.getUserLessonProgress(lessonId),
         ]);
 
         const rawTopics = extractTopics(topicsRes);
         const rawLessons = extractLessons(topicLessonsRes);
         const matchedTopic = rawTopics.find(item => item._id === actualTopicId);
-        const allProgress = (allProgressRes as any)?.progress || [];
         if (!matchedTopic) {
           setIsNotFound(true);
           return;
         }
-        const detailProgress = (detailProgressRes as any)?.progress || detailProgressRes;
-        setCurrentLessonProgress(detailProgress || null);
+        setCurrentLessonProgress(detailProgressRes);
         setLesson(fetchedLesson);
         setTopic(matchedTopic);
         setLessonsInTopic(rawLessons.filter(item => item.isActive));
-        setUserProgressList(allProgress);
+        setUserProgressList(allProgressRes);
         setHintIndex(0);
         setOutputLines([]);
         setOutputOpen(false);
@@ -211,14 +209,11 @@ export default function WorkspacePage() {
 
         const [updatedAllProgress, updatedDetailProgress] = await Promise.all([
           progressApi.getAllUserProgress(),
-          progressApi.getUserLessonProgress(lessonId).catch(() => null),
+          progressApi.getUserLessonProgress(lessonId),
         ]);
 
-        setUserProgressList(
-          Array.isArray(updatedAllProgress) ? updatedAllProgress : (updatedAllProgress as any)?.progress || [],
-        );
-        const newDetail = (updatedDetailProgress as any)?.progress || updatedDetailProgress;
-        setCurrentLessonProgress(newDetail || null);
+        setUserProgressList(updatedAllProgress);
+        setCurrentLessonProgress(updatedDetailProgress);
       } else {
         resultLogs.push({
           id: 'result-fail',

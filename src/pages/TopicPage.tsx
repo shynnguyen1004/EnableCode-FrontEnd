@@ -9,7 +9,7 @@ import { isTopicLocked, calculateTopicCompletionPercentage } from '../lib/progre
 import { topicApi } from '../api/topicApi';
 import { lessonApi } from '../api/lessonApi';
 import { progressApi } from '../api/progressApi';
-import { extractTopics } from '../utils/lessonMapper';
+import { extractTopics, extractLessons } from '../utils/lessonMapper';
 
 export default function TopicPage() {
   const { t, localizeTopic, difficultyLabel } = useI18n();
@@ -34,7 +34,7 @@ export default function TopicPage() {
 
         setTopics(formattedTopics.filter(topic => topic.isActive));
 
-        setAllLessons(lessonsRes.lessons || []);
+        setAllLessons(extractLessons(lessonsRes));
         setUserProgressList(progressRes);
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
