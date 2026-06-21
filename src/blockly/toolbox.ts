@@ -49,10 +49,17 @@ function sortCategories(categories: string[]): string[] {
 }
 
 export function buildToolbox(toolboxConfig: Record<string, unknown> | undefined): BlocklyOptions['toolbox'] {
+  if (
+    toolboxConfig &&
+    toolboxConfig.kind &&
+    Array.isArray(toolboxConfig.contents) &&
+    toolboxConfig.contents.length > 0
+  ) {
+    return toolboxConfig as unknown as BlocklyOptions['toolbox'];
+  }
   const categories = sortCategories(
     Array.isArray(toolboxConfig?.categories) ? (toolboxConfig.categories as string[]) : DEFAULT_CATEGORIES,
   );
-
   return {
     kind: 'categoryToolbox',
     contents: categories

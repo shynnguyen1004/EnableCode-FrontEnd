@@ -17,6 +17,7 @@ type BlocklyEditorProps = {
   toolboxConfig?: Record<string, unknown>;
   initialBlocks?: Record<string, unknown>;
   lessonKey: string;
+  savedWorkspaceState?: Record<string, unknown>;
   toolboxTitle?: string;
 };
 
@@ -35,7 +36,7 @@ function ensureToolboxTitle(host: HTMLElement, title: string): void {
 }
 
 const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(function BlocklyEditor(
-  { toolboxConfig, initialBlocks, lessonKey, toolboxTitle = 'Block Library' },
+  { toolboxConfig, initialBlocks, lessonKey, savedWorkspaceState, toolboxTitle = 'Block Library' },
   ref,
 ) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -48,6 +49,7 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
     getWorkspace: () => workspaceRef.current,
     resetWorkspace: () => {
       if (!workspaceRef.current) return;
+      workspaceRef.current.clear();
       loadLessonIntoWorkspace(workspaceRef.current, initialBlocksRef.current);
     },
   }));
@@ -56,9 +58,13 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
     if (!hostRef.current) return;
 
     registerEnableCodeBlocks();
+    const defaultToolbox: Blockly.utils.toolbox.ToolboxDefinition = {
+      kind: 'flyoutToolbox',
+      contents: [],
+    };
 
     const workspace = Blockly.inject(hostRef.current, {
-      toolbox: buildToolbox(toolboxConfig),
+      toolbox: defaultToolbox,
       theme: enableCodeTheme,
       renderer: 'zelos',
       toolboxPosition: 'end',
@@ -90,8 +96,6 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
     });
 
     workspaceRef.current = workspace;
-    loadLessonIntoWorkspace(workspace, initialBlocksRef.current);
-    ensureToolboxTitle(hostRef.current, toolboxTitle);
 
     const resize = () => {
       Blockly.svgResize(workspace);
@@ -109,7 +113,32 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
       workspace.dispose();
       workspaceRef.current = null;
     };
-  }, [lessonKey, toolboxConfig, toolboxTitle]);
+  }, []);
+  useEffect(() => {
+    if (workspaceRef.current && toolboxConfig) {
+      const newToolbox = buildToolbox(toolboxConfig);
+      if (newToolbox) {
+        workspaceRef.current.updateToolbox(newToolbox as Blockly.utils.toolbox.ToolboxDefinition);
+      }
+      if (hostRef.current) ensureToolboxTitle(hostRef.current, toolboxTitle);
+    }
+  }, [toolboxConfig, toolboxTitle]);
+
+  useEffect(() => {
+    if (!workspaceRef.current) return;
+    workspaceRef.current.clear();
+
+    if (savedWorkspaceState && Object.keys(savedWorkspaceState).length > 0) {
+      try {
+        Blockly.serialization.workspaces.load(savedWorkspaceState, workspaceRef.current);
+      } catch (error) {
+        console.error('Failed to load saved workspace state, falling back to template:', error);
+        loadLessonIntoWorkspace(workspaceRef.current, initialBlocks);
+      }
+    } else {
+      loadLessonIntoWorkspace(workspaceRef.current, initialBlocks);
+    }
+  }, [lessonKey]);
 
   return <div ref={hostRef} className="blockly-editor-host" aria-label="Blockly workspace" />;
 });

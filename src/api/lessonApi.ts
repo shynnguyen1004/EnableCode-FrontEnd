@@ -10,6 +10,7 @@ import type {
   MessageResponse,
   SaveProgressRequest,
   SubmitLessonRequest,
+  LessonDetailResponse,
 } from '../lib/types';
 
 export const lessonApi = {
@@ -20,7 +21,7 @@ export const lessonApi = {
   getLessons: (params?: { topicId?: string; difficulty?: string; isActive?: boolean; page?: number; limit?: number }) =>
     axiosClient.get<unknown, PaginatedLessonsResponse>('/lessons', { params }),
 
-  getLessonDetails: (lessonId: string) => axiosClient.get<unknown, Lesson>(`/lessons/${lessonId}`),
+  getLessonDetails: (lessonId: string) => axiosClient.get<unknown, LessonDetailResponse>(`/lessons/${lessonId}`),
 
   getLessonProgress: (lessonId: string) => axiosClient.get<unknown, UserProgress>(`/lessons/${lessonId}/progress`),
 

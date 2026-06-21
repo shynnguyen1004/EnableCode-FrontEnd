@@ -67,6 +67,7 @@ export interface Lesson {
   problemStatement: string;
   toolboxConfig: Record<string, unknown>;
   initialBlocks: Record<string, unknown>;
+  allowedBlocks: string[];
   solution: Record<string, unknown>;
   hint: Hint[];
   publicTestcases: Testcase[];
@@ -288,4 +289,16 @@ export interface ErrorResponse {
 export interface LocalizedCurriculumText {
   title: string;
   description: string | null;
+}
+
+export interface CustomBlockDTO {
+  blockType: string;
+  definition: Record<string, unknown>;
+  generatorCode: string;
+}
+
+export interface LessonDetailResponse {
+  success: boolean;
+  lesson: Lesson;
+  requiredBlocks: CustomBlockDTO[];
 }
