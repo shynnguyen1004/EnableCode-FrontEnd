@@ -29,7 +29,7 @@ function BrutalistSlider({
   icon: ReactNode;
 }) {
   return (
-    <div className="profile-brutal-slider">
+    <div id="draggable" className="profile-brutal-slider">
       <input
         type="range"
         min={1}
