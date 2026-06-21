@@ -4,6 +4,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { profileApi } from '../api/profileApi';
 import type { UserProfileResponse } from '../lib/types';
+import { useI18n } from '../i18n/I18nProvider';
 
 /* ─── Inline SVG Icons ─── */
 const CheckCircleIcon = () => (
@@ -59,6 +60,7 @@ const CalibrateIcon = () => (
 
 export default function SettingsPage() {
   const { isLoggedIn } = useAuth();
+  const { t } = useI18n();
 
   const [profileData, setProfileData] = useState<UserProfileResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -160,12 +162,12 @@ export default function SettingsPage() {
             <span className="settings-heading-icon">
               <EyeSettingsIcon />
             </span>
-            Eye-Tracking Settings
+            {t('settings.eyeTrackingTitle')}
           </h3>
 
           <section className="control-card">
-            <h4>SYSTEM CALIBRATION</h4>
-            <p className="control-desc">Recalibrate the tracker if the cursor isn't matching your gaze.</p>
+            <h4>{t('settings.calibrationTitle')}</h4>
+            <p className="control-desc">{t('settings.calibrationBody')}</p>
 
             <Link
               to="/calibration"
@@ -183,7 +185,7 @@ export default function SettingsPage() {
               }}
             >
               <CalibrateIcon />
-              Start Calibration
+              {t('settings.startCalibration')}
             </Link>
           </section>
         </main>

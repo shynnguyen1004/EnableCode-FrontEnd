@@ -593,6 +593,14 @@
   color: var(--text-light);
 }
 
+.calibration-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  text-align: center;
+}
+
 .calibration-intro h1 {
   margin: 0 0 0.75rem;
   font-family: Unbounded, Montserrat, sans-serif;
@@ -602,7 +610,7 @@
 }
 
 .calibration-intro p {
-  margin: 0;
+  margin: 0 auto;
   text-align: center;
   font-size: clamp(1rem, 2.2vw, 1.25rem);
   opacity: 0.75;
@@ -1221,7 +1229,8 @@
 .workspace-page {
   min-height: 100vh;
   min-height: 100svh;
-  width: 100%;
+  height: 100vh;
+  width: 100vw;
   background: var(--bg-dark);
   color: var(--text-light);
   display: flex;

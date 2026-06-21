@@ -96,7 +96,7 @@ export default function HomePage() {
 
         <div className="hero-actions">
           <FaceControlToggle />
-          <Link to="/lessons" className="btn btn-primary hero-cta group">
+          <Link to={isLoggedIn ? '/lessons' : '/login'} className="btn btn-primary hero-cta group">
             {t('home.getStarted')}
             <ArrowRight size={32} className="hero-arrow" strokeWidth={3} style={{ marginLeft: '12px' }} />
           </Link>

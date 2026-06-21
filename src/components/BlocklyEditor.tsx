@@ -96,6 +96,22 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
     });
 
     workspaceRef.current = workspace;
+    workspace.addChangeListener(event => {
+      if (event.type === Blockly.Events.BLOCK_CREATE) {
+        const blockCreateEvent = event as Blockly.Events.BlockCreate;
+
+        blockCreateEvent.ids?.forEach((blockId: string) => {
+          const block = workspace.getBlockById(blockId);
+          const svgRoot = block?.getSvgRoot();
+
+          if (svgRoot) {
+            svgRoot.setAttribute('id', 'draggable');
+          }
+        });
+      }
+    });
+    loadLessonIntoWorkspace(workspace, initialBlocksRef.current);
+    ensureToolboxTitle(hostRef.current, toolboxTitle);
 
     const resize = () => {
       Blockly.svgResize(workspace);

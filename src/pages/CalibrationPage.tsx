@@ -7,17 +7,20 @@ import { useEyeTracking } from '../context/EyeTrackingContext';
 import { profileApi } from '../api/profileApi';
 import PageScale from '../components/PageScale';
 
+// Midpoints of the four screen edges: top → right → bottom → left
 const CAL_POINTS = [
-  { x: 10, y: 10 },
-  { x: 50, y: 10 },
-  { x: 90, y: 10 },
-  { x: 10, y: 50 },
-  { x: 50, y: 50 },
-  { x: 90, y: 50 },
-  { x: 10, y: 90 },
-  { x: 50, y: 90 },
-  { x: 90, y: 90 },
+  { x: 50, y: 0 },
+  { x: 100, y: 50 },
+  { x: 50, y: 100 },
+  { x: 0, y: 50 },
 ];
+
+const CAL_HOLD_KEYS = [
+  'calibration.holdTop',
+  'calibration.holdRight',
+  'calibration.holdBottom',
+  'calibration.holdLeft',
+] as const;
 
 const RING_RADIUS = 36;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
@@ -182,7 +185,9 @@ export default function CalibrationPage() {
             </button>
           </div>
 
-          <p className="calibration-instruction">{captured ? t('calibration.captured') : t('calibration.gazeHold')}</p>
+          <p className="calibration-instruction">
+            {captured ? t('calibration.captured') : t(CAL_HOLD_KEYS[pointIndex])}
+          </p>
 
           {CAL_POINTS.map((point, index) => {
             if (!completedPoints.includes(index)) return null;

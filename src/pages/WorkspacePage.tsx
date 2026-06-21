@@ -3,6 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Play, Lightbulb, ChevronRight, Settings, RefreshCw, Loader2 } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import * as Blockly from 'blockly';
+import ReactMarkdown from 'react-markdown';
 
 import BlocklyEditor, { type BlocklyEditorHandle } from '../components/BlocklyEditor';
 import WorkspaceOutputPanel from '../components/WorkspaceOutputPanel';
@@ -277,14 +278,11 @@ export default function WorkspacePage() {
 
       <div className="workspace-body">
         <aside className="workspace-panel">
-          <div className="workspace-panel-scroll">
+          <div id="draggable" className="workspace-panel-scroll">
             <div className="objective-chip">{t('workspace.objective')}</div>
             <h1>{localizedLesson.title}</h1>
             <div className="workspace-panel-copy">
-              <p>{localizedLesson.description || lesson.problemStatement}</p>
-              {lesson.problemStatement && localizedLesson.description !== lesson.problemStatement && (
-                <p>{lesson.problemStatement}</p>
-              )}
+              <ReactMarkdown>{localizedLesson.description || lesson.problemStatement || ''}</ReactMarkdown>
             </div>
 
             {activeHint && (
