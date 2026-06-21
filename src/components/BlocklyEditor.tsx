@@ -66,7 +66,7 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
 
     registerEnableCodeBlocks();
     const defaultToolbox: Blockly.utils.toolbox.ToolboxDefinition = {
-      kind: 'flyoutToolbox',
+      kind: 'categoryToolbox',
       contents: [],
     };
 
