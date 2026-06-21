@@ -35,6 +35,12 @@ function ensureToolboxTitle(host: HTMLElement, title: string): void {
   heading.textContent = title;
 }
 
+function lockWorkspaceScale(workspace: Blockly.WorkspaceSvg): void {
+  if (workspace.getScale() !== 1) {
+    workspace.setScale(1);
+  }
+}
+
 const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(function BlocklyEditor(
   { toolboxConfig, initialBlocks, lessonKey, savedWorkspaceState, toolboxTitle = 'Block Library' },
   ref,
@@ -51,6 +57,7 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
       if (!workspaceRef.current) return;
       workspaceRef.current.clear();
       loadLessonIntoWorkspace(workspaceRef.current, initialBlocksRef.current);
+      lockWorkspaceScale(workspaceRef.current);
     },
   }));
 
@@ -77,25 +84,25 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
       },
       zoom: {
         controls: false,
-        wheel: true,
+        wheel: false,
+        pinch: false,
         startScale: 1,
-        maxScale: 1.4,
-        minScale: 0.7,
-        pinch: true,
+        maxScale: 1,
+        minScale: 1,
+        scaleSpeed: 1,
       },
       trashcan: false,
       sounds: false,
       move: {
-        scrollbars: {
-          horizontal: true,
-          vertical: true,
-        },
-        drag: true,
-        wheel: true,
+        scrollbars: false,
+        drag: false,
+        wheel: false,
       },
     });
 
     workspaceRef.current = workspace;
+    lockWorkspaceScale(workspace);
+    workspace.addChangeListener(() => lockWorkspaceScale(workspace));
     workspace.addChangeListener(event => {
       if (event.type === Blockly.Events.BLOCK_CREATE) {
         const blockCreateEvent = event as Blockly.Events.BlockCreate;
@@ -110,20 +117,31 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
         });
       }
     });
-    loadLessonIntoWorkspace(workspace, initialBlocksRef.current);
     ensureToolboxTitle(hostRef.current, toolboxTitle);
 
     const resize = () => {
       Blockly.svgResize(workspace);
+      lockWorkspaceScale(workspace);
       if (hostRef.current) ensureToolboxTitle(hostRef.current, toolboxTitle);
     };
 
     resize();
+    loadLessonIntoWorkspace(workspace, initialBlocksRef.current);
+
+    const preventBrowserZoom = (event: WheelEvent) => {
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault();
+      }
+    };
+
+    const host = hostRef.current;
+    host.addEventListener('wheel', preventBrowserZoom, { passive: false });
     const observer = new ResizeObserver(resize);
-    observer.observe(hostRef.current);
+    observer.observe(host);
     window.addEventListener('resize', resize);
 
     return () => {
+      host.removeEventListener('wheel', preventBrowserZoom);
       observer.disconnect();
       window.removeEventListener('resize', resize);
       workspace.dispose();
@@ -154,6 +172,9 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
     } else {
       loadLessonIntoWorkspace(workspaceRef.current, initialBlocks);
     }
+
+    Blockly.svgResize(workspaceRef.current);
+    lockWorkspaceScale(workspaceRef.current);
   }, [lessonKey]);
 
   return <div ref={hostRef} className="blockly-editor-host" aria-label="Blockly workspace" />;

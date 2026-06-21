@@ -38,6 +38,21 @@ export default function WorkspacePage() {
   const [hasRun, setHasRun] = useState(false);
   const [runPassed, setRunPassed] = useState<boolean | null>(null);
   useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!lessonId) return;
 
     const fetchWorkspaceData = async () => {
