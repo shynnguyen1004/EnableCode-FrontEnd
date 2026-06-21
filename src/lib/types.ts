@@ -23,6 +23,7 @@ export interface UserProfileResponse {
   lastActiveDate?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  isCalibrated?: boolean;
 }
 
 export interface UserStats {

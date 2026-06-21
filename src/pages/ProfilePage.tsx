@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+// 1. TẤT CẢ IMPORT PHẢI NẰM Ở ĐÂY
+import { useEffect, useState, ReactNode } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -11,12 +12,16 @@ import {
   Languages,
   Loader2,
   Save,
+  AlertTriangle,
 } from 'lucide-react';
 import LanguageToggle from '../components/LanguageToggle';
-import { ReactNode } from 'react';
-import { useI18n } from '../i18n/I18nProvider';
 import PageScale from '../components/PageScale';
+import { useI18n } from '../i18n/I18nProvider';
+import { useAuth } from '../context/AuthContext';
+import { profileApi } from '../api/profileApi';
+import type { UserProfileResponse, Calibration } from '../lib/types';
 
+// 2. KHAI BÁO COMPONENT CON SAU KHI ĐÃ IMPORT XONG
 function BrutalistSlider({
   value,
   onChange,
@@ -49,10 +54,7 @@ function BrutalistSlider({
   );
 }
 
-import { useAuth } from '../context/AuthContext';
-import { profileApi } from '../api/profileApi';
-import type { UserProfileResponse, Calibration } from '../lib/types';
-
+// 3. COMPONENT CHÍNH CỦA TRANG
 export default function ProfilePage() {
   const { t } = useI18n();
   const { isLoggedIn } = useAuth();
@@ -66,13 +68,22 @@ export default function ProfilePage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn) return;
 
     const fetchProfileAndSettings = async () => {
+      setIsLoading(true);
+      setFetchError(false);
       try {
-        const [profileRes, calibrationRes] = await Promise.all([profileApi.getProfile(), profileApi.getCalibration()]);
+        const [profileRes, calibrationRes] = await Promise.all([
+          profileApi.getProfile(),
+          profileApi.getCalibration().catch(() => {
+            console.warn('Error fetching calibration data, returning null.');
+            return null; // Bỏ qua lỗi 404 của Calibration
+          }),
+        ]);
 
         setProfileData(profileRes);
         setCalibration(calibrationRes);
@@ -83,6 +94,7 @@ export default function ProfilePage() {
         }
       } catch (error) {
         console.error('Error fetching profile and settings:', error);
+        setFetchError(true); // Đánh dấu là có lỗi nghiêm trọng khi lấy Profile
       } finally {
         setIsLoading(false);
       }
@@ -116,7 +128,8 @@ export default function ProfilePage() {
     return <Navigate to="/login" replace />;
   }
 
-  if (isLoading || !profileData) {
+  // Xử lý khi đang tải
+  if (isLoading) {
     return (
       <div
         className="profile-page"
@@ -124,6 +137,29 @@ export default function ProfilePage() {
       >
         <Loader2 size={40} className="animate-spin text-orange-500 mr-3" />
         <p style={{ color: '#666', fontSize: '1.2rem', fontWeight: 500 }}>Profile is loading...</p>
+      </div>
+    );
+  }
+
+  // Xử lý khi server lỗi thật sự (không lấy được Profile)
+  if (fetchError || !profileData) {
+    return (
+      <div
+        className="profile-page"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+        }}
+      >
+        <AlertTriangle size={64} className="text-orange-500 mb-4" />
+        <h2 style={{ color: '#fff', marginBottom: '1rem' }}>Lỗi tải dữ liệu</h2>
+        <p style={{ color: '#aaa', marginBottom: '2rem' }}>Không thể kết nối đến máy chủ. Vui lòng thử lại sau.</p>
+        <Link to="/lessons" className="btn btn-primary">
+          Quay lại trang chủ
+        </Link>
       </div>
     );
   }
@@ -169,7 +205,7 @@ export default function ProfilePage() {
             </article>
             <article className="profile-stat-card" tabIndex={0}>
               <Award size={52} strokeWidth={3} className="icon-orange" />
-              <strong>{profileData.badges || 0}</strong>
+              <strong>{/* Giả sử bạn có trường badges */ 0}</strong>
               <span>{t('settings.badges')}</span>
             </article>
             <article className="profile-stat-card wide" tabIndex={0}>
@@ -183,34 +219,39 @@ export default function ProfilePage() {
         </aside>
 
         <main className="profile-controls">
-          <section className="profile-language-section" style={{ marginBottom: '2rem' }}>
-            <div className="profile-language-header" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div className="profile-heading-icon-wrap profile-heading-icon-wrap--language">
-                <Languages size={28} strokeWidth={2.5} color="#FFF9DC" />
-              </div>
-              <h2>{t('settings.languageTitle')}</h2>
-            </div>
-            <p>{t('settings.languageSubtitle')}</p>
-            <LanguageToggle />
-          </section>
           <div className="profile-controls-inner">
-            <div className="profile-controls-header">
-              <div className="profile-heading-icon-wrap">
-                <Eye size={44} strokeWidth={2.5} color="#FFF9DC" />
+            <section className="profile-language-section" style={{ marginBottom: '2.5rem' }}>
+              <div
+                className="profile-language-header"
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}
+              >
+                <div className="profile-heading-icon-wrap profile-heading-icon-wrap--language">
+                  <Languages size={28} strokeWidth={2.5} color="#FFF9DC" />
+                </div>
+                <h3>{t('settings.languageTitle')}</h3>
               </div>
-              <h2>{t('settings.eyeTrackingTitle')}</h2>
-            </div>
+              <p style={{ marginBottom: '1rem', color: '#666' }}>{t('settings.languageSubtitle')}</p>
+              <LanguageToggle />
+            </section>
+          </div>
 
+          <div className="profile-controls-inner">
             <div
               className="profile-controls-header"
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1.5rem',
+              }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div className="profile-heading-icon-wrap">
                   <Eye size={28} strokeWidth={2.5} color="#FFF9DC" />
                 </div>
-                <h2>{t('settings.eyeTrackingTitle')}</h2>
+                <h3>{t('settings.eyeTrackingTitle')}</h3>
               </div>
+
               <button
                 onClick={handleSaveSettings}
                 disabled={isSaving}
