@@ -1,4 +1,26 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useI18n } from '../i18n/I18nProvider';
+
+type ActionKind =
+  | 'moving'
+  | 'click'
+  | 'drag'
+  | 'drop'
+  | 'scrollUp'
+  | 'scrollDown'
+  | 'scrollUpPanel'
+  | 'scrollDownPanel';
+
+const ACTION_LABEL_KEYS: Record<ActionKind, string> = {
+  moving: 'faceControl.moving',
+  click: 'faceControl.click',
+  drag: 'faceControl.drag',
+  drop: 'faceControl.drop',
+  scrollUp: 'faceControl.scrollUp',
+  scrollDown: 'faceControl.scrollDown',
+  scrollUpPanel: 'faceControl.scrollUpPanel',
+  scrollDownPanel: 'faceControl.scrollDownPanel',
+};
 
 // Định nghĩa các interface tường minh để dập tắt hoàn toàn lỗi ESLint "no-explicit-any"
 interface NormalizedLandmark {
@@ -44,26 +66,30 @@ declare global {
 }
 
 const Mouse: React.FC = () => {
+  const { t } = useI18n();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cursorRef = useRef<HTMLDivElement | null>(null);
 
-  const [mouseAction, setMouseAction] = useState<string>('Đang di chuyển');
+  const [actionKind, setActionKind] = useState<ActionKind>('moving');
   const [fps, setFps] = useState<number>(0);
   const [isDragging, setIsDragging] = useState(false);
 
-  const mouseActionRef = useRef('Đang di chuyển');
+  const actionKindRef = useRef<ActionKind>('moving');
   const isDraggingRef = useRef(false);
+
+  const updateAction = (kind: ActionKind) => {
+    actionKindRef.current = kind;
+    setActionKind(kind);
+  };
+
+  const mouseAction = t(ACTION_LABEL_KEYS[actionKind]);
 
   const currentPos = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
   const smoothedRaw = useRef({ x: 0.5, y: 0.5 });
   const wasMouthOpenRef = useRef<boolean>(false);
   const lastFrameTimeRef = useRef<number>(0);
   const lastHoveredEl = useRef<Element | null>(null);
-
-  useEffect(() => {
-    mouseActionRef.current = mouseAction;
-  }, [mouseAction]);
 
   useEffect(() => {
     const videoElement = videoRef.current;
@@ -211,15 +237,15 @@ const Mouse: React.FC = () => {
             if (isDraggableElement) {
               isDraggingRef.current = true;
               setIsDragging(true);
-              setMouseAction('Kéo vật thể (Drag)');
+              updateAction('drag');
               if (elAtPoint) elAtPoint.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true }));
             } else {
-              setMouseAction('💥 CLICK!');
+              updateAction('click');
               if (elAtPoint && elAtPoint instanceof HTMLElement && typeof elAtPoint.click === 'function') {
                 elAtPoint.click();
               }
               setTimeout(() => {
-                if (!isDraggingRef.current) setMouseAction('Đang di chuyển');
+                if (!isDraggingRef.current) updateAction('moving');
               }, 500);
             }
           }
@@ -230,12 +256,12 @@ const Mouse: React.FC = () => {
             if (isDraggingRef.current) {
               isDraggingRef.current = false;
               setIsDragging(false);
-              setMouseAction('Thả vật thể (Drop)');
+              updateAction('drop');
               if (elAtPoint) {
                 elAtPoint.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true }));
                 elAtPoint.dispatchEvent(new DragEvent('dragend', { bubbles: true, cancelable: true }));
               }
-              setTimeout(() => setMouseAction('Đang di chuyển'), 500);
+              setTimeout(() => updateAction('moving'), 500);
             }
           }
         }
@@ -253,24 +279,24 @@ const Mouse: React.FC = () => {
           if (cursorX >= rect.left && cursorX <= rect.right) {
             if (cursorY >= rect.top && cursorY <= rect.top + PANEL_EDGE_PADDING) {
               activeScrollTarget.scrollBy({ top: -SCROLL_STEP, behavior: 'auto' });
-              setMouseAction('🔼 Cuộn lên (Panel)');
+              updateAction('scrollUpPanel');
             } else if (cursorY <= rect.bottom && cursorY >= rect.bottom - PANEL_EDGE_PADDING) {
               activeScrollTarget.scrollBy({ top: SCROLL_STEP, behavior: 'auto' });
-              setMouseAction('🔽 Cuộn xuống (Panel)');
-            } else if (mouseActionRef.current.includes('Cuộn')) {
-              setMouseAction('Đang di chuyển');
+              updateAction('scrollDownPanel');
+            } else if (actionKindRef.current.startsWith('scroll')) {
+              updateAction('moving');
             }
           }
         } else {
           // Fallback cuộn toàn trang nếu không đứng trên panel đặc biệt nào
           if (cursorY < VIEWPORT_EDGE_THRESHOLD) {
             window.scrollBy({ top: -SCROLL_STEP, behavior: 'auto' });
-            setMouseAction('🔼 Cuộn lên');
+            updateAction('scrollUp');
           } else if (cursorY > window.innerHeight - VIEWPORT_EDGE_THRESHOLD) {
             window.scrollBy({ top: SCROLL_STEP, behavior: 'auto' });
-            setMouseAction('🔽 Cuộn xuống');
-          } else if (mouseActionRef.current.includes('Cuộn')) {
-            setMouseAction('Đang di chuyển');
+            updateAction('scrollDown');
+          } else if (actionKindRef.current.startsWith('scroll')) {
+            updateAction('moving');
           }
         }
       } else {
@@ -386,7 +412,7 @@ const Mouse: React.FC = () => {
             fontSize: '12px',
             borderRadius: '6px',
             fontWeight: 700,
-            borderRight: `4px solid ${mouseAction.includes('CLICK') ? '#f43f5e' : '#38bdf8'}`,
+            borderRight: `4px solid ${actionKind === 'click' ? '#f43f5e' : '#38bdf8'}`,
             backdropFilter: 'blur(4px)',
           }}
         >
