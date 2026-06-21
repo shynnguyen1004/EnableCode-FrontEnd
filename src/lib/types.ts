@@ -147,6 +147,23 @@ export interface AuthResponse {
   user?: UserProfileResponse;
 }
 
+export interface UserProfileApiResponse {
+  success: boolean;
+  user: UserProfileResponse;
+  message?: string;
+}
+
+export interface UserStatsApiResponse {
+  success: boolean;
+  stats: UserStats;
+}
+
+export interface CalibrationApiResponse {
+  success: boolean;
+  calibration: Calibration;
+  message?: string;
+}
+
 export interface MessageResponse {
   message: string;
 }

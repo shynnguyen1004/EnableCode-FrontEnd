@@ -1,24 +1,41 @@
 import axiosClient from './axiosClient';
 import type {
   UserProfileResponse,
+  UserProfileApiResponse,
   UserStats,
+  UserStatsApiResponse,
   Calibration,
+  CalibrationApiResponse,
   UpdateCalibrationRequest,
   UpdateProfileRequest,
   MessageResponse,
 } from '../lib/types';
 
 export const profileApi = {
-  getProfile: () => axiosClient.get<unknown, UserProfileResponse>('/users/profile'),
+  getProfile: async (): Promise<UserProfileResponse> => {
+    const response = await axiosClient.get<unknown, UserProfileApiResponse>('/users/profile');
+    return response.user;
+  },
 
-  updateProfile: (data: UpdateProfileRequest) => axiosClient.put<unknown, UserProfileResponse>('/users/profile', data),
+  updateProfile: async (data: UpdateProfileRequest): Promise<UserProfileResponse> => {
+    const response = await axiosClient.put<unknown, UserProfileApiResponse>('/users/profile', data);
+    return response.user;
+  },
 
   deleteAccount: () => axiosClient.delete<unknown, MessageResponse>('/users/profile'),
 
-  getUserStats: () => axiosClient.get<unknown, UserStats>('/users/stats'),
+  getUserStats: async (): Promise<UserStats> => {
+    const response = await axiosClient.get<unknown, UserStatsApiResponse>('/users/stats');
+    return response.stats;
+  },
 
-  getCalibration: () => axiosClient.get<unknown, Calibration>('/users/calibration'),
+  getCalibration: async (): Promise<Calibration> => {
+    const response = await axiosClient.get<unknown, CalibrationApiResponse>('/users/calibration');
+    return response.calibration;
+  },
 
-  updateCalibration: (data: UpdateCalibrationRequest) =>
-    axiosClient.put<unknown, Calibration>('/users/calibration', data),
+  updateCalibration: async (data: UpdateCalibrationRequest): Promise<Calibration> => {
+    const response = await axiosClient.put<unknown, CalibrationApiResponse>('/users/calibration', data);
+    return response.calibration;
+  },
 };
