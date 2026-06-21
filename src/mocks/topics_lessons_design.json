@@ -1,0 +1,1980 @@
+{
+  "topics": [
+    {
+      "_id": "664a00000000000000000001",
+      "title": "Làm quen với Blockly",
+      "description": "Khám phá giao diện kéo thả Blockly, hiểu cách hoạt động của các khối lệnh và thực hành ghép lệnh đơn giản đầu tiên.",
+      "difficulty": "easy",
+      "relevantTopicIds": [],
+      "isActive": true
+    },
+    {
+      "_id": "664a00000000000000000002",
+      "title": "In thông tin ra màn hình",
+      "description": "Sử dụng khối Print để hiển thị văn bản và số ra màn hình, tương đương lệnh cout trong C++.",
+      "difficulty": "easy",
+      "relevantTopicIds": ["664a00000000000000000001"],
+      "isActive": true
+    },
+    {
+      "_id": "664a00000000000000000003",
+      "title": "Biến số",
+      "description": "Học cách tạo biến, gán giá trị và sử dụng lại biến trong chương trình. Hiểu biến kiểu số và kiểu chuỗi.",
+      "difficulty": "easy",
+      "relevantTopicIds": ["664a00000000000000000002"],
+      "isActive": true
+    },
+    {
+      "_id": "664a00000000000000000004",
+      "title": "Phép tính số học",
+      "description": "Thực hiện các phép tính cộng, trừ, nhân, chia với khối toán tử. Áp dụng vào bài toán thực tế.",
+      "difficulty": "easy",
+      "relevantTopicIds": ["664a00000000000000000003"],
+      "isActive": true
+    },
+    {
+      "_id": "664a00000000000000000005",
+      "title": "Nhập liệu từ người dùng",
+      "description": "Tương tác với người dùng bằng cách hỏi và nhận giá trị đầu vào, sau đó xử lý và hiển thị kết quả.",
+      "difficulty": "medium",
+      "relevantTopicIds": ["664a00000000000000000003", "664a00000000000000000004"],
+      "isActive": true
+    },
+    {
+      "_id": "664a00000000000000000006",
+      "title": "Câu lệnh điều kiện",
+      "description": "Sử dụng if/else để rẽ nhánh logic dựa trên điều kiện so sánh. Xây dựng chương trình có nhiều trường hợp xử lý.",
+      "difficulty": "medium",
+      "relevantTopicIds": ["664a00000000000000000004", "664a00000000000000000005"],
+      "isActive": true
+    },
+    {
+      "_id": "664a00000000000000000007",
+      "title": "Vòng lặp",
+      "description": "Lặp lại nhóm lệnh nhiều lần bằng khối repeat và count. Kết hợp vòng lặp với biến để giải bài toán tính tổng.",
+      "difficulty": "medium",
+      "relevantTopicIds": ["664a00000000000000000006"],
+      "isActive": true
+    },
+    {
+      "_id": "664a00000000000000000008",
+      "title": "Hàm",
+      "description": "Đóng gói nhóm lệnh thành hàm có tên, gọi lại nhiều lần. Tạo hàm có tham số và hàm trả về giá trị.",
+      "difficulty": "hard",
+      "relevantTopicIds": ["664a00000000000000000007"],
+      "isActive": true
+    },
+    {
+      "_id": "664a00000000000000000009",
+      "title": "Dự án tổng hợp",
+      "description": "Kết hợp toàn bộ kiến thức đã học để xây dựng 3 ứng dụng thực tế: máy tính, trò chơi đoán số và bảng điểm.",
+      "difficulty": "hard",
+      "relevantTopicIds": ["664a00000000000000000006", "664a00000000000000000007", "664a00000000000000000008"],
+      "isActive": true
+    }
+  ],
+  "lessons": [
+    {
+      "_id": "664b00000000000000000001",
+      "topic_id": "664a00000000000000000001",
+      "title": "Sân chơi khối Blockly (Dev Test)",
+      "description": "Bài sandbox để thử toàn bộ 11 loại khối: Events, Output, Text, Loops, Logic, Variables, Math và Actions. Kéo khối từ hộp công cụ bên phải, gắn vào khối On Start, rồi nhấn Run Code.",
+      "order": 1,
+      "difficulty": "easy",
+      "toolbox_config": {
+        "categories": ["event", "loops", "variables", "action", "logic", "math", "output", "text"],
+        "sandbox": true
+      },
+      "initial_blocks": {
+        "blocks": []
+      },
+      "hint": [
+        { "step": 1, "text": "Events (đỏ): On Start — khối mũ, chương trình bắt đầu từ đây." },
+        { "step": 2, "text": "Output (tím): print — in giá trị ra màn hình." },
+        { "step": 3, "text": "Text (tím): text, join — tạo và nối chuỗi." },
+        { "step": 4, "text": "Loops (cam): Repeat — lặp khối bên trong N lần." },
+        {
+          "step": 5,
+          "text": "Logic (xanh dương): if — chạy nhánh khi điều kiện đúng (số khác 0 hoặc chuỗi không rỗng)."
+        },
+        { "step": 6, "text": "Variables (cam): set / get — gán và đọc biến." },
+        { "step": 7, "text": "Math (tím): number, phép + − × ÷." },
+        { "step": 8, "text": "Actions (xanh lá): Move Forward — khối hành động (chưa có mô phỏng)." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "text_print",
+            "value": {
+              "type": "text_join",
+              "values": {
+                "A": { "type": "text", "fields": { "TEXT": "Hello " } },
+                "B": { "type": "text", "fields": { "TEXT": "Blockly!" } }
+              }
+            }
+          }
+        ]
+      },
+      "public_testcases": [
+        {
+          "input": null,
+          "expected_output": "",
+          "description": "Sandbox — Run Code hiển thị kết quả, không cần đúng testcase"
+        }
+      ],
+      "hidden_testcases": [{ "input": null, "expected_output": "" }],
+      "base_xp": 30,
+      "duration": 5,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000002",
+      "topic_id": "664a00000000000000000001",
+      "title": "Kéo thả khối lệnh đầu tiên",
+      "description": "Thực hành kéo thả khối từ hộp công cụ vào vùng làm việc và kết nối các khối lại với nhau.",
+      "order": 2,
+      "difficulty": "easy",
+      "toolbox_config": {
+        "categories": ["output", "text", "logic"]
+      },
+      "initial_blocks": {
+        "blocks": [{ "type": "text_print", "fields": { "TEXT": "" }, "comment": "Hãy điền nội dung vào đây!" }]
+      },
+      "hint": [
+        { "step": 1, "text": "Khối 'in ra' đã có sẵn. Bạn chỉ cần kéo khối văn bản 'text' kết nối vào." },
+        { "step": 2, "text": "Nhập nội dung 'Hello World' vào khối văn bản." }
+      ],
+      "solution": {
+        "blocks": [{ "type": "text_print", "fields": { "TEXT": "Hello World" } }]
+      },
+      "public_testcases": [
+        { "input": null, "expected_output": "Hello World", "description": "In đúng chuỗi Hello World" }
+      ],
+      "hidden_testcases": [{ "input": null, "expected_output": "Hello World" }],
+      "base_xp": 40,
+      "duration": 7,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000003",
+      "topic_id": "664a00000000000000000001",
+      "title": "Bài tập: Lắp ghép chuỗi lệnh",
+      "description": "Sắp xếp 3 khối lệnh theo đúng thứ tự để chương trình chạy đúng yêu cầu.",
+      "order": 3,
+      "difficulty": "easy",
+      "toolbox_config": {
+        "categories": ["output", "text"]
+      },
+      "initial_blocks": {
+        "blocks": []
+      },
+      "hint": [
+        { "step": 1, "text": "Cần 3 khối 'in ra' xếp theo thứ tự từ trên xuống dưới." },
+        { "step": 2, "text": "Khối trên cùng in 'Bước 1', tiếp theo 'Bước 2', cuối cùng 'Bước 3'." }
+      ],
+      "solution": {
+        "blocks": [
+          { "type": "text_print", "fields": { "TEXT": "Bước 1" } },
+          { "type": "text_print", "fields": { "TEXT": "Bước 2" } },
+          { "type": "text_print", "fields": { "TEXT": "Bước 3" } }
+        ]
+      },
+      "public_testcases": [
+        { "input": null, "expected_output": "Bước 1\nBước 2\nBước 3", "description": "In đúng thứ tự 3 bước" }
+      ],
+      "hidden_testcases": [{ "input": null, "expected_output": "Bước 1\nBước 2\nBước 3" }],
+      "base_xp": 50,
+      "duration": 8,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000004",
+      "topic_id": "664a00000000000000000002",
+      "title": "In một dòng văn bản",
+      "description": "Sử dụng khối 'in ra' để hiển thị một dòng chữ bất kỳ ra màn hình kết quả.",
+      "order": 1,
+      "difficulty": "easy",
+      "toolbox_config": {
+        "categories": ["output", "text"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Kéo khối 'in ra' từ danh mục Output." },
+        { "step": 2, "text": "Điền nội dung 'Xin chào!' vào ô văn bản." }
+      ],
+      "solution": {
+        "blocks": [{ "type": "text_print", "fields": { "TEXT": "Xin chào!" } }]
+      },
+      "public_testcases": [{ "input": null, "expected_output": "Xin chào!", "description": "In đúng lời chào" }],
+      "hidden_testcases": [{ "input": null, "expected_output": "Xin chào!" }],
+      "base_xp": 40,
+      "duration": 7,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000005",
+      "topic_id": "664a00000000000000000002",
+      "title": "In nhiều dòng văn bản",
+      "description": "Xếp nhiều khối 'in ra' theo thứ tự để hiển thị thông tin trên nhiều dòng khác nhau.",
+      "order": 2,
+      "difficulty": "easy",
+      "toolbox_config": {
+        "categories": ["output", "text"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Kéo 2 khối 'in ra' vào vùng làm việc." },
+        { "step": 2, "text": "Mỗi khối in một dòng riêng. Dòng 1: 'Tên: An', Dòng 2: 'Tuổi: 10'." }
+      ],
+      "solution": {
+        "blocks": [
+          { "type": "text_print", "fields": { "TEXT": "Tên: An" } },
+          { "type": "text_print", "fields": { "TEXT": "Tuổi: 10" } }
+        ]
+      },
+      "public_testcases": [
+        { "input": null, "expected_output": "Tên: An\nTuổi: 10", "description": "In đúng 2 dòng thông tin" }
+      ],
+      "hidden_testcases": [{ "input": null, "expected_output": "Tên: An\nTuổi: 10" }],
+      "base_xp": 50,
+      "duration": 8,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000006",
+      "topic_id": "664a00000000000000000002",
+      "title": "Bài tập: In tên của bạn",
+      "description": "Viết chương trình in ra tên của chính bạn lên màn hình.",
+      "order": 3,
+      "difficulty": "easy",
+      "toolbox_config": {
+        "categories": ["output", "text"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [{ "step": 1, "text": "Dùng khối 'in ra' và nhập tên của bạn vào ô văn bản." }],
+      "solution": {
+        "blocks": [{ "type": "text_print", "fields": { "TEXT": "Tên tôi là Minh" } }]
+      },
+      "public_testcases": [
+        { "input": null, "expected_output": "Tên tôi là Minh", "description": "Có in ra tên hợp lệ" }
+      ],
+      "hidden_testcases": [],
+      "base_xp": 60,
+      "duration": 8,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000007",
+      "topic_id": "664a00000000000000000002",
+      "title": "Bài tập: In thông tin cá nhân",
+      "description": "Hiển thị tên, tuổi và lớp học trên 3 dòng riêng biệt.",
+      "order": 4,
+      "difficulty": "easy",
+      "toolbox_config": {
+        "categories": ["output", "text"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Cần 3 khối 'in ra', mỗi khối in một thông tin." },
+        { "step": 2, "text": "Định dạng: 'Tên: ...', 'Tuổi: ...', 'Lớp: ...'." }
+      ],
+      "solution": {
+        "blocks": [
+          { "type": "text_print", "fields": { "TEXT": "Tên: Minh" } },
+          { "type": "text_print", "fields": { "TEXT": "Tuổi: 12" } },
+          { "type": "text_print", "fields": { "TEXT": "Lớp: 6A" } }
+        ]
+      },
+      "public_testcases": [
+        { "input": null, "expected_output": "Tên: Minh\nTuổi: 12\nLớp: 6A", "description": "In đủ 3 dòng thông tin" }
+      ],
+      "hidden_testcases": [{ "input": null, "expected_output": "Tên: Minh\nTuổi: 12\nLớp: 6A" }],
+      "base_xp": 70,
+      "duration": 10,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000008",
+      "topic_id": "664a00000000000000000003",
+      "title": "Biến số là gì?",
+      "description": "Hiểu khái niệm biến qua hình ảnh hộp chứa giá trị. Thực hành tạo biến và in giá trị của biến.",
+      "order": 1,
+      "difficulty": "easy",
+      "toolbox_config": {
+        "categories": ["variables", "output", "text", "math"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Vào danh mục Variables, nhấn 'Tạo biến' và đặt tên là 'diem'." },
+        { "step": 2, "text": "Kéo khối 'đặt diem = ...' và gán giá trị 10." },
+        { "step": 3, "text": "Kéo khối 'in ra' và kéo biến 'diem' vào trong." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "diem" },
+            "value": { "type": "math_number", "fields": { "NUM": 10 } }
+          },
+          { "type": "text_print", "value": { "type": "variables_get", "fields": { "VAR": "diem" } } }
+        ]
+      },
+      "public_testcases": [{ "input": null, "expected_output": "10", "description": "In đúng giá trị biến" }],
+      "hidden_testcases": [{ "input": null, "expected_output": "10" }],
+      "base_xp": 50,
+      "duration": 8,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000009",
+      "topic_id": "664a00000000000000000003",
+      "title": "Tạo biến và gán giá trị",
+      "description": "Thực hành tạo nhiều biến và thay đổi giá trị của chúng trong chương trình.",
+      "order": 2,
+      "difficulty": "easy",
+      "toolbox_config": {
+        "categories": ["variables", "output", "text", "math"]
+      },
+      "initial_blocks": {
+        "blocks": [
+          { "type": "variables_set", "fields": { "VAR": "ten" }, "value": { "type": "text", "fields": { "TEXT": "" } } }
+        ]
+      },
+      "hint": [
+        { "step": 1, "text": "Biến 'ten' đã có sẵn. Điền tên bạn vào ô trống." },
+        { "step": 2, "text": "Kéo khối 'in ra' và gắn biến 'ten' vào." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "ten" },
+            "value": { "type": "text", "fields": { "TEXT": "Minh" } }
+          },
+          { "type": "text_print", "value": { "type": "variables_get", "fields": { "VAR": "ten" } } }
+        ]
+      },
+      "public_testcases": [{ "input": null, "expected_output": "Minh", "description": "In đúng giá trị biến ten" }],
+      "hidden_testcases": [{ "input": null, "expected_output": "Minh" }],
+      "base_xp": 50,
+      "duration": 8,
+      "isActive": true
+    },
+    {
+      "_id": "664b0000000000000000000a",
+      "topic_id": "664a00000000000000000003",
+      "title": "Biến kiểu số nguyên",
+      "description": "Lưu số vào biến, thay đổi giá trị và in kết quả ra màn hình.",
+      "order": 3,
+      "difficulty": "easy",
+      "toolbox_config": {
+        "categories": ["variables", "output", "math"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Tạo biến 'so' và gán giá trị 42." },
+        { "step": 2, "text": "Dùng khối 'in ra' kết nối với biến 'so'." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "so" },
+            "value": { "type": "math_number", "fields": { "NUM": 42 } }
+          },
+          { "type": "text_print", "value": { "type": "variables_get", "fields": { "VAR": "so" } } }
+        ]
+      },
+      "public_testcases": [{ "input": null, "expected_output": "42", "description": "In đúng số 42" }],
+      "hidden_testcases": [{ "input": null, "expected_output": "42" }],
+      "base_xp": 60,
+      "duration": 8,
+      "isActive": true
+    },
+    {
+      "_id": "664b0000000000000000000b",
+      "topic_id": "664a00000000000000000003",
+      "title": "Biến kiểu chuỗi",
+      "description": "Lưu đoạn chữ vào biến kiểu chuỗi và ghép hai biến chuỗi lại với nhau.",
+      "order": 4,
+      "difficulty": "easy",
+      "toolbox_config": {
+        "categories": ["variables", "output", "text"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Tạo 2 biến: 'ho' = 'Nguyễn' và 'ten' = 'Minh'." },
+        { "step": 2, "text": "Dùng khối 'nối chuỗi' để ghép 'ho' + ' ' + 'ten'." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "ho" },
+            "value": { "type": "text", "fields": { "TEXT": "Nguyễn" } }
+          },
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "ten" },
+            "value": { "type": "text", "fields": { "TEXT": "Minh" } }
+          },
+          {
+            "type": "text_print",
+            "value": {
+              "type": "text_join",
+              "items": [
+                { "type": "variables_get", "fields": { "VAR": "ho" } },
+                { "type": "text", "fields": { "TEXT": " " } },
+                { "type": "variables_get", "fields": { "VAR": "ten" } }
+              ]
+            }
+          }
+        ]
+      },
+      "public_testcases": [
+        { "input": null, "expected_output": "Nguyễn Minh", "description": "Ghép và in đúng họ tên" }
+      ],
+      "hidden_testcases": [{ "input": null, "expected_output": "Nguyễn Minh" }],
+      "base_xp": 60,
+      "duration": 8,
+      "isActive": true
+    },
+    {
+      "_id": "664b0000000000000000000c",
+      "topic_id": "664a00000000000000000003",
+      "title": "Bài tập: Tính diện tích hình vuông",
+      "description": "Dùng biến lưu độ dài cạnh, tính diện tích và in kết quả ra màn hình.",
+      "order": 5,
+      "difficulty": "easy",
+      "toolbox_config": {
+        "categories": ["variables", "output", "math"]
+      },
+      "initial_blocks": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "canh" },
+            "value": { "type": "math_number", "fields": { "NUM": 5 } }
+          }
+        ]
+      },
+      "hint": [
+        { "step": 1, "text": "Biến 'canh' đã có giá trị 5. Tạo thêm biến 'dientich'." },
+        { "step": 2, "text": "Gán 'dientich' = canh × canh bằng khối nhân." },
+        { "step": 3, "text": "In ra biến 'dientich'." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "canh" },
+            "value": { "type": "math_number", "fields": { "NUM": 5 } }
+          },
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "dientich" },
+            "value": {
+              "type": "math_arithmetic",
+              "fields": { "OP": "MULTIPLY" },
+              "values": {
+                "A": { "type": "variables_get", "fields": { "VAR": "canh" } },
+                "B": { "type": "variables_get", "fields": { "VAR": "canh" } }
+              }
+            }
+          },
+          { "type": "text_print", "value": { "type": "variables_get", "fields": { "VAR": "dientich" } } }
+        ]
+      },
+      "public_testcases": [
+        { "input": null, "expected_output": "25", "description": "Diện tích hình vuông cạnh 5 là 25" }
+      ],
+      "hidden_testcases": [{ "input": null, "expected_output": "25" }],
+      "base_xp": 80,
+      "duration": 10,
+      "isActive": true
+    },
+    {
+      "_id": "664b0000000000000000000d",
+      "topic_id": "664a00000000000000000004",
+      "title": "Phép cộng hai số",
+      "description": "Sử dụng khối toán tử + để cộng hai số và in kết quả.",
+      "order": 1,
+      "difficulty": "easy",
+      "toolbox_config": {
+        "categories": ["math", "variables", "output"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Tạo biến 'a' = 3 và biến 'b' = 7." },
+        { "step": 2, "text": "Kéo khối 'in ra' và gắn khối 'a + b' vào trong." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "a" },
+            "value": { "type": "math_number", "fields": { "NUM": 3 } }
+          },
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "b" },
+            "value": { "type": "math_number", "fields": { "NUM": 7 } }
+          },
+          {
+            "type": "text_print",
+            "value": {
+              "type": "math_arithmetic",
+              "fields": { "OP": "ADD" },
+              "values": {
+                "A": { "type": "variables_get", "fields": { "VAR": "a" } },
+                "B": { "type": "variables_get", "fields": { "VAR": "b" } }
+              }
+            }
+          }
+        ]
+      },
+      "public_testcases": [{ "input": null, "expected_output": "10", "description": "3 + 7 = 10" }],
+      "hidden_testcases": [{ "input": null, "expected_output": "10" }],
+      "base_xp": 50,
+      "duration": 8,
+      "isActive": true
+    },
+    {
+      "_id": "664b0000000000000000000e",
+      "topic_id": "664a00000000000000000004",
+      "title": "Phép trừ hai số",
+      "description": "Sử dụng khối toán tử - để tính hiệu hai số.",
+      "order": 2,
+      "difficulty": "easy",
+      "toolbox_config": {
+        "categories": ["math", "variables", "output"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Tạo biến 'a' = 10, 'b' = 4." },
+        { "step": 2, "text": "In ra kết quả a - b." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "a" },
+            "value": { "type": "math_number", "fields": { "NUM": 10 } }
+          },
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "b" },
+            "value": { "type": "math_number", "fields": { "NUM": 4 } }
+          },
+          {
+            "type": "text_print",
+            "value": {
+              "type": "math_arithmetic",
+              "fields": { "OP": "MINUS" },
+              "values": {
+                "A": { "type": "variables_get", "fields": { "VAR": "a" } },
+                "B": { "type": "variables_get", "fields": { "VAR": "b" } }
+              }
+            }
+          }
+        ]
+      },
+      "public_testcases": [{ "input": null, "expected_output": "6", "description": "10 - 4 = 6" }],
+      "hidden_testcases": [{ "input": null, "expected_output": "6" }],
+      "base_xp": 50,
+      "duration": 8,
+      "isActive": true
+    },
+    {
+      "_id": "664b0000000000000000000f",
+      "topic_id": "664a00000000000000000004",
+      "title": "Phép nhân và chia",
+      "description": "Sử dụng khối toán tử × và ÷ để tính tích và thương hai số.",
+      "order": 3,
+      "difficulty": "easy",
+      "toolbox_config": {
+        "categories": ["math", "variables", "output"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Tạo biến 'a' = 6, 'b' = 3." },
+        { "step": 2, "text": "In a × b trên dòng 1, in a ÷ b trên dòng 2." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "a" },
+            "value": { "type": "math_number", "fields": { "NUM": 6 } }
+          },
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "b" },
+            "value": { "type": "math_number", "fields": { "NUM": 3 } }
+          },
+          {
+            "type": "text_print",
+            "value": {
+              "type": "math_arithmetic",
+              "fields": { "OP": "MULTIPLY" },
+              "values": {
+                "A": { "type": "variables_get", "fields": { "VAR": "a" } },
+                "B": { "type": "variables_get", "fields": { "VAR": "b" } }
+              }
+            }
+          },
+          {
+            "type": "text_print",
+            "value": {
+              "type": "math_arithmetic",
+              "fields": { "OP": "DIVIDE" },
+              "values": {
+                "A": { "type": "variables_get", "fields": { "VAR": "a" } },
+                "B": { "type": "variables_get", "fields": { "VAR": "b" } }
+              }
+            }
+          }
+        ]
+      },
+      "public_testcases": [{ "input": null, "expected_output": "18\n2", "description": "6×3=18 và 6÷3=2" }],
+      "hidden_testcases": [{ "input": null, "expected_output": "18\n2" }],
+      "base_xp": 50,
+      "duration": 8,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000010",
+      "topic_id": "664a00000000000000000004",
+      "title": "Bài tập: Tính tổng, hiệu, tích, thương",
+      "description": "Cho trước a = 12, b = 4. Tính và in cả 4 phép tính trên 4 dòng.",
+      "order": 4,
+      "difficulty": "easy",
+      "toolbox_config": {
+        "categories": ["math", "variables", "output"]
+      },
+      "initial_blocks": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "a" },
+            "value": { "type": "math_number", "fields": { "NUM": 12 } }
+          },
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "b" },
+            "value": { "type": "math_number", "fields": { "NUM": 4 } }
+          }
+        ]
+      },
+      "hint": [
+        { "step": 1, "text": "a và b đã có sẵn. Cần 4 khối 'in ra' cho 4 phép tính." },
+        { "step": 2, "text": "Thứ tự: tổng → hiệu → tích → thương." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "a" },
+            "value": { "type": "math_number", "fields": { "NUM": 12 } }
+          },
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "b" },
+            "value": { "type": "math_number", "fields": { "NUM": 4 } }
+          },
+          {
+            "type": "text_print",
+            "value": {
+              "type": "math_arithmetic",
+              "fields": { "OP": "ADD" },
+              "values": {
+                "A": { "type": "variables_get", "fields": { "VAR": "a" } },
+                "B": { "type": "variables_get", "fields": { "VAR": "b" } }
+              }
+            }
+          },
+          {
+            "type": "text_print",
+            "value": {
+              "type": "math_arithmetic",
+              "fields": { "OP": "MINUS" },
+              "values": {
+                "A": { "type": "variables_get", "fields": { "VAR": "a" } },
+                "B": { "type": "variables_get", "fields": { "VAR": "b" } }
+              }
+            }
+          },
+          {
+            "type": "text_print",
+            "value": {
+              "type": "math_arithmetic",
+              "fields": { "OP": "MULTIPLY" },
+              "values": {
+                "A": { "type": "variables_get", "fields": { "VAR": "a" } },
+                "B": { "type": "variables_get", "fields": { "VAR": "b" } }
+              }
+            }
+          },
+          {
+            "type": "text_print",
+            "value": {
+              "type": "math_arithmetic",
+              "fields": { "OP": "DIVIDE" },
+              "values": {
+                "A": { "type": "variables_get", "fields": { "VAR": "a" } },
+                "B": { "type": "variables_get", "fields": { "VAR": "b" } }
+              }
+            }
+          }
+        ]
+      },
+      "public_testcases": [
+        { "input": null, "expected_output": "16\n8\n48\n3", "description": "12+4=16, 12-4=8, 12×4=48, 12÷4=3" }
+      ],
+      "hidden_testcases": [{ "input": null, "expected_output": "16\n8\n48\n3" }],
+      "base_xp": 80,
+      "duration": 10,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000011",
+      "topic_id": "664a00000000000000000004",
+      "title": "Bài tập: Tính chu vi và diện tích hình chữ nhật",
+      "description": "Cho chiều dài và chiều rộng, tính và in chu vi và diện tích hình chữ nhật.",
+      "order": 5,
+      "difficulty": "easy",
+      "toolbox_config": {
+        "categories": ["math", "variables", "output"]
+      },
+      "initial_blocks": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "dai" },
+            "value": { "type": "math_number", "fields": { "NUM": 8 } }
+          },
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "rong" },
+            "value": { "type": "math_number", "fields": { "NUM": 5 } }
+          }
+        ]
+      },
+      "hint": [
+        { "step": 1, "text": "Chu vi = (dai + rong) × 2. Tạo biến 'chuvi' để lưu." },
+        { "step": 2, "text": "Diện tích = dai × rong. Tạo biến 'dientich' để lưu." },
+        { "step": 3, "text": "In 'chuvi' và 'dientich' trên 2 dòng." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "chuvi" },
+            "value": {
+              "type": "math_arithmetic",
+              "fields": { "OP": "MULTIPLY" },
+              "values": {
+                "A": {
+                  "type": "math_arithmetic",
+                  "fields": { "OP": "ADD" },
+                  "values": {
+                    "A": { "type": "variables_get", "fields": { "VAR": "dai" } },
+                    "B": { "type": "variables_get", "fields": { "VAR": "rong" } }
+                  }
+                },
+                "B": { "type": "math_number", "fields": { "NUM": 2 } }
+              }
+            }
+          },
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "dientich" },
+            "value": {
+              "type": "math_arithmetic",
+              "fields": { "OP": "MULTIPLY" },
+              "values": {
+                "A": { "type": "variables_get", "fields": { "VAR": "dai" } },
+                "B": { "type": "variables_get", "fields": { "VAR": "rong" } }
+              }
+            }
+          },
+          { "type": "text_print", "value": { "type": "variables_get", "fields": { "VAR": "chuvi" } } },
+          { "type": "text_print", "value": { "type": "variables_get", "fields": { "VAR": "dientich" } } }
+        ]
+      },
+      "public_testcases": [
+        { "input": null, "expected_output": "26\n40", "description": "Chu vi = 26, diện tích = 40" }
+      ],
+      "hidden_testcases": [{ "input": null, "expected_output": "26\n40" }],
+      "base_xp": 100,
+      "duration": 12,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000012",
+      "topic_id": "664a00000000000000000005",
+      "title": "Hỏi và nhận câu trả lời",
+      "description": "Sử dụng khối 'hỏi ... và đợi' để nhận giá trị từ người dùng và lưu vào biến.",
+      "order": 1,
+      "difficulty": "medium",
+      "toolbox_config": {
+        "categories": ["input", "variables", "output", "text"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Kéo khối 'hỏi ... và đợi' từ danh mục Input." },
+        { "step": 2, "text": "Nhập câu hỏi 'Bạn tên là gì?'." },
+        { "step": 3, "text": "Kéo khối 'in ra' và dùng khối 'câu trả lời' từ Input." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "text_prompt_ext",
+            "fields": { "TYPE": "TEXT" },
+            "value": { "type": "text", "fields": { "TEXT": "Bạn tên là gì?" } }
+          },
+          { "type": "text_print", "value": { "type": "text_prompt_answer" } }
+        ]
+      },
+      "public_testcases": [
+        { "input": "Minh", "expected_output": "Minh", "description": "In lại đúng tên người dùng nhập" }
+      ],
+      "hidden_testcases": [
+        { "input": "Lan", "expected_output": "Lan" },
+        { "input": "Tuấn", "expected_output": "Tuấn" }
+      ],
+      "base_xp": 60,
+      "duration": 8,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000013",
+      "topic_id": "664a00000000000000000005",
+      "title": "Dùng giá trị vừa nhập",
+      "description": "Gán câu trả lời của người dùng vào biến và sử dụng biến đó trong tính toán.",
+      "order": 2,
+      "difficulty": "medium",
+      "toolbox_config": {
+        "categories": ["input", "variables", "output", "math"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Hỏi người dùng nhập một số, lưu vào biến 'so'." },
+        { "step": 2, "text": "Tính so × 2 và in kết quả." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "so" },
+            "value": {
+              "type": "text_prompt_ext",
+              "fields": { "TYPE": "NUMBER" },
+              "value": { "type": "text", "fields": { "TEXT": "Nhập một số:" } }
+            }
+          },
+          {
+            "type": "text_print",
+            "value": {
+              "type": "math_arithmetic",
+              "fields": { "OP": "MULTIPLY" },
+              "values": {
+                "A": { "type": "variables_get", "fields": { "VAR": "so" } },
+                "B": { "type": "math_number", "fields": { "NUM": 2 } }
+              }
+            }
+          }
+        ]
+      },
+      "public_testcases": [{ "input": "5", "expected_output": "10", "description": "Nhập 5 → in 10" }],
+      "hidden_testcases": [
+        { "input": "3", "expected_output": "6" },
+        { "input": "7", "expected_output": "14" }
+      ],
+      "base_xp": 70,
+      "duration": 10,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000014",
+      "topic_id": "664a00000000000000000005",
+      "title": "Bài tập: Máy tính cộng đơn giản",
+      "description": "Nhập 2 số từ người dùng, tính tổng và in ra kết quả.",
+      "order": 3,
+      "difficulty": "medium",
+      "toolbox_config": {
+        "categories": ["input", "variables", "output", "math"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Hỏi số thứ nhất, lưu vào 'a'. Hỏi số thứ hai, lưu vào 'b'." },
+        { "step": 2, "text": "In ra a + b." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "a" },
+            "value": {
+              "type": "text_prompt_ext",
+              "fields": { "TYPE": "NUMBER" },
+              "value": { "type": "text", "fields": { "TEXT": "Nhập số thứ nhất:" } }
+            }
+          },
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "b" },
+            "value": {
+              "type": "text_prompt_ext",
+              "fields": { "TYPE": "NUMBER" },
+              "value": { "type": "text", "fields": { "TEXT": "Nhập số thứ hai:" } }
+            }
+          },
+          {
+            "type": "text_print",
+            "value": {
+              "type": "math_arithmetic",
+              "fields": { "OP": "ADD" },
+              "values": {
+                "A": { "type": "variables_get", "fields": { "VAR": "a" } },
+                "B": { "type": "variables_get", "fields": { "VAR": "b" } }
+              }
+            }
+          }
+        ]
+      },
+      "public_testcases": [{ "input": "3\n7", "expected_output": "10", "description": "3 + 7 = 10" }],
+      "hidden_testcases": [
+        { "input": "10\n5", "expected_output": "15" },
+        { "input": "0\n9", "expected_output": "9" }
+      ],
+      "base_xp": 90,
+      "duration": 10,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000015",
+      "topic_id": "664a00000000000000000005",
+      "title": "Bài tập: Chào theo tên",
+      "description": "Hỏi tên người dùng, sau đó in lời chào có kèm tên của họ.",
+      "order": 4,
+      "difficulty": "medium",
+      "toolbox_config": {
+        "categories": ["input", "variables", "output", "text"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Hỏi tên, lưu vào biến 'ten'." },
+        { "step": 2, "text": "Dùng khối 'nối chuỗi' để ghép 'Xin chào, ' + ten + '!'." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "ten" },
+            "value": {
+              "type": "text_prompt_ext",
+              "fields": { "TYPE": "TEXT" },
+              "value": { "type": "text", "fields": { "TEXT": "Bạn tên gì?" } }
+            }
+          },
+          {
+            "type": "text_print",
+            "value": {
+              "type": "text_join",
+              "items": [
+                { "type": "text", "fields": { "TEXT": "Xin chào, " } },
+                { "type": "variables_get", "fields": { "VAR": "ten" } },
+                { "type": "text", "fields": { "TEXT": "!" } }
+              ]
+            }
+          }
+        ]
+      },
+      "public_testcases": [
+        { "input": "Minh", "expected_output": "Xin chào, Minh!", "description": "Chào đúng tên người dùng" }
+      ],
+      "hidden_testcases": [
+        { "input": "Lan", "expected_output": "Xin chào, Lan!" },
+        { "input": "Tuấn", "expected_output": "Xin chào, Tuấn!" }
+      ],
+      "base_xp": 80,
+      "duration": 8,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000016",
+      "topic_id": "664a00000000000000000006",
+      "title": "So sánh hai giá trị",
+      "description": "Làm quen với các toán tử so sánh: =, ≠, >, <, ≥, ≤ và kết quả true/false.",
+      "order": 1,
+      "difficulty": "medium",
+      "toolbox_config": {
+        "categories": ["logic", "math", "variables", "output"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Kéo khối 'in ra' và gắn khối so sánh '5 > 3' vào." },
+        { "step": 2, "text": "Chương trình sẽ in 'true' vì 5 lớn hơn 3." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "text_print",
+            "value": {
+              "type": "logic_compare",
+              "fields": { "OP": "GT" },
+              "values": {
+                "A": { "type": "math_number", "fields": { "NUM": 5 } },
+                "B": { "type": "math_number", "fields": { "NUM": 3 } }
+              }
+            }
+          }
+        ]
+      },
+      "public_testcases": [{ "input": null, "expected_output": "true", "description": "5 > 3 là true" }],
+      "hidden_testcases": [{ "input": null, "expected_output": "true" }],
+      "base_xp": 60,
+      "duration": 8,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000017",
+      "topic_id": "664a00000000000000000006",
+      "title": "Câu lệnh if đơn giản",
+      "description": "Dùng khối 'nếu ... thì ...' để chạy lệnh khi điều kiện là true.",
+      "order": 2,
+      "difficulty": "medium",
+      "toolbox_config": {
+        "categories": ["logic", "math", "variables", "output"]
+      },
+      "initial_blocks": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "tuoi" },
+            "value": { "type": "math_number", "fields": { "NUM": 15 } }
+          }
+        ]
+      },
+      "hint": [
+        { "step": 1, "text": "Kéo khối 'nếu ... thì ...' vào vùng làm việc." },
+        { "step": 2, "text": "Điều kiện: tuoi >= 18. Nếu đúng thì in 'Đủ tuổi lái xe'." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "tuoi" },
+            "value": { "type": "math_number", "fields": { "NUM": 15 } }
+          },
+          {
+            "type": "controls_if",
+            "condition": {
+              "type": "logic_compare",
+              "fields": { "OP": "GTE" },
+              "values": {
+                "A": { "type": "variables_get", "fields": { "VAR": "tuoi" } },
+                "B": { "type": "math_number", "fields": { "NUM": 18 } }
+              }
+            },
+            "do": [{ "type": "text_print", "fields": { "TEXT": "Đủ tuổi lái xe" } }]
+          }
+        ]
+      },
+      "public_testcases": [{ "input": null, "expected_output": "", "description": "tuoi=15 < 18 nên không in gì" }],
+      "hidden_testcases": [{ "input": null, "expected_output": "" }],
+      "base_xp": 70,
+      "duration": 10,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000018",
+      "topic_id": "664a00000000000000000006",
+      "title": "Câu lệnh if-else",
+      "description": "Mở rộng câu lệnh if với nhánh else để xử lý cả hai trường hợp đúng và sai.",
+      "order": 3,
+      "difficulty": "medium",
+      "toolbox_config": {
+        "categories": ["logic", "math", "variables", "output"]
+      },
+      "initial_blocks": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "so" },
+            "value": { "type": "math_number", "fields": { "NUM": 7 } }
+          }
+        ]
+      },
+      "hint": [
+        { "step": 1, "text": "Dùng khối 'nếu ... thì ... không thì ...'." },
+        { "step": 2, "text": "Nếu so > 0 thì in 'Dương', không thì in 'Âm hoặc bằng 0'." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "so" },
+            "value": { "type": "math_number", "fields": { "NUM": 7 } }
+          },
+          {
+            "type": "controls_if",
+            "has_else": true,
+            "condition": {
+              "type": "logic_compare",
+              "fields": { "OP": "GT" },
+              "values": {
+                "A": { "type": "variables_get", "fields": { "VAR": "so" } },
+                "B": { "type": "math_number", "fields": { "NUM": 0 } }
+              }
+            },
+            "do": [{ "type": "text_print", "fields": { "TEXT": "Dương" } }],
+            "else": [{ "type": "text_print", "fields": { "TEXT": "Âm hoặc bằng 0" } }]
+          }
+        ]
+      },
+      "public_testcases": [{ "input": null, "expected_output": "Dương", "description": "so=7 > 0 nên in Dương" }],
+      "hidden_testcases": [{ "input": null, "expected_output": "Dương" }],
+      "base_xp": 80,
+      "duration": 10,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000019",
+      "topic_id": "664a00000000000000000006",
+      "title": "Bài tập: Tìm số lớn hơn",
+      "description": "Nhập 2 số, so sánh và in ra số nào lớn hơn.",
+      "order": 4,
+      "difficulty": "medium",
+      "toolbox_config": {
+        "categories": ["logic", "math", "variables", "output", "input"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Nhập 'a' và 'b' từ bàn phím." },
+        { "step": 2, "text": "Dùng if-else: nếu a > b thì in a, không thì in b." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "a" },
+            "value": {
+              "type": "text_prompt_ext",
+              "fields": { "TYPE": "NUMBER" },
+              "value": { "type": "text", "fields": { "TEXT": "Nhập số a:" } }
+            }
+          },
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "b" },
+            "value": {
+              "type": "text_prompt_ext",
+              "fields": { "TYPE": "NUMBER" },
+              "value": { "type": "text", "fields": { "TEXT": "Nhập số b:" } }
+            }
+          },
+          {
+            "type": "controls_if",
+            "has_else": true,
+            "condition": {
+              "type": "logic_compare",
+              "fields": { "OP": "GT" },
+              "values": {
+                "A": { "type": "variables_get", "fields": { "VAR": "a" } },
+                "B": { "type": "variables_get", "fields": { "VAR": "b" } }
+              }
+            },
+            "do": [{ "type": "text_print", "value": { "type": "variables_get", "fields": { "VAR": "a" } } }],
+            "else": [{ "type": "text_print", "value": { "type": "variables_get", "fields": { "VAR": "b" } } }]
+          }
+        ]
+      },
+      "public_testcases": [{ "input": "8\n3", "expected_output": "8", "description": "8 > 3 nên in 8" }],
+      "hidden_testcases": [
+        { "input": "2\n9", "expected_output": "9" },
+        { "input": "5\n5", "expected_output": "5" }
+      ],
+      "base_xp": 90,
+      "duration": 10,
+      "isActive": true
+    },
+    {
+      "_id": "664b0000000000000000001a",
+      "topic_id": "664a00000000000000000006",
+      "title": "Bài tập: Xếp loại học lực",
+      "description": "Nhập điểm số (0–10), in ra xếp loại: Giỏi (≥8), Khá (6–7), Trung bình (5), Yếu (<5).",
+      "order": 5,
+      "difficulty": "medium",
+      "toolbox_config": {
+        "categories": ["logic", "math", "variables", "output", "input"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Nhập điểm, lưu vào biến 'diem'." },
+        { "step": 2, "text": "Dùng if / else if / else: kiểm tra từ cao xuống thấp." },
+        { "step": 3, "text": "diem >= 8 → Giỏi; diem >= 6 → Khá; diem >= 5 → Trung bình; còn lại → Yếu." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "diem" },
+            "value": {
+              "type": "text_prompt_ext",
+              "fields": { "TYPE": "NUMBER" },
+              "value": { "type": "text", "fields": { "TEXT": "Nhập điểm:" } }
+            }
+          },
+          {
+            "type": "controls_if",
+            "elseif_count": 2,
+            "has_else": true,
+            "conditions": [
+              {
+                "type": "logic_compare",
+                "fields": { "OP": "GTE" },
+                "values": {
+                  "A": { "type": "variables_get", "fields": { "VAR": "diem" } },
+                  "B": { "type": "math_number", "fields": { "NUM": 8 } }
+                }
+              },
+              {
+                "type": "logic_compare",
+                "fields": { "OP": "GTE" },
+                "values": {
+                  "A": { "type": "variables_get", "fields": { "VAR": "diem" } },
+                  "B": { "type": "math_number", "fields": { "NUM": 6 } }
+                }
+              },
+              {
+                "type": "logic_compare",
+                "fields": { "OP": "GTE" },
+                "values": {
+                  "A": { "type": "variables_get", "fields": { "VAR": "diem" } },
+                  "B": { "type": "math_number", "fields": { "NUM": 5 } }
+                }
+              }
+            ],
+            "do": [
+              [{ "type": "text_print", "fields": { "TEXT": "Giỏi" } }],
+              [{ "type": "text_print", "fields": { "TEXT": "Khá" } }],
+              [{ "type": "text_print", "fields": { "TEXT": "Trung bình" } }]
+            ],
+            "else": [{ "type": "text_print", "fields": { "TEXT": "Yếu" } }]
+          }
+        ]
+      },
+      "public_testcases": [
+        { "input": "9", "expected_output": "Giỏi", "description": "9 >= 8 → Giỏi" },
+        { "input": "6", "expected_output": "Khá", "description": "6 >= 6 → Khá" }
+      ],
+      "hidden_testcases": [
+        { "input": "5", "expected_output": "Trung bình" },
+        { "input": "3", "expected_output": "Yếu" }
+      ],
+      "base_xp": 120,
+      "duration": 12,
+      "isActive": true
+    },
+    {
+      "_id": "664b0000000000000000001b",
+      "topic_id": "664a00000000000000000007",
+      "title": "Lặp số lần cố định",
+      "description": "Sử dụng khối 'lặp lại N lần' để thực hiện một nhóm lệnh nhiều lần.",
+      "order": 1,
+      "difficulty": "medium",
+      "toolbox_config": {
+        "categories": ["loops", "output", "text"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Kéo khối 'lặp lại 10 lần' từ danh mục Loops." },
+        { "step": 2, "text": "Đặt khối 'in ra Xin chào' vào bên trong vòng lặp." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "controls_repeat_ext",
+            "value": { "type": "math_number", "fields": { "NUM": 5 } },
+            "do": [{ "type": "text_print", "fields": { "TEXT": "Xin chào" } }]
+          }
+        ]
+      },
+      "public_testcases": [
+        {
+          "input": null,
+          "expected_output": "Xin chào\nXin chào\nXin chào\nXin chào\nXin chào",
+          "description": "In 5 lần Xin chào"
+        }
+      ],
+      "hidden_testcases": [{ "input": null, "expected_output": "Xin chào\nXin chào\nXin chào\nXin chào\nXin chào" }],
+      "base_xp": 70,
+      "duration": 8,
+      "isActive": true
+    },
+    {
+      "_id": "664b0000000000000000001c",
+      "topic_id": "664a00000000000000000007",
+      "title": "Vòng lặp có biến đếm",
+      "description": "Dùng khối 'đếm từ ... đến ...' để lặp và sử dụng biến đếm trong thân vòng lặp.",
+      "order": 2,
+      "difficulty": "medium",
+      "toolbox_config": {
+        "categories": ["loops", "variables", "output", "math"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Kéo khối 'đếm với i từ 1 đến 5' vào." },
+        { "step": 2, "text": "Bên trong, kéo khối 'in ra' và gắn biến 'i' vào." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "controls_for",
+            "fields": { "VAR": "i" },
+            "from": { "type": "math_number", "fields": { "NUM": 1 } },
+            "to": { "type": "math_number", "fields": { "NUM": 5 } },
+            "by": { "type": "math_number", "fields": { "NUM": 1 } },
+            "do": [{ "type": "text_print", "value": { "type": "variables_get", "fields": { "VAR": "i" } } }]
+          }
+        ]
+      },
+      "public_testcases": [{ "input": null, "expected_output": "1\n2\n3\n4\n5", "description": "In số 1 đến 5" }],
+      "hidden_testcases": [{ "input": null, "expected_output": "1\n2\n3\n4\n5" }],
+      "base_xp": 80,
+      "duration": 10,
+      "isActive": true
+    },
+    {
+      "_id": "664b0000000000000000001d",
+      "topic_id": "664a00000000000000000007",
+      "title": "Bài tập: In số từ 1 đến 10",
+      "description": "Dùng vòng lặp có biến đếm để in các số nguyên từ 1 đến 10.",
+      "order": 3,
+      "difficulty": "medium",
+      "toolbox_config": {
+        "categories": ["loops", "variables", "output"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Dùng khối 'đếm với i từ 1 đến 10'." },
+        { "step": 2, "text": "Bên trong vòng lặp, in biến i." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "controls_for",
+            "fields": { "VAR": "i" },
+            "from": { "type": "math_number", "fields": { "NUM": 1 } },
+            "to": { "type": "math_number", "fields": { "NUM": 10 } },
+            "by": { "type": "math_number", "fields": { "NUM": 1 } },
+            "do": [{ "type": "text_print", "value": { "type": "variables_get", "fields": { "VAR": "i" } } }]
+          }
+        ]
+      },
+      "public_testcases": [
+        { "input": null, "expected_output": "1\n2\n3\n4\n5\n6\n7\n8\n9\n10", "description": "In 1 đến 10" }
+      ],
+      "hidden_testcases": [{ "input": null, "expected_output": "1\n2\n3\n4\n5\n6\n7\n8\n9\n10" }],
+      "base_xp": 90,
+      "duration": 10,
+      "isActive": true
+    },
+    {
+      "_id": "664b0000000000000000001e",
+      "topic_id": "664a00000000000000000007",
+      "title": "Bài tập: Tính tổng 1 + 2 + ... + N",
+      "description": "Nhập N, dùng vòng lặp cộng tích lũy từ 1 đến N và in tổng.",
+      "order": 4,
+      "difficulty": "medium",
+      "toolbox_config": {
+        "categories": ["loops", "variables", "output", "math", "input"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Tạo biến 'tong' = 0 và biến 'N' = 10." },
+        { "step": 2, "text": "Vòng lặp từ 1 đến N, mỗi bước: tong = tong + i." },
+        { "step": 3, "text": "Sau vòng lặp, in biến 'tong'." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "tong" },
+            "value": { "type": "math_number", "fields": { "NUM": 0 } }
+          },
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "N" },
+            "value": { "type": "math_number", "fields": { "NUM": 10 } }
+          },
+          {
+            "type": "controls_for",
+            "fields": { "VAR": "i" },
+            "from": { "type": "math_number", "fields": { "NUM": 1 } },
+            "to": { "type": "variables_get", "fields": { "VAR": "N" } },
+            "by": { "type": "math_number", "fields": { "NUM": 1 } },
+            "do": [
+              {
+                "type": "variables_set",
+                "fields": { "VAR": "tong" },
+                "value": {
+                  "type": "math_arithmetic",
+                  "fields": { "OP": "ADD" },
+                  "values": {
+                    "A": { "type": "variables_get", "fields": { "VAR": "tong" } },
+                    "B": { "type": "variables_get", "fields": { "VAR": "i" } }
+                  }
+                }
+              }
+            ]
+          },
+          { "type": "text_print", "value": { "type": "variables_get", "fields": { "VAR": "tong" } } }
+        ]
+      },
+      "public_testcases": [{ "input": null, "expected_output": "55", "description": "Tổng 1 đến 10 = 55" }],
+      "hidden_testcases": [{ "input": null, "expected_output": "55" }],
+      "base_xp": 120,
+      "duration": 12,
+      "isActive": true
+    },
+    {
+      "_id": "664b0000000000000000001f",
+      "topic_id": "664a00000000000000000007",
+      "title": "Bài tập: Bảng cửu chương",
+      "description": "In toàn bộ bảng cửu chương số 2 từ 2×1 đến 2×10.",
+      "order": 5,
+      "difficulty": "medium",
+      "toolbox_config": {
+        "categories": ["loops", "variables", "output", "math", "text"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Dùng vòng lặp từ 1 đến 10 với biến i." },
+        { "step": 2, "text": "Mỗi bước in: '2 × i = ' + (2 × i)." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "controls_for",
+            "fields": { "VAR": "i" },
+            "from": { "type": "math_number", "fields": { "NUM": 1 } },
+            "to": { "type": "math_number", "fields": { "NUM": 10 } },
+            "by": { "type": "math_number", "fields": { "NUM": 1 } },
+            "do": [
+              {
+                "type": "text_print",
+                "value": {
+                  "type": "text_join",
+                  "items": [
+                    { "type": "text", "fields": { "TEXT": "2 x " } },
+                    { "type": "variables_get", "fields": { "VAR": "i" } },
+                    { "type": "text", "fields": { "TEXT": " = " } },
+                    {
+                      "type": "math_arithmetic",
+                      "fields": { "OP": "MULTIPLY" },
+                      "values": {
+                        "A": { "type": "math_number", "fields": { "NUM": 2 } },
+                        "B": { "type": "variables_get", "fields": { "VAR": "i" } }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "public_testcases": [
+        {
+          "input": null,
+          "expected_output": "2 x 1 = 2\n2 x 2 = 4\n2 x 3 = 6\n2 x 4 = 8\n2 x 5 = 10\n2 x 6 = 12\n2 x 7 = 14\n2 x 8 = 16\n2 x 9 = 18\n2 x 10 = 20",
+          "description": "Bảng cửu chương 2 đầy đủ"
+        }
+      ],
+      "hidden_testcases": [
+        {
+          "input": null,
+          "expected_output": "2 x 1 = 2\n2 x 2 = 4\n2 x 3 = 6\n2 x 4 = 8\n2 x 5 = 10\n2 x 6 = 12\n2 x 7 = 14\n2 x 8 = 16\n2 x 9 = 18\n2 x 10 = 20"
+        }
+      ],
+      "base_xp": 130,
+      "duration": 12,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000020",
+      "topic_id": "664a00000000000000000008",
+      "title": "Hàm là gì?",
+      "description": "Hiểu khái niệm hàm là nhóm lệnh có tên, có thể gọi lại nhiều lần ở bất kỳ đâu.",
+      "order": 1,
+      "difficulty": "hard",
+      "toolbox_config": {
+        "categories": ["functions", "output", "text"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Vào danh mục Functions, kéo khối 'để làm chaoHoi'." },
+        { "step": 2, "text": "Bên trong hàm, thêm lệnh in 'Xin chào!'." },
+        { "step": 3, "text": "Ở bên ngoài, gọi hàm 'chaoHoi' 2 lần." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "procedures_defnoreturn",
+            "fields": { "NAME": "chaoHoi" },
+            "body": [{ "type": "text_print", "fields": { "TEXT": "Xin chào!" } }]
+          },
+          { "type": "procedures_callnoreturn", "fields": { "NAME": "chaoHoi" } },
+          { "type": "procedures_callnoreturn", "fields": { "NAME": "chaoHoi" } }
+        ]
+      },
+      "public_testcases": [
+        { "input": null, "expected_output": "Xin chào!\nXin chào!", "description": "Gọi hàm 2 lần" }
+      ],
+      "hidden_testcases": [{ "input": null, "expected_output": "Xin chào!\nXin chào!" }],
+      "base_xp": 80,
+      "duration": 8,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000021",
+      "topic_id": "664a00000000000000000008",
+      "title": "Tạo và gọi hàm đơn giản",
+      "description": "Định nghĩa hàm tự đặt tên và gọi hàm đó nhiều lần trong chương trình.",
+      "order": 2,
+      "difficulty": "hard",
+      "toolbox_config": {
+        "categories": ["functions", "output", "text"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Tạo hàm 'inDuongKe' in ra '----------'." },
+        { "step": 2, "text": "Gọi hàm trước và sau khi in nội dung chính." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "procedures_defnoreturn",
+            "fields": { "NAME": "inDuongKe" },
+            "body": [{ "type": "text_print", "fields": { "TEXT": "----------" } }]
+          },
+          { "type": "procedures_callnoreturn", "fields": { "NAME": "inDuongKe" } },
+          { "type": "text_print", "fields": { "TEXT": "Tiêu đề" } },
+          { "type": "procedures_callnoreturn", "fields": { "NAME": "inDuongKe" } }
+        ]
+      },
+      "public_testcases": [
+        {
+          "input": null,
+          "expected_output": "----------\nTiêu đề\n----------",
+          "description": "In đường kẻ trước và sau tiêu đề"
+        }
+      ],
+      "hidden_testcases": [{ "input": null, "expected_output": "----------\nTiêu đề\n----------" }],
+      "base_xp": 90,
+      "duration": 10,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000022",
+      "topic_id": "664a00000000000000000008",
+      "title": "Hàm có tham số",
+      "description": "Tạo hàm nhận tham số đầu vào để xử lý linh hoạt với nhiều giá trị khác nhau.",
+      "order": 3,
+      "difficulty": "hard",
+      "toolbox_config": {
+        "categories": ["functions", "variables", "output", "text"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Tạo hàm 'chaoTen' với tham số 'ten'." },
+        { "step": 2, "text": "Bên trong hàm in 'Xin chào, ' + ten." },
+        { "step": 3, "text": "Gọi hàm với các tên khác nhau." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "procedures_defnoreturn",
+            "fields": { "NAME": "chaoTen" },
+            "args": ["ten"],
+            "body": [
+              {
+                "type": "text_print",
+                "value": {
+                  "type": "text_join",
+                  "items": [
+                    { "type": "text", "fields": { "TEXT": "Xin chào, " } },
+                    { "type": "variables_get", "fields": { "VAR": "ten" } }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "procedures_callnoreturn",
+            "fields": { "NAME": "chaoTen" },
+            "args": [{ "type": "text", "fields": { "TEXT": "Minh" } }]
+          },
+          {
+            "type": "procedures_callnoreturn",
+            "fields": { "NAME": "chaoTen" },
+            "args": [{ "type": "text", "fields": { "TEXT": "Lan" } }]
+          }
+        ]
+      },
+      "public_testcases": [
+        {
+          "input": null,
+          "expected_output": "Xin chào, Minh\nXin chào, Lan",
+          "description": "Gọi hàm với 2 tên khác nhau"
+        }
+      ],
+      "hidden_testcases": [{ "input": null, "expected_output": "Xin chào, Minh\nXin chào, Lan" }],
+      "base_xp": 100,
+      "duration": 12,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000023",
+      "topic_id": "664a00000000000000000008",
+      "title": "Hàm trả về giá trị",
+      "description": "Tạo hàm có khối 'return' để trả kết quả về cho nơi gọi hàm.",
+      "order": 4,
+      "difficulty": "hard",
+      "toolbox_config": {
+        "categories": ["functions", "variables", "output", "math"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Tạo hàm 'binhPhuong' với tham số 'x', trả về x × x." },
+        { "step": 2, "text": "Gọi hàm và in kết quả: binhPhuong(4)." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "procedures_defreturn",
+            "fields": { "NAME": "binhPhuong" },
+            "args": ["x"],
+            "body": [
+              {
+                "type": "procedures_return",
+                "value": {
+                  "type": "math_arithmetic",
+                  "fields": { "OP": "MULTIPLY" },
+                  "values": {
+                    "A": { "type": "variables_get", "fields": { "VAR": "x" } },
+                    "B": { "type": "variables_get", "fields": { "VAR": "x" } }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "text_print",
+            "value": {
+              "type": "procedures_callreturn",
+              "fields": { "NAME": "binhPhuong" },
+              "args": [{ "type": "math_number", "fields": { "NUM": 4 } }]
+            }
+          }
+        ]
+      },
+      "public_testcases": [{ "input": null, "expected_output": "16", "description": "4² = 16" }],
+      "hidden_testcases": [{ "input": null, "expected_output": "16" }],
+      "base_xp": 110,
+      "duration": 12,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000024",
+      "topic_id": "664a00000000000000000008",
+      "title": "Bài tập: Hàm tính diện tích hình tròn",
+      "description": "Viết hàm nhận bán kính r, tính và trả về diện tích π × r². Gọi hàm với r = 7.",
+      "order": 5,
+      "difficulty": "hard",
+      "toolbox_config": {
+        "categories": ["functions", "variables", "output", "math"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Tạo hàm 'dienTichTron' với tham số 'r'." },
+        { "step": 2, "text": "Dùng giá trị π ≈ 3.14. Trả về 3.14 × r × r." },
+        { "step": 3, "text": "Gọi hàm với r = 7 và in kết quả." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "procedures_defreturn",
+            "fields": { "NAME": "dienTichTron" },
+            "args": ["r"],
+            "body": [
+              {
+                "type": "procedures_return",
+                "value": {
+                  "type": "math_arithmetic",
+                  "fields": { "OP": "MULTIPLY" },
+                  "values": {
+                    "A": { "type": "math_number", "fields": { "NUM": 3.14 } },
+                    "B": {
+                      "type": "math_arithmetic",
+                      "fields": { "OP": "MULTIPLY" },
+                      "values": {
+                        "A": { "type": "variables_get", "fields": { "VAR": "r" } },
+                        "B": { "type": "variables_get", "fields": { "VAR": "r" } }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "text_print",
+            "value": {
+              "type": "procedures_callreturn",
+              "fields": { "NAME": "dienTichTron" },
+              "args": [{ "type": "math_number", "fields": { "NUM": 7 } }]
+            }
+          }
+        ]
+      },
+      "public_testcases": [{ "input": null, "expected_output": "153.86", "description": "3.14 × 7 × 7 = 153.86" }],
+      "hidden_testcases": [{ "input": null, "expected_output": "153.86" }],
+      "base_xp": 130,
+      "duration": 12,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000025",
+      "topic_id": "664a00000000000000000009",
+      "title": "Dự án: Máy tính 4 phép tính",
+      "description": "Xây dựng chương trình nhập 2 số và phép tính (1=cộng, 2=trừ, 3=nhân, 4=chia), in kết quả tương ứng.",
+      "order": 1,
+      "difficulty": "hard",
+      "toolbox_config": {
+        "categories": ["input", "logic", "math", "variables", "output", "text", "loops"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Nhập a, b và phep (1–4) từ người dùng." },
+        { "step": 2, "text": "Dùng if/else if để kiểm tra phep và in phép tính tương ứng." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "a" },
+            "value": {
+              "type": "text_prompt_ext",
+              "fields": { "TYPE": "NUMBER" },
+              "value": { "type": "text", "fields": { "TEXT": "Nhập số a:" } }
+            }
+          },
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "b" },
+            "value": {
+              "type": "text_prompt_ext",
+              "fields": { "TYPE": "NUMBER" },
+              "value": { "type": "text", "fields": { "TEXT": "Nhập số b:" } }
+            }
+          },
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "phep" },
+            "value": {
+              "type": "text_prompt_ext",
+              "fields": { "TYPE": "NUMBER" },
+              "value": { "type": "text", "fields": { "TEXT": "Chọn phép tính (1=+, 2=-, 3=×, 4=÷):" } }
+            }
+          },
+          {
+            "type": "controls_if",
+            "elseif_count": 3,
+            "has_else": false,
+            "note": "if phep==1 → print a+b; elif phep==2 → print a-b; elif phep==3 → print a*b; elif phep==4 → print a/b"
+          }
+        ]
+      },
+      "public_testcases": [
+        { "input": "6\n3\n1", "expected_output": "9", "description": "6 + 3 = 9" },
+        { "input": "6\n3\n4", "expected_output": "2", "description": "6 ÷ 3 = 2" }
+      ],
+      "hidden_testcases": [
+        { "input": "5\n4\n2", "expected_output": "1" },
+        { "input": "5\n4\n3", "expected_output": "20" }
+      ],
+      "base_xp": 200,
+      "duration": 20,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000026",
+      "topic_id": "664a00000000000000000009",
+      "title": "Dự án: Trò chơi đoán số",
+      "description": "Máy đặt sẵn một số bí mật (1–10). Người dùng nhập lần đoán, chương trình in 'Quá lớn', 'Quá nhỏ' hoặc 'Đúng rồi!'.",
+      "order": 2,
+      "difficulty": "hard",
+      "toolbox_config": {
+        "categories": ["input", "logic", "math", "variables", "output", "loops"]
+      },
+      "initial_blocks": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "bimAt" },
+            "value": { "type": "math_number", "fields": { "NUM": 7 } }
+          }
+        ]
+      },
+      "hint": [
+        { "step": 1, "text": "Số bí mật đã được đặt sẵn = 7. Nhập đoán từ người dùng." },
+        {
+          "step": 2,
+          "text": "Dùng if/else if/else: đoán > bimAt → 'Quá lớn'; đoán < bimAt → 'Quá nhỏ'; còn lại → 'Đúng rồi!'."
+        }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "bimAt" },
+            "value": { "type": "math_number", "fields": { "NUM": 7 } }
+          },
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "doan" },
+            "value": {
+              "type": "text_prompt_ext",
+              "fields": { "TYPE": "NUMBER" },
+              "value": { "type": "text", "fields": { "TEXT": "Đoán số (1-10):" } }
+            }
+          },
+          {
+            "type": "controls_if",
+            "elseif_count": 1,
+            "has_else": true,
+            "note": "if doan > bimAt → 'Quá lớn'; elif doan < bimAt → 'Quá nhỏ'; else → 'Đúng rồi!'"
+          }
+        ]
+      },
+      "public_testcases": [
+        { "input": "7", "expected_output": "Đúng rồi!", "description": "Đoán đúng số 7" },
+        { "input": "9", "expected_output": "Quá lớn", "description": "9 > 7" },
+        { "input": "4", "expected_output": "Quá nhỏ", "description": "4 < 7" }
+      ],
+      "hidden_testcases": [
+        { "input": "7", "expected_output": "Đúng rồi!" },
+        { "input": "10", "expected_output": "Quá lớn" },
+        { "input": "1", "expected_output": "Quá nhỏ" }
+      ],
+      "base_xp": 200,
+      "duration": 20,
+      "isActive": true
+    },
+    {
+      "_id": "664b00000000000000000027",
+      "topic_id": "664a00000000000000000009",
+      "title": "Dự án: Bảng điểm học sinh",
+      "description": "Nhập điểm của 3 môn (Toán, Văn, Anh), tính điểm trung bình và in xếp loại học lực.",
+      "order": 3,
+      "difficulty": "hard",
+      "toolbox_config": {
+        "categories": ["input", "logic", "math", "variables", "output", "text", "functions"]
+      },
+      "initial_blocks": { "blocks": [] },
+      "hint": [
+        { "step": 1, "text": "Nhập điểm 3 môn và lưu vào 3 biến: toan, van, anh." },
+        { "step": 2, "text": "Tính tb = (toan + van + anh) / 3." },
+        { "step": 3, "text": "Dùng if/else if/else để xếp loại rồi in kết quả." }
+      ],
+      "solution": {
+        "blocks": [
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "toan" },
+            "value": {
+              "type": "text_prompt_ext",
+              "fields": { "TYPE": "NUMBER" },
+              "value": { "type": "text", "fields": { "TEXT": "Điểm Toán:" } }
+            }
+          },
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "van" },
+            "value": {
+              "type": "text_prompt_ext",
+              "fields": { "TYPE": "NUMBER" },
+              "value": { "type": "text", "fields": { "TEXT": "Điểm Văn:" } }
+            }
+          },
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "anh" },
+            "value": {
+              "type": "text_prompt_ext",
+              "fields": { "TYPE": "NUMBER" },
+              "value": { "type": "text", "fields": { "TEXT": "Điểm Anh:" } }
+            }
+          },
+          {
+            "type": "variables_set",
+            "fields": { "VAR": "tb" },
+            "value": {
+              "type": "math_arithmetic",
+              "fields": { "OP": "DIVIDE" },
+              "values": {
+                "A": {
+                  "type": "math_arithmetic",
+                  "fields": { "OP": "ADD" },
+                  "values": {
+                    "A": {
+                      "type": "math_arithmetic",
+                      "fields": { "OP": "ADD" },
+                      "values": {
+                        "A": { "type": "variables_get", "fields": { "VAR": "toan" } },
+                        "B": { "type": "variables_get", "fields": { "VAR": "van" } }
+                      }
+                    },
+                    "B": { "type": "variables_get", "fields": { "VAR": "anh" } }
+                  }
+                },
+                "B": { "type": "math_number", "fields": { "NUM": 3 } }
+              }
+            }
+          },
+          {
+            "type": "text_print",
+            "value": {
+              "type": "text_join",
+              "items": [
+                { "type": "text", "fields": { "TEXT": "Điểm TB: " } },
+                { "type": "variables_get", "fields": { "VAR": "tb" } }
+              ]
+            }
+          },
+          {
+            "type": "controls_if",
+            "elseif_count": 2,
+            "has_else": true,
+            "note": "if tb >= 8 → Giỏi; elif tb >= 6.5 → Khá; elif tb >= 5 → Trung bình; else → Yếu"
+          }
+        ]
+      },
+      "public_testcases": [
+        { "input": "9\n8\n8", "expected_output": "Điểm TB: 8.33\nGiỏi", "description": "TB 8.33 → Giỏi" },
+        { "input": "6\n7\n6", "expected_output": "Điểm TB: 6.33\nKhá", "description": "TB 6.33 → Khá" }
+      ],
+      "hidden_testcases": [
+        { "input": "5\n5\n5", "expected_output": "Điểm TB: 5\nTrung bình" },
+        { "input": "3\n4\n2", "expected_output": "Điểm TB: 3\nYếu" }
+      ],
+      "base_xp": 200,
+      "duration": 20,
+      "isActive": true
+    }
+  ]
+}
