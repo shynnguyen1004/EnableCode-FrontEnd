@@ -1,8 +1,32 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+// Định nghĩa các interface tường minh để dập tắt hoàn toàn lỗi ESLint "no-explicit-any"
+interface NormalizedLandmark {
+  x: number;
+  y: number;
+  z?: number;
+}
+
+interface FaceMeshResults {
+  multiFaceLandmarks?: NormalizedLandmark[][];
+  image: HTMLVideoElement | HTMLCanvasElement;
+}
+
+interface FaceMeshOptions {
+  maxNumFaces?: number;
+  refineLandmarks?: boolean;
+  minDetectionConfidence?: number;
+}
+
+interface CameraOptions {
+  onFrame: () => Promise<void>;
+  width: number;
+  height: number;
+}
+
 interface FaceMeshInstance {
-  setOptions(options: any): void;
-  onResults(callback: (results: any) => void): void;
+  setOptions(options: FaceMeshOptions): void;
+  onResults(callback: (results: FaceMeshResults) => void): void;
   send(input: { image: HTMLVideoElement | HTMLCanvasElement }): Promise<void>;
   close(): Promise<void>;
 }
@@ -15,7 +39,7 @@ interface CameraInstance {
 declare global {
   interface Window {
     FaceMesh: new (config?: { locateFile: (file: string) => string }) => FaceMeshInstance;
-    Camera: new (video: HTMLVideoElement, options: any) => CameraInstance;
+    Camera: new (video: HTMLVideoElement, options: CameraOptions) => CameraInstance;
   }
 }
 
@@ -37,20 +61,6 @@ const Mouse: React.FC = () => {
   const lastFrameTimeRef = useRef<number>(0);
   const lastHoveredEl = useRef<Element | null>(null);
 
-  // Hàm hỗ trợ tìm kiếm Panel/Container có thể cuộn gần nhất dưới con trỏ chuột
-  const getScrollableParent = (el: Element | null): Element | null => {
-    if (!el) return null;
-    const style = window.getComputedStyle(el);
-    const overflowY = style.overflowY;
-    const isScrollable = overflowY === 'auto' || overflowY === 'scroll';
-    const canScroll = el.scrollHeight > el.clientHeight;
-
-    if (isScrollable && canScroll) {
-      return el;
-    }
-    return getScrollableParent(el.parentElement);
-  };
-
   useEffect(() => {
     mouseActionRef.current = mouseAction;
   }, [mouseAction]);
@@ -68,12 +78,26 @@ const Mouse: React.FC = () => {
 
     let active = true;
 
+    // Chuyển hàm tìm kiếm panel vào TRONG useEffect để sửa triệt để lỗi dependency của ESLint
+    const getScrollableParent = (el: Element | null): Element | null => {
+      if (!el) return null;
+      const style = window.getComputedStyle(el);
+      const overflowY = style.overflowY;
+      const isScrollable = overflowY === 'auto' || overflowY === 'scroll';
+      const canScroll = el.scrollHeight > el.clientHeight;
+
+      if (isScrollable && canScroll) {
+        return el;
+      }
+      return getScrollableParent(el.parentElement);
+    };
+
     const faceMesh = new FaceMesh({
       locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
     });
     faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5 });
 
-    faceMesh.onResults((results: any) => {
+    faceMesh.onResults((results: FaceMeshResults) => {
       if (!active) return;
 
       const now = performance.now();
@@ -91,19 +115,26 @@ const Mouse: React.FC = () => {
       if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
         const landmarks = results.multiFaceLandmarks[0];
 
-        canvasCtx.fillStyle = 'rgba(45, 212, 191, 0.7)';
-        landmarks.forEach((pt: any) => {
-          canvasCtx.beginPath();
-          canvasCtx.arc((1 - pt.x) * -canvasElement.width, pt.y * canvasElement.height, 0.8, 0, 2 * Math.PI);
-          canvasCtx.fill();
+        // --- CAMERA: CHỈ HIỂN THỊ LANDMARK CẦN THIẾT ---
+        // Chỉ vẽ Mũi (1) để track hướng và 2 điểm Môi trong (13, 14) để tính độ há miệng
+        const essentialIndices = [1, 13, 14];
+        essentialIndices.forEach(idx => {
+          const pt = landmarks[idx];
+          if (pt) {
+            canvasCtx.beginPath();
+            // Đốm đỏ cho mũi, đốm xanh ngọc cho môi
+            canvasCtx.fillStyle = idx === 1 ? '#f43f5e' : '#2dd4bf';
+            canvasCtx.arc((1 - pt.x) * -canvasElement.width, pt.y * canvasElement.height, 3, 0, 2 * Math.PI);
+            canvasCtx.fill();
+          }
         });
         canvasCtx.restore();
 
         const SENSITIVITY = { X: 0.3, Y: 0.25 };
         const MOUTH_OPEN_LIMIT = 0.025;
         const MOUTH_CLOSE_LIMIT = 0.018;
-        const SCROLL_STEP = 30; // Giảm một chút để cuộn panel mượt hơn
-        const EDGE_THRESHOLD = 60;
+        const SCROLL_STEP = 25;
+        const VIEWPORT_EDGE_THRESHOLD = 60;
 
         const nose = landmarks[1];
         smoothedRaw.current.x += (nose.x - smoothedRaw.current.x) * 0.2;
@@ -123,10 +154,13 @@ const Mouse: React.FC = () => {
 
         const elAtPoint = document.elementFromPoint(currentPos.current.x, currentPos.current.y);
 
-        // --- XỬ LÝ HOVER EFFECT CHO CHUỘT ẢO ---
-        if (elAtPoint !== lastHoveredEl.current) {
+        // --- HIỆU ỨNG HOVER ĐƯỢC GIỮ NGUYÊN (FIX FLICKER) ---
+        // Tìm element tương tác cha (như button, thẻ a) thay vì chỉ lấy thẻ text con bên trong
+        const interactiveTarget =
+          elAtPoint?.closest('button, a, [role="button"], input, select, [draggable="true"]') || elAtPoint;
+
+        if (interactiveTarget !== lastHoveredEl.current) {
           if (lastHoveredEl.current) {
-            // Xóa class hover giả lập khỏi phần tử cũ
             lastHoveredEl.current.classList.remove('virtual-hover');
             ['mouseleave', 'mouseout'].forEach(evt =>
               lastHoveredEl.current?.dispatchEvent(
@@ -134,11 +168,10 @@ const Mouse: React.FC = () => {
               ),
             );
           }
-          if (elAtPoint) {
-            // Thêm class hover giả lập vào phần tử mới giúp kích hoạt CSS style
-            elAtPoint.classList.add('virtual-hover');
+          if (interactiveTarget) {
+            interactiveTarget.classList.add('virtual-hover');
             ['mouseenter', 'mouseover', 'mousemove'].forEach(evt =>
-              elAtPoint.dispatchEvent(
+              interactiveTarget.dispatchEvent(
                 new MouseEvent(evt, {
                   bubbles: true,
                   cancelable: true,
@@ -149,9 +182,9 @@ const Mouse: React.FC = () => {
               ),
             );
           }
-          lastHoveredEl.current = elAtPoint;
-        } else if (elAtPoint) {
-          elAtPoint.dispatchEvent(
+          lastHoveredEl.current = interactiveTarget;
+        } else if (interactiveTarget) {
+          interactiveTarget.dispatchEvent(
             new MouseEvent('mousemove', {
               bubbles: true,
               view: window,
@@ -161,14 +194,13 @@ const Mouse: React.FC = () => {
           );
         }
 
-        // --- TINH GỌN THAO TÁC HÁ MIỆNG (CLICK HOẶC KÉO THẢ) ---
+        // --- THAO TÁC HÁ MIỆNG / CÀI ĐẶT DRAGGABLE ---
         const mouthGap = Math.abs(landmarks[13].y - landmarks[14].y);
 
         if (mouthGap > MOUTH_OPEN_LIMIT) {
           if (!wasMouthOpenRef.current) {
             wasMouthOpenRef.current = true;
 
-            // Kiểm tra xem ID hoặc thuộc tính phần tử có hỗ trợ kéo thả hay không
             const isDraggableElement =
               elAtPoint &&
               (elAtPoint.getAttribute('draggable') === 'true' ||
@@ -177,13 +209,11 @@ const Mouse: React.FC = () => {
                 elAtPoint.closest('[id*="drag"]'));
 
             if (isDraggableElement) {
-              // Bật trạng thái Kéo thả ngay lập tức
               isDraggingRef.current = true;
               setIsDragging(true);
               setMouseAction('Kéo vật thể (Drag)');
-              elAtPoint.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true }));
+              if (elAtPoint) elAtPoint.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true }));
             } else {
-              // Thực hiện Click ngay lập tức
               setMouseAction('💥 CLICK!');
               if (elAtPoint && elAtPoint instanceof HTMLElement && typeof elAtPoint.click === 'function') {
                 elAtPoint.click();
@@ -198,7 +228,6 @@ const Mouse: React.FC = () => {
             wasMouthOpenRef.current = false;
 
             if (isDraggingRef.current) {
-              // Nếu đang kéo thì thực hiện Thả (Drop) khi ngậm miệng
               isDraggingRef.current = false;
               setIsDragging(false);
               setMouseAction('Thả vật thể (Drop)');
@@ -211,17 +240,38 @@ const Mouse: React.FC = () => {
           }
         }
 
-        // --- XỬ LÝ SCROLL THEO TỪNG PANEL RIÊNG BIỆT ---
-        const activeScrollTarget = getScrollableParent(elAtPoint) || document.documentElement;
+        // --- SCROLL PANEL: TỰ ĐỘNG CUỘN THEO BIÊN BOX ---
+        const activeScrollTarget = getScrollableParent(elAtPoint);
+        const cursorX = currentPos.current.x;
+        const cursorY = currentPos.current.y;
 
-        if (currentPos.current.y < EDGE_THRESHOLD) {
-          activeScrollTarget.scrollBy({ top: -SCROLL_STEP, behavior: 'auto' });
-          setMouseAction('🔼 Cuộn lên');
-        } else if (currentPos.current.y > window.innerHeight - EDGE_THRESHOLD) {
-          activeScrollTarget.scrollBy({ top: SCROLL_STEP, behavior: 'auto' });
-          setMouseAction('🔽 Cuộn xuống');
-        } else if (mouseActionRef.current.includes('Cuộn')) {
-          setMouseAction('Đang di chuyển');
+        if (activeScrollTarget && activeScrollTarget !== document.documentElement) {
+          const rect = activeScrollTarget.getBoundingClientRect();
+          const PANEL_EDGE_PADDING = 40; // Khoảng cách vùng kích hoạt cuộn tính từ biên trong của Panel
+
+          // Đảm bảo chuột đang nằm thực sự trong phạm vi chiều ngang của Box đó
+          if (cursorX >= rect.left && cursorX <= rect.right) {
+            if (cursorY >= rect.top && cursorY <= rect.top + PANEL_EDGE_PADDING) {
+              activeScrollTarget.scrollBy({ top: -SCROLL_STEP, behavior: 'auto' });
+              setMouseAction('🔼 Cuộn lên (Panel)');
+            } else if (cursorY <= rect.bottom && cursorY >= rect.bottom - PANEL_EDGE_PADDING) {
+              activeScrollTarget.scrollBy({ top: SCROLL_STEP, behavior: 'auto' });
+              setMouseAction('🔽 Cuộn xuống (Panel)');
+            } else if (mouseActionRef.current.includes('Cuộn')) {
+              setMouseAction('Đang di chuyển');
+            }
+          }
+        } else {
+          // Fallback cuộn toàn trang nếu không đứng trên panel đặc biệt nào
+          if (cursorY < VIEWPORT_EDGE_THRESHOLD) {
+            window.scrollBy({ top: -SCROLL_STEP, behavior: 'auto' });
+            setMouseAction('🔼 Cuộn lên');
+          } else if (cursorY > window.innerHeight - VIEWPORT_EDGE_THRESHOLD) {
+            window.scrollBy({ top: SCROLL_STEP, behavior: 'auto' });
+            setMouseAction('🔽 Cuộn xuống');
+          } else if (mouseActionRef.current.includes('Cuộn')) {
+            setMouseAction('Đang di chuyển');
+          }
         }
       } else {
         canvasCtx.restore();
@@ -247,18 +297,17 @@ const Mouse: React.FC = () => {
 
   return (
     <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9999 }}>
-      {/* Inject CSS giả lập hiệu ứng hover đồng bộ với class .virtual-hover */}
+      {/* Cấu hình lại CSS giả lập hiệu ứng hover: Đổi sang VIỀN ĐEN và giữ ổn định */}
       <style>{`
         .virtual-hover {
           cursor: pointer !important;
-          opacity: 0.85 !important;
-          filter: brightness(1.15) !important;
-          transition: all 0.15s ease !important;
+          opacity: 0.9 !important;
+          filter: brightness(1.08) !important;
         }
-        /* Hỗ trợ hiển thị outline nhẹ để biết chuột ảo đang target vào đâu */
-        button.virtual-hover, a.virtual-hover, [draggable="true"].virtual-hover {
-          outline: 2px dashed #2dd4bf !important;
-          outline-offset: 2px;
+        button.virtual-hover, a.virtual-hover, [role="button"].virtual-hover, [draggable="true"].virtual-hover {
+          outline: 2.5px dashed #000000 !important;
+          outline-offset: -1px !important;
+          box-shadow: 0 0 8px rgba(0,0,0,0.3) !important;
         }
       `}</style>
 
