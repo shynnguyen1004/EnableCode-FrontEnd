@@ -65,13 +65,9 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
     if (!hostRef.current) return;
 
     registerEnableCodeBlocks();
-    const defaultToolbox: Blockly.utils.toolbox.ToolboxDefinition = {
-      kind: 'categoryToolbox',
-      contents: [],
-    };
 
     const workspace = Blockly.inject(hostRef.current, {
-      toolbox: defaultToolbox,
+      toolbox: buildToolbox(toolboxConfig) as Blockly.utils.toolbox.ToolboxDefinition,
       theme: enableCodeTheme,
       renderer: 'zelos',
       toolboxPosition: 'end',
