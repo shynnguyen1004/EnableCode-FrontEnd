@@ -3,7 +3,7 @@ import { Link, Navigate } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext';
 import { profileApi } from '../api/profileApi';
-import type { UserProfileResponse, Calibration } from '../lib/types';
+import type { UserProfileResponse } from '../lib/types';
 
 /* ─── Inline SVG Icons ─── */
 const CheckCircleIcon = () => (
@@ -57,65 +57,20 @@ const CalibrateIcon = () => (
   </svg>
 );
 
-const SlidersIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <line x1="3" y1="5" x2="17" y2="5" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-    <line x1="3" y1="10" x2="17" y2="10" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-    <line x1="3" y1="15" x2="17" y2="15" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-    <circle cx="7" cy="5" r="2" fill="#ff7700" stroke="#fff" strokeWidth="1.5" />
-    <circle cx="13" cy="10" r="2" fill="#ff7700" stroke="#fff" strokeWidth="1.5" />
-    <circle cx="9" cy="15" r="2" fill="#ff7700" stroke="#fff" strokeWidth="1.5" />
-  </svg>
-);
-
-const CursorClickIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <path
-      d="M5 3L5 14L8.5 10.5L12 16L14 15L10.5 9L15 8Z"
-      fill="#fff"
-      stroke="#fff"
-      strokeWidth="1"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const ToggleCheckIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <path d="M4 8L7 11L12 5" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
 export default function SettingsPage() {
   const { isLoggedIn } = useAuth();
 
-  // State for server data
   const [profileData, setProfileData] = useState<UserProfileResponse | null>(null);
-  const [calibration, setCalibration] = useState<Calibration | null>(null);
-
-  const [sensitivity, setSensitivity] = useState(75);
-  const [dwellTime, setDwellTime] = useState(40);
-  const [visualFeedback, setVisualFeedback] = useState(true);
-
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn) return;
 
     const fetchSettingsData = async () => {
+      setIsLoading(true);
       try {
-        const [profileRes, calibrationRes] = await Promise.all([profileApi.getProfile(), profileApi.getCalibration()]);
-
+        const profileRes = await profileApi.getProfile();
         setProfileData(profileRes);
-        setCalibration(calibrationRes);
-
-        // Map backend preferences to local state
-        if (calibrationRes?.preferences) {
-          setSensitivity(calibrationRes.preferences.trackingSensitivity || 75);
-          setDwellTime(calibrationRes.preferences.mouthDragThreshold || 40);
-          setVisualFeedback(calibrationRes.preferences.visualFeedback ?? true);
-        }
       } catch (error) {
         console.error('Error fetching settings data:', error);
       } finally {
@@ -125,28 +80,6 @@ export default function SettingsPage() {
 
     fetchSettingsData();
   }, [isLoggedIn]);
-
-  const handleSaveConfig = async () => {
-    if (!calibration) return;
-    setIsSaving(true);
-    try {
-      await profileApi.updateCalibration({
-        ...calibration,
-        preferences: {
-          ...calibration.preferences,
-          trackingSensitivity: sensitivity,
-          mouthDragThreshold: dwellTime,
-          visualFeedback: visualFeedback,
-        },
-      });
-      alert('Eye-tracking settings saved successfully!');
-    } catch (error) {
-      console.error('Error saving settings:', error);
-      alert('Failed to save settings. Please try again later.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const getInitials = (name: string) => {
     if (!name) return 'GU';
@@ -183,22 +116,6 @@ export default function SettingsPage() {
           ←
         </Link>
         <h1>Profile & Settings</h1>
-
-        <button
-          onClick={handleSaveConfig}
-          disabled={isSaving}
-          style={{
-            background: '#ff7700',
-            color: '#fff',
-            border: 'none',
-            padding: '8px 16px',
-            borderRadius: '8px',
-            cursor: isSaving ? 'not-allowed' : 'pointer',
-            fontWeight: 'bold',
-          }}
-        >
-          {isSaving ? 'Saving...' : 'Save Changes'}
-        </button>
       </header>
 
       <div className="settings-main">
@@ -239,7 +156,7 @@ export default function SettingsPage() {
         </aside>
 
         <main className="settings-controls">
-          <h3>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span className="settings-heading-icon">
               <EyeSettingsIcon />
             </span>
@@ -248,64 +165,27 @@ export default function SettingsPage() {
 
           <section className="control-card">
             <h4>SYSTEM CALIBRATION</h4>
-            <p>Recalibrate the tracker if the cursor isn't matching your gaze.</p>
-            <button className="settings-action-btn" type="button">
+            <p className="control-desc">Recalibrate the tracker if the cursor isn't matching your gaze.</p>
+
+            <Link
+              to="/calibration"
+              className="settings-action-btn"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                textDecoration: 'none',
+                background: 'var(--accent-orange)',
+                color: '#fff',
+                padding: '12px 24px',
+                borderRadius: '16px',
+                fontWeight: 'bold',
+              }}
+            >
               <CalibrateIcon />
               Start Calibration
-            </button>
+            </Link>
           </section>
-
-          <section className="control-card">
-            <div className="control-row">
-              <h4>EYE SENSITIVITY</h4>
-              <span className="control-value-badge">{sensitivity}%</span>
-            </div>
-            <p className="control-desc">Higher sensitivity makes the cursor move faster across the screen.</p>
-            <div id="draggable" className="custom-range-wrap">
-              <input
-                type="range"
-                min={1}
-                max={100}
-                value={sensitivity}
-                onChange={event => setSensitivity(Number(event.target.value))}
-                style={{ '--range-progress': `${sensitivity}%` } as React.CSSProperties}
-              />
-              <div className="range-thumb-icon" style={{ left: `calc(${sensitivity}% - 18px)` }}>
-                <SlidersIcon />
-              </div>
-            </div>
-          </section>
-
-          <section className="control-card">
-            <div className="control-row">
-              <h4>DWELL TIME (CLICK)</h4>
-              <span className="control-value-badge">{(dwellTime / 10).toFixed(1)}s</span>
-            </div>
-            <p className="control-desc">How long you need to stare at a button to trigger a "click".</p>
-            <div id="draggable" className="custom-range-wrap">
-              <input
-                type="range"
-                min={1}
-                max={100}
-                value={dwellTime}
-                onChange={event => setDwellTime(Number(event.target.value))}
-                style={{ '--range-progress': `${dwellTime}%` } as React.CSSProperties}
-              />
-              <div className="range-thumb-icon" style={{ left: `calc(${dwellTime}% - 18px)` }}>
-                <CursorClickIcon />
-              </div>
-            </div>
-          </section>
-
-          <button type="button" className="toggle-card" onClick={() => setVisualFeedback(value => !value)}>
-            <div>
-              <h4>VISUAL CLICK FEEDBACK</h4>
-              <p>Show an expanding ring animation while dwelling on buttons.</p>
-            </div>
-            <div className={`toggle-switch ${visualFeedback ? 'on' : 'off'}`}>
-              <div className="toggle-knob">{visualFeedback && <ToggleCheckIcon />}</div>
-            </div>
-          </button>
         </main>
       </div>
     </div>
