@@ -34,9 +34,22 @@ const Mouse: React.FC = () => {
   const currentPos = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
   const smoothedRaw = useRef({ x: 0.5, y: 0.5 });
   const wasMouthOpenRef = useRef<boolean>(false);
-  const mouthOpenTimeRef = useRef<number>(0);
   const lastFrameTimeRef = useRef<number>(0);
   const lastHoveredEl = useRef<Element | null>(null);
+
+  // Hàm hỗ trợ tìm kiếm Panel/Container có thể cuộn gần nhất dưới con trỏ chuột
+  const getScrollableParent = (el: Element | null): Element | null => {
+    if (!el) return null;
+    const style = window.getComputedStyle(el);
+    const overflowY = style.overflowY;
+    const isScrollable = overflowY === 'auto' || overflowY === 'scroll';
+    const canScroll = el.scrollHeight > el.clientHeight;
+
+    if (isScrollable && canScroll) {
+      return el;
+    }
+    return getScrollableParent(el.parentElement);
+  };
 
   useEffect(() => {
     mouseActionRef.current = mouseAction;
@@ -64,7 +77,6 @@ const Mouse: React.FC = () => {
       if (!active) return;
 
       const now = performance.now();
-
       if (now - lastFrameTimeRef.current < 40) return;
 
       const currentFps = Math.round(1000 / (now - lastFrameTimeRef.current));
@@ -90,7 +102,7 @@ const Mouse: React.FC = () => {
         const SENSITIVITY = { X: 0.3, Y: 0.25 };
         const MOUTH_OPEN_LIMIT = 0.025;
         const MOUTH_CLOSE_LIMIT = 0.018;
-        const SCROLL_STEP = 50;
+        const SCROLL_STEP = 30; // Giảm một chút để cuộn panel mượt hơn
         const EDGE_THRESHOLD = 60;
 
         const nose = landmarks[1];
@@ -111,18 +123,26 @@ const Mouse: React.FC = () => {
 
         const elAtPoint = document.elementFromPoint(currentPos.current.x, currentPos.current.y);
 
+        // --- XỬ LÝ HOVER EFFECT CHO CHUỘT ẢO ---
         if (elAtPoint !== lastHoveredEl.current) {
           if (lastHoveredEl.current) {
+            // Xóa class hover giả lập khỏi phần tử cũ
+            lastHoveredEl.current.classList.remove('virtual-hover');
             ['mouseleave', 'mouseout'].forEach(evt =>
-              lastHoveredEl.current?.dispatchEvent(new MouseEvent(evt, { bubbles: true, cancelable: true })),
+              lastHoveredEl.current?.dispatchEvent(
+                new MouseEvent(evt, { bubbles: true, cancelable: true, view: window }),
+              ),
             );
           }
           if (elAtPoint) {
+            // Thêm class hover giả lập vào phần tử mới giúp kích hoạt CSS style
+            elAtPoint.classList.add('virtual-hover');
             ['mouseenter', 'mouseover', 'mousemove'].forEach(evt =>
               elAtPoint.dispatchEvent(
                 new MouseEvent(evt, {
                   bubbles: true,
                   cancelable: true,
+                  view: window,
                   clientX: currentPos.current.x,
                   clientY: currentPos.current.y,
                 }),
@@ -134,47 +154,71 @@ const Mouse: React.FC = () => {
           elAtPoint.dispatchEvent(
             new MouseEvent('mousemove', {
               bubbles: true,
+              view: window,
               clientX: currentPos.current.x,
               clientY: currentPos.current.y,
             }),
           );
         }
 
+        // --- TINH GỌN THAO TÁC HÁ MIỆNG (CLICK HOẶC KÉO THẢ) ---
         const mouthGap = Math.abs(landmarks[13].y - landmarks[14].y);
-        const currentTime = Date.now();
 
         if (mouthGap > MOUTH_OPEN_LIMIT) {
           if (!wasMouthOpenRef.current) {
-            mouthOpenTimeRef.current = currentTime;
             wasMouthOpenRef.current = true;
-          } else if (currentTime - mouthOpenTimeRef.current > 450 && !isDraggingRef.current) {
-            isDraggingRef.current = true;
-            setIsDragging(true);
-            setMouseAction('Kéo vật thể (Drag)');
-          }
-        } else if (mouthGap < MOUTH_CLOSE_LIMIT && wasMouthOpenRef.current) {
-          const duration = currentTime - mouthOpenTimeRef.current;
-          wasMouthOpenRef.current = false;
 
-          if (isDraggingRef.current) {
-            isDraggingRef.current = false;
-            setIsDragging(false);
-            setMouseAction('Thả vật thể (Drop)');
-            setTimeout(() => setMouseAction('Đang di chuyển'), 500);
-          } else if (duration > 50 && duration < 350) {
-            setMouseAction('💥 CLICK!');
-            if (elAtPoint && elAtPoint instanceof HTMLElement && typeof elAtPoint.click === 'function') {
-              elAtPoint.click();
+            // Kiểm tra xem ID hoặc thuộc tính phần tử có hỗ trợ kéo thả hay không
+            const isDraggableElement =
+              elAtPoint &&
+              (elAtPoint.getAttribute('draggable') === 'true' ||
+                elAtPoint.id.toLowerCase().includes('drag') ||
+                elAtPoint.closest('[draggable="true"]') ||
+                elAtPoint.closest('[id*="drag"]'));
+
+            if (isDraggableElement) {
+              // Bật trạng thái Kéo thả ngay lập tức
+              isDraggingRef.current = true;
+              setIsDragging(true);
+              setMouseAction('Kéo vật thể (Drag)');
+              elAtPoint.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true }));
+            } else {
+              // Thực hiện Click ngay lập tức
+              setMouseAction('💥 CLICK!');
+              if (elAtPoint && elAtPoint instanceof HTMLElement && typeof elAtPoint.click === 'function') {
+                elAtPoint.click();
+              }
+              setTimeout(() => {
+                if (!isDraggingRef.current) setMouseAction('Đang di chuyển');
+              }, 500);
             }
-            setTimeout(() => setMouseAction('Đang di chuyển'), 500);
+          }
+        } else if (mouthGap < MOUTH_CLOSE_LIMIT) {
+          if (wasMouthOpenRef.current) {
+            wasMouthOpenRef.current = false;
+
+            if (isDraggingRef.current) {
+              // Nếu đang kéo thì thực hiện Thả (Drop) khi ngậm miệng
+              isDraggingRef.current = false;
+              setIsDragging(false);
+              setMouseAction('Thả vật thể (Drop)');
+              if (elAtPoint) {
+                elAtPoint.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true }));
+                elAtPoint.dispatchEvent(new DragEvent('dragend', { bubbles: true, cancelable: true }));
+              }
+              setTimeout(() => setMouseAction('Đang di chuyển'), 500);
+            }
           }
         }
 
+        // --- XỬ LÝ SCROLL THEO TỪNG PANEL RIÊNG BIỆT ---
+        const activeScrollTarget = getScrollableParent(elAtPoint) || document.documentElement;
+
         if (currentPos.current.y < EDGE_THRESHOLD) {
-          window.scrollBy(0, -SCROLL_STEP);
+          activeScrollTarget.scrollBy({ top: -SCROLL_STEP, behavior: 'auto' });
           setMouseAction('🔼 Cuộn lên');
         } else if (currentPos.current.y > window.innerHeight - EDGE_THRESHOLD) {
-          window.scrollBy(0, SCROLL_STEP);
+          activeScrollTarget.scrollBy({ top: SCROLL_STEP, behavior: 'auto' });
           setMouseAction('🔽 Cuộn xuống');
         } else if (mouseActionRef.current.includes('Cuộn')) {
           setMouseAction('Đang di chuyển');
@@ -203,6 +247,21 @@ const Mouse: React.FC = () => {
 
   return (
     <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9999 }}>
+      {/* Inject CSS giả lập hiệu ứng hover đồng bộ với class .virtual-hover */}
+      <style>{`
+        .virtual-hover {
+          cursor: pointer !important;
+          opacity: 0.85 !important;
+          filter: brightness(1.15) !important;
+          transition: all 0.15s ease !important;
+        }
+        /* Hỗ trợ hiển thị outline nhẹ để biết chuột ảo đang target vào đâu */
+        button.virtual-hover, a.virtual-hover, [draggable="true"].virtual-hover {
+          outline: 2px dashed #2dd4bf !important;
+          outline-offset: 2px;
+        }
+      `}</style>
+
       <div
         ref={cursorRef}
         style={{

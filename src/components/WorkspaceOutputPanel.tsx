@@ -114,7 +114,7 @@ export default function WorkspaceOutputPanel({
       </div>
 
       {isOpen && (
-        <div className="workspace-output-body">
+        <div id="draggable" className="workspace-output-body">
           {lines.length === 0 && !isRunning && <span className="workspace-output-placeholder">{placeholder}</span>}
           {lines.map(line => (
             <div key={line.id} className={`workspace-output-line ${LINE_CLASS[line.type]}`}>

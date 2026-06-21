@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+// 1. TẤT CẢ IMPORT PHẢI NẰM Ở ĐÂY
+import { useEffect, useState, ReactNode } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Target, Award, Eye, Languages, Loader2, AlertTriangle } from 'lucide-react';
 import LanguageToggle from '../components/LanguageToggle';
