@@ -1,7 +1,6 @@
 // 1. TẤT CẢ IMPORT PHẢI NẰM Ở ĐÂY
-
-import { useEffect, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   CheckCircle,
@@ -13,6 +12,8 @@ import {
   AlertTriangle,
   ScanFace,
   LogOut,
+  Pencil,
+  X,
 } from 'lucide-react';
 import LanguageToggle from '../components/LanguageToggle';
 import PageScale from '../components/PageScale';
@@ -20,17 +21,36 @@ import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
 import { profileApi } from '../api/profileApi';
 import { authApi } from '../api/authApi';
+import { AvatarImageError, processAvatarFile } from '../lib/avatarImage';
 import type { UserProfileResponse } from '../lib/types';
+
+function formatDisplayName(name?: string): string {
+  const parts = name?.trim().split(/\s+/).filter(Boolean) ?? [];
+  if (parts.length === 0) return 'STUDENT';
+  if (parts.length === 1) return parts[0].toUpperCase();
+
+  const lastName = parts[parts.length - 1].toUpperCase();
+  const initials = parts.slice(0, -1).map(part => `${part.charAt(0).toUpperCase()}.`);
+  return [...initials, lastName].join(' ');
+}
 
 export default function ProfilePage() {
   const { t } = useI18n();
-  const { isLoggedIn, logout } = useAuth();
+  const { isLoggedIn, logout, updateUser } = useAuth();
+  const navigate = useNavigate();
 
   // Chỉ giữ lại state quản lý dữ liệu Profile và trạng thái tải trang
   const [profileData, setProfileData] = useState<UserProfileResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editAvatar, setEditAvatar] = useState('');
+  const [avatarFileName, setAvatarFileName] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [editError, setEditError] = useState('');
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -65,6 +85,83 @@ export default function ProfilePage() {
     }
   };
 
+  const openEditModal = () => {
+    if (!profileData) return;
+    setEditName(profileData.name || '');
+    setEditAvatar(profileData.avatar || '');
+    setAvatarFileName(profileData.avatar ? t('settings.editProfileCurrentAvatar') : '');
+    setEditError('');
+    if (avatarInputRef.current) avatarInputRef.current.value = '';
+    setIsEditOpen(true);
+  };
+
+  const closeEditModal = () => {
+    if (isSavingProfile) return;
+    setIsEditOpen(false);
+    setEditError('');
+    if (avatarInputRef.current) avatarInputRef.current.value = '';
+  };
+
+  const getAvatarErrorMessage = (error: AvatarImageError) => {
+    if (error.code === 'invalid_type') return t('settings.editProfileAvatarInvalid');
+    if (error.code === 'too_large') return t('settings.editProfileAvatarTooLarge');
+    return t('settings.editProfileAvatarProcessFailed');
+  };
+
+  const handleAvatarFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const dataUrl = await processAvatarFile(file);
+      setEditAvatar(dataUrl);
+      setAvatarFileName(file.name);
+      setEditError('');
+    } catch (error) {
+      if (error instanceof AvatarImageError) {
+        setEditError(getAvatarErrorMessage(error));
+      } else {
+        setEditError(t('settings.editProfileAvatarProcessFailed'));
+      }
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setEditAvatar('');
+    setAvatarFileName('');
+    setEditError('');
+    if (avatarInputRef.current) avatarInputRef.current.value = '';
+  };
+
+  const handleSaveProfile = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!profileData) return;
+
+    const trimmedName = editName.trim();
+    if (!trimmedName) {
+      setEditError(t('settings.editProfileNameRequired'));
+      return;
+    }
+
+    setIsSavingProfile(true);
+    setEditError('');
+
+    try {
+      const updatedProfile = await profileApi.updateProfile({
+        name: trimmedName,
+        avatar: editAvatar.trim() || null,
+      });
+      setProfileData(updatedProfile);
+      updateUser(updatedProfile);
+      setIsEditOpen(false);
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      setEditError(t('settings.editProfileFailed'));
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   if (!isLoggedIn) {
     return <Navigate to="/" replace />;
   }
@@ -74,8 +171,7 @@ export default function ProfilePage() {
     return (
       <div
         className="profile-page"
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}
-      >
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
         <Loader2 size={40} className="animate-spin text-orange-500 mr-3" />
         <p style={{ color: '#666', fontSize: '1.2rem', fontWeight: 500 }}>Profile is loading...</p>
       </div>
@@ -93,8 +189,7 @@ export default function ProfilePage() {
           alignItems: 'center',
           justifyContent: 'center',
           height: '100vh',
-        }}
-      >
+        }}>
         <AlertTriangle size={64} className="text-orange-500 mb-4" />
         <h2 style={{ color: '#fff', marginBottom: '1rem' }}>Lỗi tải dữ liệu</h2>
         <p style={{ color: '#aaa', marginBottom: '2rem' }}>Không thể kết nối đến máy chủ. Vui lòng thử lại sau.</p>
@@ -110,11 +205,11 @@ export default function ProfilePage() {
     : '...';
 
   return (
-    <PageScale scale={0.9} className="profile-page">
+    <PageScale scale={0.8} className="profile-page">
       <header className="profile-topbar">
-        <Link to="/lessons" className="profile-back-btn" aria-label={t('nav.backToLessons')}>
+        <button onClick={() => navigate(-1)} className="profile-back-btn" aria-label="Go back">
           <ArrowLeft size={32} strokeWidth={3} />
-        </Link>
+        </button>
         <h1>{t('settings.title')}</h1>
         <div className="profile-topbar-spacer" />
       </header>
@@ -130,11 +225,17 @@ export default function ProfilePage() {
               />
             </div>
             <div className="profile-details">
-              <h2>{profileData.name?.toUpperCase() || 'STUDENT'}</h2>
+              <h2>{formatDisplayName(profileData.name)}</h2>
               <p>
-                {t('settings.memberSincePrefix')} {memberSinceStr} • {t('settings.levelPrefix')}{' '}
-                {profileData.level || 1} {t('settings.explorer')}
+                {t('settings.memberSincePrefix')} {memberSinceStr}
               </p>
+              <p>
+                {t('settings.levelPrefix')} {profileData.level || 1} {t('settings.explorer')}
+              </p>
+              <button type="button" className="profile-edit-btn" onClick={openEditModal}>
+                <Pencil size={20} strokeWidth={3} />
+                {t('settings.editProfile')}
+              </button>
             </div>
           </div>
 
@@ -165,8 +266,7 @@ export default function ProfilePage() {
             <section className="profile-language-section" style={{ marginBottom: '2.5rem' }}>
               <div
                 className="profile-language-header"
-                style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}
-              >
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                 <div className="profile-heading-icon-wrap profile-heading-icon-wrap--language">
                   <Languages size={28} strokeWidth={2.5} color="#FFF9DC" />
                 </div>
@@ -186,8 +286,7 @@ export default function ProfilePage() {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 marginBottom: '1.5rem',
-              }}
-            >
+              }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div className="profile-heading-icon-wrap">
                   <Eye size={28} strokeWidth={2.5} color="#FFF9DC" />
@@ -213,8 +312,7 @@ export default function ProfilePage() {
                     type="button"
                     onClick={handleLogout}
                     disabled={isLoggingOut}
-                    className="profile-action-btn profile-action-btn--logout group"
-                  >
+                    className="profile-action-btn profile-action-btn--logout group">
                     {isLoggingOut ? (
                       <Loader2 size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon animate-spin" />
                     ) : (
@@ -228,6 +326,101 @@ export default function ProfilePage() {
           </div>
         </main>
       </div>
+
+      {isEditOpen && (
+        <div className="profile-edit-overlay" onClick={closeEditModal} role="presentation">
+          <div
+            className="profile-edit-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="profile-edit-title"
+            onClick={event => event.stopPropagation()}>
+            <button
+              type="button"
+              className="profile-edit-close"
+              onClick={closeEditModal}
+              aria-label={t('settings.editProfileCancel')}>
+              <X size={28} strokeWidth={3} />
+            </button>
+
+            <h3 id="profile-edit-title">{t('settings.editProfileTitle')}</h3>
+
+            <div className="profile-edit-preview">
+              <img
+                src={editAvatar.trim() || profileData.avatar || '/images/profilePicture.jpeg'}
+                alt={t('settings.avatarAlt')}
+                className="profile-edit-preview-img"
+              />
+            </div>
+
+            <form className="profile-edit-form" onSubmit={handleSaveProfile}>
+              <label htmlFor="profile-edit-name">{t('settings.editProfileName')}</label>
+              <input
+                id="profile-edit-name"
+                type="text"
+                value={editName}
+                onChange={event => setEditName(event.target.value)}
+                placeholder={t('settings.editProfileNamePlaceholder')}
+                disabled={isSavingProfile}
+                required
+              />
+
+              <label htmlFor="profile-edit-avatar">{t('settings.editProfileAvatar')}</label>
+              <p className="profile-edit-hint">{t('settings.editProfileAvatarHint')}</p>
+              <div className="profile-edit-upload-row">
+                <input
+                  ref={avatarInputRef}
+                  id="profile-edit-avatar"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="profile-edit-file-input"
+                  onChange={handleAvatarFileChange}
+                  disabled={isSavingProfile}
+                />
+                <button
+                  type="button"
+                  className="profile-edit-upload-btn"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={isSavingProfile}>
+                  {t('settings.editProfileChooseFile')}
+                </button>
+                {editAvatar && (
+                  <button
+                    type="button"
+                    className="profile-edit-remove-btn"
+                    onClick={handleRemoveAvatar}
+                    disabled={isSavingProfile}>
+                    {t('settings.editProfileRemoveAvatar')}
+                  </button>
+                )}
+              </div>
+              {avatarFileName && <p className="profile-edit-file-name">{avatarFileName}</p>}
+
+              {editError && <p className="profile-edit-error">{editError}</p>}
+
+              <div className="profile-edit-actions">
+                <button
+                  type="button"
+                  className="profile-edit-cancel"
+                  onClick={closeEditModal}
+                  disabled={isSavingProfile}>
+                  {t('settings.editProfileCancel')}
+                </button>
+                <button type="submit" className="profile-edit-save" disabled={isSavingProfile}>
+                  {isSavingProfile ? (
+                    <>
+                      <Loader2 size={22} className="animate-spin" />
+                      {t('settings.editProfileSaving')}
+                    </>
+                  ) : (
+                    t('settings.editProfileSave')
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </PageScale>
   );
 }
