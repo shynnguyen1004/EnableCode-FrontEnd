@@ -1,4 +1,5 @@
 // 1. TẤT CẢ IMPORT PHẢI NẰM Ở ĐÂY
+
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
@@ -65,7 +66,7 @@ export default function ProfilePage() {
   };
 
   if (!isLoggedIn) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   // Xử lý hiển thị loading
