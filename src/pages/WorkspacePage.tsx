@@ -58,11 +58,8 @@ export default function WorkspacePage() {
     const fetchWorkspaceData = async () => {
       try {
         const lessonRes = await lessonApi.getLessonDetails(lessonId);
-        console.log('1. RAW API RESPONSE:', lessonRes);
         const fetchedLesson = extractSingleLesson(lessonRes);
         const requiredBlocks = lessonRes.requiredBlocks || [];
-        console.log('2. EXTRACTED LESSON:', fetchedLesson);
-        console.log('3. REQUIRED BLOCKS TỪ API:', requiredBlocks);
         if (!fetchedLesson?.topicId) {
           setIsNotFound(true);
           return;
@@ -149,7 +146,6 @@ export default function WorkspacePage() {
         pythonCode: output,
         time: 0,
       });
-
       const resultLogs: LogLine[] = [...logs];
       if (response.output) {
         resultLogs.push({

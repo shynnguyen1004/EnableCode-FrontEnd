@@ -56,8 +56,14 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
     resetWorkspace: () => {
       if (!workspaceRef.current) return;
       workspaceRef.current.clear();
-      loadLessonIntoWorkspace(workspaceRef.current, initialBlocksRef.current);
-      lockWorkspaceScale(workspaceRef.current);
+      if (initialBlocksRef.current && Object.keys(initialBlocksRef.current).length > 0) {
+        Blockly.serialization.workspaces.load(initialBlocksRef.current, workspaceRef.current);
+      } else {
+        const startBlock = workspaceRef.current.newBlock('controls_start');
+        startBlock.initSvg();
+        startBlock.render();
+        startBlock.moveBy(56, 56);
+      }
     },
   }));
 
@@ -156,23 +162,28 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
 
   useEffect(() => {
     if (!workspaceRef.current) return;
+
     workspaceRef.current.clear();
 
     if (savedWorkspaceState && Object.keys(savedWorkspaceState).length > 0) {
       try {
         Blockly.serialization.workspaces.load(savedWorkspaceState, workspaceRef.current);
       } catch (error) {
-        console.error('Failed to load saved workspace state, falling back to template:', error);
-        loadLessonIntoWorkspace(workspaceRef.current, initialBlocks);
+        console.error('Lỗi load saved state:', error);
+      }
+    } else if (initialBlocks && Object.keys(initialBlocks).length > 0) {
+      try {
+        Blockly.serialization.workspaces.load(initialBlocks, workspaceRef.current);
+      } catch (error) {
+        console.error('Lỗi load initialBlocks:', error);
       }
     } else {
-      loadLessonIntoWorkspace(workspaceRef.current, initialBlocks);
+      const startBlock = workspaceRef.current.newBlock('controls_start');
+      startBlock.initSvg();
+      startBlock.render();
+      startBlock.moveBy(56, 56);
     }
-
-    Blockly.svgResize(workspaceRef.current);
-    lockWorkspaceScale(workspaceRef.current);
   }, [lessonKey]);
-
   return <div ref={hostRef} className="blockly-editor-host" aria-label="Blockly workspace" />;
 });
 
