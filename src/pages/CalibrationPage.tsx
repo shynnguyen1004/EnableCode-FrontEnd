@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, ArrowLeft, CheckCircle, RefreshCw, Target, Crosshair, ArrowRight } from 'lucide-react';
+import { Eye, ArrowLeft, CheckCircle, RefreshCw, Target, Crosshair, ArrowRight, CircleX } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
 import { useEyeTracking } from '../context/EyeTrackingContext';
@@ -159,10 +159,17 @@ export default function CalibrationPage() {
                 ))}
               </div>
 
-              <button type="button" className="calibration-primary-btn group" onClick={startCalibration}>
-                <Crosshair size={32} strokeWidth={3} className="btn-icon calibration-crosshair-icon" />
-                {t('calibration.begin')}
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <button type="button" className="calibration-primary-btn group" onClick={startCalibration}>
+                  <Crosshair size={32} strokeWidth={3} className="btn-icon calibration-crosshair-icon" />
+                  {t('calibration.begin')}
+                </button>
+
+                <Link to="/lessons" className="calibration-primary-btn group" style={{ background: '#E53A36' }}>
+                  <CircleX size={32} strokeWidth={3} className="btn-icon" />
+                  {t('calibration.cancel')}
+                </Link>
+              </div>
             </section>
           </main>
         </>
@@ -196,8 +203,7 @@ export default function CalibrationPage() {
               <div
                 key={`done-${index}`}
                 className="calibration-point calibration-point--done"
-                style={{ left: `${point.x}%`, top: `${point.y}%` }}
-              >
+                style={{ left: `${point.x}%`, top: `${point.y}%` }}>
                 <div className="calibration-point-done-dot">
                   <CheckCircle size={16} strokeWidth={3} />
                 </div>
@@ -208,8 +214,7 @@ export default function CalibrationPage() {
           {!captured && (
             <div
               className="calibration-point calibration-point--active"
-              style={{ left: `${currentPoint.x}%`, top: `${currentPoint.y}%` }}
-            >
+              style={{ left: `${currentPoint.x}%`, top: `${currentPoint.y}%` }}>
               <div className="calibration-point-pulse" />
               <svg width="88" height="88" className="calibration-point-ring" viewBox="0 0 88 88">
                 <circle
@@ -232,8 +237,7 @@ export default function CalibrationPage() {
           {captured && (
             <div
               className="calibration-point calibration-point--flash"
-              style={{ left: `${currentPoint.x}%`, top: `${currentPoint.y}%` }}
-            >
+              style={{ left: `${currentPoint.x}%`, top: `${currentPoint.y}%` }}>
               <div className="calibration-point-flash-dot">
                 <CheckCircle size={36} strokeWidth={3} />
               </div>
