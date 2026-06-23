@@ -77,7 +77,8 @@ export default function HomePage() {
                   alignItems: 'center',
                   gap: '8px',
                 }}
-                disabled={isLoggingOut}>
+                disabled={isLoggingOut}
+              >
                 {isLoggingOut && <Loader2 size={18} className="animate-spin" />}
                 {t('nav.logOut') || 'Log Out'}
               </button>
@@ -98,7 +99,7 @@ export default function HomePage() {
 
         <div className="hero-actions">
           <FaceControlToggle />
-          <Link to={isLoggedIn ? '/lessons' : '/login'} className="btn btn-primary hero-cta group">
+          <Link to={isLoggedIn ? '/calibration' : '/login'} className="btn btn-primary hero-cta group">
             {t('home.getStarted')}
             <ArrowRight size={32} className="hero-arrow" strokeWidth={3} style={{ marginLeft: '12px' }} />
           </Link>
