@@ -2587,3 +2587,21 @@
   transform: translate(6px, 6px);
   box-shadow: none;
 }
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- Tạo class animate-spin để dùng cho mọi icon --- */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.mr-3 {
+  margin-right: 0.75rem;
+}

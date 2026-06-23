@@ -288,7 +288,7 @@ export default function WorkspacePage() {
             <div className="objective-chip">{t('workspace.objective')}</div>
             <h1>{localizedLesson.title}</h1>
             <div className="workspace-panel-copy">
-              <ReactMarkdown>{localizedLesson.description || lesson.problemStatement || ''}</ReactMarkdown>
+              <ReactMarkdown>{localizedLesson.description || lesson.description || ''}</ReactMarkdown>
             </div>
 
             {activeHint && (
@@ -310,8 +310,7 @@ export default function WorkspacePage() {
               type="button"
               className={`workspace-panel-btn run group${isSubmitting ? ' is-disabled' : ''}`}
               onClick={handleRunCode}
-              disabled={isSubmitting}
-            >
+              disabled={isSubmitting}>
               {isSubmitting ? (
                 <Loader2 size={44} strokeWidth={3} className="btn-icon workspace-spinner" />
               ) : (

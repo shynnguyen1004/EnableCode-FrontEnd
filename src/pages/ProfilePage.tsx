@@ -173,7 +173,9 @@ export default function ProfilePage() {
         className="profile-page"
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
         <Loader2 size={40} className="animate-spin text-orange-500 mr-3" />
-        <p style={{ color: '#666', fontSize: '1.2rem', fontWeight: 500 }}>Profile is loading...</p>
+        <p style={{ color: '#666', fontSize: '1.2rem', fontWeight: 500 }}>
+          {t('settings.loadingProfile') || 'Profile is loading...'}
+        </p>
       </div>
     );
   }
@@ -191,10 +193,10 @@ export default function ProfilePage() {
           height: '100vh',
         }}>
         <AlertTriangle size={64} className="text-orange-500 mb-4" />
-        <h2 style={{ color: '#fff', marginBottom: '1rem' }}>Lỗi tải dữ liệu</h2>
-        <p style={{ color: '#aaa', marginBottom: '2rem' }}>Không thể kết nối đến máy chủ. Vui lòng thử lại sau.</p>
-        <Link to="/lessons" className="btn btn-primary">
-          Quay lại trang chủ
+        <h2 style={{ color: '#fff', marginBottom: '1rem' }}>{t('settings.errorTitle')}</h2>
+        <p style={{ color: '#aaa', marginBottom: '2rem' }}>{t('settings.errorDesc')}</p>
+        <Link to="/" className="btn btn-primary">
+          {t('settings.backToHome')}
         </Link>
       </div>
     );

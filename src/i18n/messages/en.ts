@@ -77,10 +77,12 @@ const en = {
   topics: {
     dashboardTitle: 'Course Dashboard',
     dashboardSubtitle: 'Select a topic to view its lessons.',
+    loadingTopics: 'Topics is loading...',
   },
   course: {
     progress: 'Progress',
     locked: 'Locked',
+    loadingLessons: 'Loading lessons...',
     difficulty: {
       easy: 'Beginner',
       medium: 'Intermediate',
@@ -178,6 +180,10 @@ const en = {
     languageEnglish: 'English',
     languageVietnamese: 'Tiếng Việt',
     saveSettings: 'Save Settings',
+    loadingProfile: 'Profile is loading...',
+    errorTitle: 'Data Loading Error',
+    errorDesc: 'Cannot connect to server. Please try again later.',
+    backToHome: 'Back to Home',
   },
   mobile: {
     title: 'Please use a desktop',

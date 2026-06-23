@@ -64,7 +64,6 @@ export interface Lesson {
   description: string | null;
   order: number;
   difficulty: Difficulty;
-  problemStatement: string;
   toolboxConfig: Record<string, unknown>;
   initialBlocks: Record<string, unknown>;
   allowedBlocks: string[];
@@ -130,11 +129,14 @@ export interface CustomBlock {
 }
 
 export interface LeaderboardEntry {
-  userId: ObjectId;
+  rank: number;
+  _id: ObjectId;
   name: string;
   avatar: string | null;
   totalScore: number;
   lessonsCompleted: number;
+  streak: number;
+  level: number;
 }
 
 // ========================================
@@ -186,7 +188,7 @@ export interface ForgotPasswordRequest {
 
 export interface ResetPasswordRequest {
   token: string;
-  newPassword: string;
+  password: string;
 }
 
 export interface SubmitLessonRequest {
@@ -222,7 +224,6 @@ export interface CreateLessonRequest {
   description?: string;
   order?: number;
   difficulty?: Difficulty;
-  problemStatement?: string;
   toolboxConfig?: Record<string, unknown>;
   initialBlocks?: Record<string, unknown>;
   solution?: Record<string, unknown>;
@@ -268,11 +269,15 @@ export interface PaginatedLessonsResponse {
   };
 }
 
-export interface PaginatedLeaderboardResponse {
-  data: LeaderboardEntry[];
-  total: number;
-  page: number;
-  limit: number;
+export interface LeaderboardResponse {
+  success: boolean;
+  leaderboard: LeaderboardEntry[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
 }
 
 export interface ForgotPasswordResponse {
@@ -318,4 +323,35 @@ export interface LessonDetailResponse {
   success: boolean;
   lesson: Lesson;
   requiredBlocks: CustomBlockDTO[];
+}
+
+export interface TopicsListResponse {
+  success: boolean;
+  topics: Topic[];
+}
+
+export interface TopicLessonsResponse {
+  success: boolean;
+  lessons: Lesson[];
+}
+
+export interface UserProgressResponse {
+  success: boolean;
+  progress: UserProgress;
+}
+
+export interface SaveProgressResponse {
+  success: boolean;
+  message: string;
+  progress: UserProgress;
+}
+
+export interface CustomBlocksListResponse {
+  success: boolean;
+  blocks: CustomBlock[];
+}
+
+export interface CustomBlockResponse {
+  success: boolean;
+  block: CustomBlock;
 }

@@ -78,10 +78,12 @@ const vi = {
   topics: {
     dashboardTitle: 'Bảng khóa học',
     dashboardSubtitle: 'Chọn một chủ đề để xem các bài học bên trong.',
+    loadingTopics: 'Đang tải chủ đề...',
   },
   course: {
     progress: 'Tiến độ',
     locked: 'Đã khóa',
+    loadingLessons: 'Đang tải bài học...',
     difficulty: {
       easy: 'Cơ bản',
       medium: 'Trung bình',
@@ -179,6 +181,10 @@ const vi = {
     languageEnglish: 'English',
     languageVietnamese: 'Tiếng Việt',
     saveSettings: 'Lưu Cài Đặt',
+    loadingProfile: 'Đang tải hồ sơ...',
+    errorTitle: 'Lỗi tải dữ liệu',
+    errorDesc: 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau.',
+    backToHome: 'Quay lại trang chủ',
   },
   mobile: {
     title: 'Vui lòng dùng máy tính',
