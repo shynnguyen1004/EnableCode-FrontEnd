@@ -33,6 +33,7 @@ export default function WorkspacePage() {
   const [isNotFound, setIsNotFound] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hintIndex, setHintIndex] = useState(0);
+  const hasHints = lesson?.hint && lesson.hint.length > 0;
   const [outputLines, setOutputLines] = useState<LogLine[]>([]);
   const [outputOpen, setOutputOpen] = useState(false);
   const [hasRun, setHasRun] = useState(false);
@@ -302,15 +303,28 @@ export default function WorkspacePage() {
           </div>
 
           <div className="workspace-panel-actions">
-            <button type="button" className="workspace-panel-btn hint group" onClick={handleHint}>
-              <Lightbulb size={36} strokeWidth={3} className="btn-icon text-orange" />
-              {t('workspace.needHint')}
-            </button>
+            <div style={{ cursor: hasHints ? 'pointer' : 'not-allowed' }}>
+              <button
+                type="button"
+                className="workspace-panel-btn hint group"
+                onClick={handleHint}
+                disabled={!hasHints}
+                style={{
+                  opacity: hasHints ? 1 : 0.5,
+                  pointerEvents: hasHints ? 'auto' : 'none',
+                  width: '100%',
+                }}
+              >
+                <Lightbulb size={36} strokeWidth={3} className="btn-icon text-orange" />
+                {t('workspace.needHint')}
+              </button>
+            </div>
             <button
               type="button"
               className={`workspace-panel-btn run group${isSubmitting ? ' is-disabled' : ''}`}
               onClick={handleRunCode}
-              disabled={isSubmitting}>
+              disabled={isSubmitting}
+            >
               {isSubmitting ? (
                 <Loader2 size={44} strokeWidth={3} className="btn-icon workspace-spinner" />
               ) : (
