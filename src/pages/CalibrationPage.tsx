@@ -1,19 +1,12 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, ArrowLeft, CheckCircle, RefreshCw, Target, Crosshair, ArrowRight, CircleX } from 'lucide-react';
+import { Eye, ArrowLeft, CheckCircle, Target, RefreshCw, Crosshair, ArrowRight, CircleX } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
 import { useEyeTracking } from '../context/EyeTrackingContext';
 import { calibrationApi } from '../api/calibrationApi';
 import PageScale from '../components/PageScale';
-import type {
-  FaceMeshResults,
-  FaceMeshType,
-  CameraType,
-  CalibrationBounds,
-  CalibrationPreferences,
-  UpdateCalibrationRequest,
-} from '../lib/types';
+import type { FaceMeshResults, FaceMeshType, CameraType } from '../lib/types';
 
 declare global {
   interface Window {
@@ -66,19 +59,7 @@ export default function CalibrationPage() {
   const latestRawRef = useRef({ x: 0.5, y: 0.5 });
   const mouthGapRawRef = useRef(0);
 
-  // Cập nhật Type và khởi tạo giá trị theo đúng cấu trúc Interface của team
-  const boundsRef = useRef<CalibrationBounds>({
-    leftX: 0,
-    rightX: 0,
-    topY: 0,
-    bottomY: 0,
-  });
-
-  const prefRef = useRef<CalibrationPreferences>({
-    mouthDragThreshold: 0,
-    trackingSensitivity: 0,
-    visualFeedback: true,
-  });
+  const boundsRef = useRef({ leftX: 0, rightX: 1, topY: 0, bottomY: 1, mouthThreshold: 0.05 });
 
   const getSafeTranslation = (key: string, fallbackText: string): string => {
     if (!key) return fallbackText;
@@ -92,16 +73,22 @@ export default function CalibrationPage() {
   };
 
   const getInstructionText = (): string => {
-    if (completedPoints.includes(pointIndex)) return getSafeTranslation('calibration.captured', 'Position captured!');
-    if (pointIndex === 0) return getSafeTranslation('calibration.mouthOpen', 'Slightly open your mouth');
-    const edgeKeys = ['calibration.holdTop', 'calibration.holdRight', 'calibration.holdBottom', 'calibration.holdLeft'];
-    const defaultTexts = [
-      'Move your head to the top side of your screen',
-      'Move your head to the right side of your screen',
-      'Move your head to the bottom side of your screen',
-      'Move your head to the left side of your screen',
+    if (completedPoints.includes(pointIndex)) return getSafeTranslation('calibration.captured', 'Đã ghi nhận vị trí!');
+    const edgeKeys = [
+      'calibration.holdMouth',
+      'calibration.holdTop',
+      'calibration.holdRight',
+      'calibration.holdBottom',
+      'calibration.holdLeft',
     ];
-    return getSafeTranslation(edgeKeys[pointIndex - 1], defaultTexts[pointIndex - 1]);
+    const defaultTexts = [
+      'Há miệng nhẹ để xác nhận vị trí',
+      'Hướng đầu về mép trên màn hình',
+      'Hướng đầu về mép phải màn hình',
+      'Hướng đầu về mép dưới màn hình',
+      'Hướng đầu về mép trái màn hình',
+    ];
+    return getSafeTranslation(edgeKeys[pointIndex], defaultTexts[pointIndex]);
   };
 
   useEffect(() => {
@@ -111,14 +98,13 @@ export default function CalibrationPage() {
     return () => document.body.classList.remove('hide-global-mouse-tracking');
   }, [step]);
 
-  // FIX LỖI CRASH TO_LOWER_CASE TỪ CONTEXT BÊN NGOÀI
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (stepRef.current === 'countdown' || stepRef.current === 'calibrating') {
         e.stopPropagation();
       }
     };
-    window.addEventListener('keydown', handleGlobalKeyDown, true); // Đăng ký ở Capture phase để chặn sớm nhất
+    window.addEventListener('keydown', handleGlobalKeyDown, true);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown, true);
   }, []);
 
@@ -127,7 +113,7 @@ export default function CalibrationPage() {
       try {
         cameraRef.current.stop();
       } catch (e) {
-        console.error('[AI-Tracker-Log] Lỗi đóng camera instance:', e);
+        console.error('[AI-Tracker-Log] Error closing camera instance:', e);
       }
       cameraRef.current = null;
     }
@@ -136,9 +122,8 @@ export default function CalibrationPage() {
       faceMeshRef.current = null;
       try {
         instance.close();
-        console.log('[AI-Tracker-Log] -> Đã giải phóng hoàn toàn bộ nhớ FaceMesh WASM.');
-      } catch (e) {
-        console.error('[AI-Tracker-Log] Lỗi đóng FaceMesh:', e);
+      } catch {
+        console.error('[AI-Tracker-Log] Error closing FaceMesh instance');
       }
     }
   }, []);
@@ -148,18 +133,16 @@ export default function CalibrationPage() {
   }, [stopCamera]);
 
   const startCalibration = async () => {
-    console.log('[AI-Tracker-Log] 🎬 Kích hoạt nút Bắt đầu Cân chỉnh.');
     try {
       const { FaceMesh, Camera } = window;
       if (!FaceMesh || !Camera) {
-        console.warn('[AI-Tracker-Log] Thư viện MediaPipe chưa sẵn sàng trên đối tượng window.');
         alert('Chưa tải xong thư viện AI. Vui lòng đợi vài giây và thử lại.');
         return;
       }
 
       const videoElement = videoRef.current;
       if (!videoElement) {
-        console.error('[AI-Tracker-Log] Không tìm thấy phần tử HTML videoRef.');
+        console.error('[AI-Tracker-Log] Error: Video element not found.');
         return;
       }
 
@@ -185,7 +168,7 @@ export default function CalibrationPage() {
         ctx.save();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Lật ảnh đối xứng gương (Mirror Effect) chuẩn xác
+        // Flip the image from camera horizontally for a mirror effect
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
         ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
@@ -196,22 +179,21 @@ export default function CalibrationPage() {
           const topLip = landmarks[13];
           const bottomLip = landmarks[14];
 
-          // Cập nhật tọa độ thực từ camera vào Ref liên tục
+          // Update calibration points from camera into Ref
           latestRawRef.current = { x: noseTip.x, y: noseTip.y };
           mouthGapRawRef.current = Math.sqrt(Math.pow(topLip.x - bottomLip.x, 2) + Math.pow(topLip.y - bottomLip.y, 2));
 
-          // Vẽ điểm hỗ trợ trực quan hóa lên khung tròn
           if (stepRef.current === 'calibrating') {
             const pi = pointIndexRef.current;
             if (pi === 0) {
-              ctx.fillStyle = '#2dd4bf'; // Điểm môi màu Xanh ngọc khi test há miệng
+              ctx.fillStyle = '#2dd4bf'; // lip landmarks
               [topLip, bottomLip].forEach(pt => {
                 ctx.beginPath();
                 ctx.arc(pt.x * canvas.width, pt.y * canvas.height, 6, 0, 2 * Math.PI);
                 ctx.fill();
               });
             } else {
-              ctx.fillStyle = '#ff7700'; // Điểm mũi màu Cam định vị ánh mắt
+              ctx.fillStyle = '#ff7700'; // nose landmark
               ctx.beginPath();
               ctx.arc(noseTip.x * canvas.width, noseTip.y * canvas.height, 8, 0, 2 * Math.PI);
               ctx.fill();
@@ -227,7 +209,9 @@ export default function CalibrationPage() {
             try {
               await faceMesh.send({ image: videoElement });
             } catch {
-              console.warn('[AI-Tracker-Log] Đã chặn an toàn một frame gửi muộn khi FaceMesh đang giải phóng.');
+              console.warn(
+                '[AI-Tracker-Log] Warning: FaceMesh send() failed. Possibly due to camera not ready or frame skipped.',
+              );
             }
           }
         },
@@ -244,49 +228,40 @@ export default function CalibrationPage() {
       setIntroCountdown(3);
       setStep('countdown');
     } catch (err) {
-      console.error('[AI-Tracker-Log] Thất bại khi mở Camera:', err);
+      console.error('[AI-Tracker-Log] Failed to open Camera:', err);
       alert('Ứng dụng cần quyền truy cập Camera để có thể tiếp tục nhận diện khuôn mặt!');
     }
   };
 
-  // Hàm lưu dữ liệu cân chỉnh và đồng bộ lên Database qua API
   const saveCalibration = useCallback(async () => {
-    const finalData: UpdateCalibrationRequest = {
+    const finalData = {
       bounds: boundsRef.current,
-      preferences: prefRef.current,
+      preferences: {},
     };
 
-    console.log(JSON.stringify(finalData, null, 2));
-
     if (!isLoggedIn) {
-      console.warn('[AI-Tracker-Log] Khách chưa đăng nhập hệ thống, dữ liệu chỉ lưu log local.');
       return;
     }
     try {
-      console.log('[AI-Tracker-Log] Đang đẩy gói tin cấu hình lên API Server...');
-      // Gọi API gửi request PUT để update dữ liệu cân chỉnh vào Database
       await calibrationApi.updateCalibration(finalData);
-      console.log('[AI-Tracker-Log] 🎉 Máy chủ phản hồi thành công! Đã cập nhật DB.');
+      console.log('[AI-Tracker-Log] Successfully update to database.');
     } catch (err) {
-      console.error('[AI-Tracker-Log] Lỗi kết nối API Server:', err);
+      console.error('[AI-Tracker-Log] Error connecting to API Server:', err);
     }
   }, [isLoggedIn]);
 
   const cancelCalibration = () => {
-    console.log('[AI-Tracker-Log] Đã nhấn phím HỦY quy trình cân chỉnh.');
     stopCamera();
     setStep('intro');
   };
 
-  // QUY TRÌNH ĐẾM NGƯỢC COUNTDOWN
+  // Countdown number before starting calibration
   useEffect(() => {
     if (step !== 'countdown') return;
-    console.log(`[AI-Tracker-Log] Đang ở màn hình chờ chuẩn bị. Giây đếm ngược: ${introCountdown}`);
     const timer = window.setInterval(() => {
       setIntroCountdown(prev => {
         if (prev <= 1) {
           window.clearInterval(timer);
-          console.log("[AI-Tracker-Log] Đếm ngược kết thúc -> Chuyển sang bước quét điểm: 'calibrating'");
           setStep('calibrating');
           setPointIndex(0);
           setDwellProgress(0);
@@ -300,11 +275,10 @@ export default function CalibrationPage() {
     return () => window.clearInterval(timer);
   }, [step]);
 
-  // VÒNG LẶP TIẾN TRÌNH 2 GIÂY MƯỢT MÀ TỪ 0 ĐẾN 100%
+  // Loading circle
   useEffect(() => {
     if (step !== 'calibrating' || isCapturing) return;
 
-    console.log(`[AI-Tracker-Log] 📍 Khởi động đo đếm giữ điểm ổn định cho Point [Index: ${pointIndex}]`);
     let startTime: number | null = null;
     let animationFrameId: number;
     const duration = 2000;
@@ -313,13 +287,11 @@ export default function CalibrationPage() {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
       const progress = Math.min((elapsed / duration) * 100, 100);
-
       setDwellProgress(progress);
 
       if (progress < 100) {
         animationFrameId = requestAnimationFrame(animate);
       } else {
-        console.log(`[AI-Tracker-Log] ✨ Point ${pointIndex} đạt đủ 100% (Giữ đủ 2 giây). Đang khóa dữ liệu...`);
         setIsCapturing(true);
 
         const currentX = latestRawRef.current.x;
@@ -327,41 +299,33 @@ export default function CalibrationPage() {
         const currentMouth = mouthGapRawRef.current;
 
         if (pointIndex === 0) {
-          prefRef.current.mouthDragThreshold = currentMouth * 0.8;
-          console.log(`[AI-Tracker-Log] -> Đã chốt mouthThreshold hình thể: ${prefRef.current.mouthDragThreshold}`);
+          boundsRef.current.mouthThreshold = currentMouth * 0.8;
         }
         if (pointIndex === 1) {
           boundsRef.current.topY = currentY;
-          console.log(`[AI-Tracker-Log] -> Đã chốt TopY biên trên: ${boundsRef.current.topY}`);
         }
         if (pointIndex === 2) {
           boundsRef.current.rightX = currentX;
-          console.log(`[AI-Tracker-Log] -> Đã chốt RightX biên phải: ${boundsRef.current.rightX}`);
         }
         if (pointIndex === 3) {
           boundsRef.current.bottomY = currentY;
-          console.log(`[AI-Tracker-Log] -> Đã chốt BottomY biên dưới: ${boundsRef.current.bottomY}`);
         }
         if (pointIndex === 4) {
           boundsRef.current.leftX = currentX;
-          console.log(`[AI-Tracker-Log] -> Đã chốt LeftX biên trái: ${boundsRef.current.leftX}`);
         }
 
         window.setTimeout(() => {
           setCompletedPoints(prev => {
             const nextList = !prev.includes(pointIndex) ? [...prev, pointIndex] : prev;
-            console.log(`[AI-Tracker-Log] Tập hợp các điểm đã xong: [${nextList.join(', ')}]`);
             return nextList;
           });
 
           if (pointIndex < CAL_POINTS.length - 1) {
             const nextIdx = pointIndex + 1;
-            console.log(`[AI-Tracker-Log] Chuyển tiếp sang điểm tiếp theo: Index ${nextIdx}`);
             setPointIndex(nextIdx);
             setDwellProgress(0);
             setIsCapturing(false);
           } else {
-            console.log('[AI-Tracker-Log] 🏁 Đã hoàn thành thu thập toàn bộ các mốc tọa độ.');
             window.setTimeout(() => {
               void saveCalibration();
               stopCamera();
@@ -389,6 +353,7 @@ export default function CalibrationPage() {
         }
       `}</style>
 
+      {/* ĐẶT THỂ VIDEO TOÀN CỤC Ở ĐÂY ĐỂ TRÁNH BỊ UNMOUNT KHI CHUYỂN STEP */}
       <video ref={videoRef} autoPlay playsInline muted style={{ display: 'none' }} />
 
       {/* STEP 1: INTRO */}
@@ -406,9 +371,36 @@ export default function CalibrationPage() {
               <div className="calibration-hero-icon">
                 <Eye size={80} strokeWidth={2} />
               </div>
+
               <div className="calibration-intro">
-                <h1>{getSafeTranslation('calibration.title', 'Cân chỉnh Eye-Tracking')}</h1>
-                <p>Thực hiện các bước sau để thiết lập giới hạn khuôn mặt</p>
+                <h1>{t('calibration.title')}</h1>
+                <p>{t('calibration.subtitle')}</p>
+              </div>
+
+              <div className="calibration-steps">
+                {[
+                  {
+                    icon: <Eye size={32} strokeWidth={2.5} />,
+                    label: t('calibration.step1Title'),
+                    sub: t('calibration.step1Body'),
+                  },
+                  {
+                    icon: <Target size={32} strokeWidth={2.5} />,
+                    label: t('calibration.step2Title'),
+                    sub: t('calibration.step2Body'),
+                  },
+                  {
+                    icon: <CheckCircle size={32} strokeWidth={2.5} />,
+                    label: t('calibration.step3Title'),
+                    sub: t('calibration.step3Body'),
+                  },
+                ].map((item, index) => (
+                  <article key={index} className="calibration-step-card">
+                    <div className="calibration-step-icon">{item.icon}</div>
+                    <strong>{item.label}</strong>
+                    <span>{item.sub}</span>
+                  </article>
+                ))}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -439,14 +431,11 @@ export default function CalibrationPage() {
             height: '80vh',
           }}
         >
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#1a202c', marginBottom: '1rem' }}>
-            Sẵn sàng...
-          </h1>
           <div
             style={{
               position: 'relative',
-              width: '280px',
-              height: '280px',
+              width: '60vmin',
+              height: '60vmin',
               borderRadius: '50%',
               overflow: 'hidden',
               border: '6px solid #ff7700',
@@ -491,50 +480,50 @@ export default function CalibrationPage() {
             {getInstructionText()}
           </p>
 
-          {CAL_POINTS.map((point, index) => {
-            if (!completedPoints.includes(index)) return null;
-
-            return (
-              <div
-                key={`done-${index}`}
-                className="calibration-point calibration-point--done"
-                style={{ left: `${point.x}%`, top: `${point.y}%` }}>
-                <div className="calibration-point-done-dot">
-                  <CheckCircle size={16} strokeWidth={3} />
-                </div>
-              </div>
-            );
-          })}
-
-          {!captured && (
-            <div
-              className="calibration-point calibration-point--active"
-              style={{ left: `${currentPoint.x}%`, top: `${currentPoint.y}%` }}>
-              <div className="calibration-point-pulse" />
-              <svg width="88" height="88" className="calibration-point-ring" viewBox="0 0 88 88">
-                <circle
-                  cx="44"
-                  cy="44"
-                  r={RING_RADIUS}
-                  fill="none"
-                  stroke="#ff7700"
-                  strokeWidth="8"
-                  strokeDasharray={RING_CIRCUMFERENCE}
-                  strokeDashoffset={RING_CIRCUMFERENCE * (1 - dwellProgress / 100)}
-                  strokeLinecap="round"
-                  transform="rotate(-90 44 44)"
-                />
-              </svg>
-              <div className="calibration-point-core" />
-            </div>
-          )}
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 10,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              width: '60vmin',
+              height: '60vmin',
+            }}
+          >
+            <svg
+              viewBox="0 0 100 100"
+              style={{ position: 'absolute', width: '108%', height: '108%', pointerEvents: 'none', zIndex: 11 }}
+            >
+              <circle
+                cx="50"
+                cy="50"
+                r="46"
+                fill="none"
+                stroke="#ff7700"
+                strokeWidth="2"
+                strokeDasharray={2 * Math.PI * 46}
+                strokeDashoffset={2 * Math.PI * 46 * (1 - dwellProgress / 100)}
+                strokeLinecap="round"
+                transform="rotate(-90 50 50)"
+                style={{ transition: 'none' }}
+              />
+            </svg>
 
             <div
-              className="calibration-point calibration-point--flash"
-              style={{ left: `${currentPoint.x}%`, top: `${currentPoint.y}%` }}>
-              <div className="calibration-point-flash-dot">
-                <CheckCircle size={36} strokeWidth={3} />
-              </div>
+              style={{
+                width: '100%',
+                height: '100%',
+                borderRadius: '50%',
+                overflow: 'hidden',
+                border: '4px solid #2d3748',
+                backgroundColor: '#1a202c',
+              }}
+            >
+              <canvas ref={canvasRef} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
           </div>
 
@@ -549,7 +538,7 @@ export default function CalibrationPage() {
                   style={{ left: `${point.x}%`, top: `${point.y}%`, transform: 'translate(-50%, -50%)' }}
                 >
                   <div className="calibration-point-done-dot">
-                    <CheckCircle size={40} strokeWidth={3} />
+                    <CheckCircle size={20} strokeWidth={3} />
                   </div>
                 </div>
               );
@@ -565,7 +554,7 @@ export default function CalibrationPage() {
                   <div className="calibration-point-pulse" style={{ backgroundColor: 'rgba(255, 119, 0, 0.3)' }} />
                   <div
                     className="calibration-point-core"
-                    style={{ backgroundColor: '#ff7700', width: '5vmin', height: '5vmin' }}
+                    style={{ backgroundColor: '#ff7700', width: '24px', height: '24px' }}
                   />
                 </div>
               );
