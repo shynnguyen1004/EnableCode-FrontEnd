@@ -65,6 +65,7 @@ export function normalizeLesson(raw: Record<string, unknown>): Lesson {
     problemStatement: String(raw.problemStatement ?? raw.problem_statement ?? raw.description ?? ''),
     toolboxConfig: (raw.toolboxConfig ?? raw.toolbox_config ?? {}) as Record<string, unknown>,
     initialBlocks: (raw.initialBlocks ?? raw.initial_blocks ?? {}) as Record<string, unknown>,
+    allowedBlocks: Array.isArray(raw.allowedBlocks) ? raw.allowedBlocks : [],
     solution: (raw.solution ?? {}) as Record<string, unknown>,
     hint: normalizeHints(raw.hint),
     publicTestcases: normalizeTestcases(raw.publicTestcases ?? raw.public_testcases),

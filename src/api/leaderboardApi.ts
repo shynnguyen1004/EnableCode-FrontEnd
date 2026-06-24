@@ -1,7 +1,7 @@
 import axiosClient from './axiosClient';
-import type { PaginatedLeaderboardResponse } from '../lib/types';
+import type { LeaderboardResponse } from '../lib/types';
 
 export const leaderboardApi = {
   getLeaderboard: (page = 1, limit = 10) =>
-    axiosClient.get<unknown, PaginatedLeaderboardResponse>('/leaderboard', { params: { page, limit } }),
+    axiosClient.get<unknown, LeaderboardResponse>('/leaderboard', { params: { page, limit } }),
 };

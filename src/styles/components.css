@@ -1227,15 +1227,17 @@
 /* ─── Workspace ─── */
 
 .workspace-page {
-  min-height: 100vh;
-  min-height: 100svh;
-  height: 100vh;
-  width: 100vw;
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  width: 100%;
+  height: 100%;
   background: var(--bg-dark);
   color: var(--text-light);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .workspace-page--loading {
@@ -1506,6 +1508,7 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  overscroll-behavior: none;
   display: flex;
   flex-direction: column;
 }
@@ -1515,6 +1518,8 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
 }
 
 .workspace-grid-bg {
@@ -1597,7 +1602,7 @@
 }
 
 .workspace-output-badge--passed {
-  color: var(--accent-green);
+  color: var(--accent-light-green);
 }
 
 .workspace-output-badge--error {
@@ -1679,7 +1684,7 @@
 }
 
 .workspace-output-line--success {
-  color: var(--accent-green);
+  color: var(--accent-light-green);
 }
 
 .workspace-output-line--error {
@@ -1745,6 +1750,8 @@
   border: 5px solid transparent;
   border-radius: 16px;
   color: var(--text-light);
+  background: transparent;
+  cursor: pointer;
   transition:
     color 0.2s ease,
     background 0.2s ease,
@@ -1810,7 +1817,7 @@
   font-family: Unbounded, Montserrat, sans-serif;
   font-weight: 900;
   letter-spacing: 0.02em;
-  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-size: clamp(1.152rem, 2.56vw, 1.92rem);
   line-height: 1.1;
 }
 
@@ -1820,6 +1827,218 @@
   font-size: clamp(1rem, 2vw, 1.35rem);
   font-weight: 500;
   line-height: 1.4;
+}
+
+.profile-edit-btn {
+  margin-top: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.1rem;
+  border: 4px solid #111;
+  border-radius: 14px;
+  background: #fff9dc;
+  color: #111;
+  font-family: Montserrat, sans-serif;
+  font-weight: 800;
+  font-size: clamp(0.85rem, 1.5vw, 1rem);
+  cursor: pointer;
+  box-shadow: 6px 6px 0 #111;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.profile-edit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 8px 8px 0 #111;
+}
+
+.profile-edit-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(17, 17, 17, 0.65);
+}
+
+.profile-edit-modal {
+  position: relative;
+  width: min(100%, 624px);
+  border: 5px solid #111;
+  border-radius: 28px;
+  background: var(--bg-cream);
+  padding: 2rem;
+  box-shadow: 14px 14px 0 #111;
+  color: #272727;
+}
+
+.profile-edit-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 4px solid #111;
+  border-radius: 12px;
+  background: #fff;
+  color: #272727;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 #111;
+}
+
+.profile-edit-modal h3 {
+  margin: 0 0 1.25rem;
+  font-family: Unbounded, Montserrat, sans-serif;
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+  font-weight: 900;
+  color: #272727;
+}
+
+.profile-edit-preview {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.profile-edit-preview-img {
+  width: 168px;
+  height: 168px;
+  border-radius: 50%;
+  border: 6px solid var(--accent-orange);
+  object-fit: cover;
+  box-shadow: 10px 10px 0 #111;
+}
+
+.profile-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.profile-edit-form label {
+  margin-top: 0.75rem;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #272727;
+}
+
+.profile-edit-form input {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: 4px solid #111;
+  border-radius: 14px;
+  background: #fff;
+  font-family: Montserrat, sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #272727;
+}
+
+.profile-edit-form input:focus {
+  outline: 3px solid var(--accent-orange);
+  outline-offset: 2px;
+}
+
+.profile-edit-hint {
+  margin: 0;
+  opacity: 0.85;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #272727;
+}
+
+.profile-edit-upload-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+}
+
+.profile-edit-file-input {
+  display: none;
+}
+
+.profile-edit-upload-btn,
+.profile-edit-remove-btn,
+.profile-edit-cancel,
+.profile-edit-save {
+  flex: 1;
+  min-width: 0;
+  min-height: 52px;
+  padding: 0.75rem 1rem;
+  border: 4px solid #111;
+  border-radius: 16px;
+  font-family: Montserrat, sans-serif;
+  font-weight: 800;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow: 6px 6px 0 #111;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.profile-edit-upload-btn {
+  background: #74a258;
+  color: #fff;
+}
+
+.profile-edit-remove-btn {
+  background: #fff;
+  color: #272727;
+}
+
+.profile-edit-upload-btn:disabled,
+.profile-edit-remove-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.profile-edit-file-name {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  word-break: break-all;
+  color: #272727;
+}
+
+.profile-edit-error {
+  margin: 0.75rem 0 0;
+  color: #e53a36;
+  font-weight: 700;
+}
+
+.profile-edit-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.profile-edit-cancel {
+  background: #fff;
+  color: #272727;
+}
+
+.profile-edit-save {
+  background: var(--accent-orange);
+  color: #fff;
+}
+
+.profile-edit-cancel:disabled,
+.profile-edit-save:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .profile-stats-grid {
@@ -1981,6 +2200,32 @@
 
 .profile-action-btn:hover .profile-action-icon {
   transform: scale(1.1);
+}
+
+.profile-action-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.profile-action-stack .profile-action-btn {
+  margin-top: 0;
+}
+
+.profile-action-btn--face-login {
+  background: #74a258;
+}
+
+.profile-action-btn--logout {
+  background: #e53a36;
+}
+
+.profile-action-btn--logout:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 12px 12px 0 #111;
 }
 
 .profile-control-card,
@@ -2341,4 +2586,22 @@
   color: #fff;
   transform: translate(6px, 6px);
   box-shadow: none;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- Tạo class animate-spin để dùng cho mọi icon --- */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.mr-3 {
+  margin-right: 0.75rem;
 }

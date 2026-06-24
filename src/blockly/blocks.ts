@@ -1,6 +1,6 @@
 import * as Blockly from 'blockly';
 import { Order, pythonGenerator } from 'blockly/python';
-
+import { CustomBlockDTO } from '../lib/types';
 let blocksRegistered = false;
 
 const blockDefinitions = [
@@ -182,4 +182,31 @@ export function registerEnableCodeBlocks(): void {
   };
 
   blocksRegistered = true;
+}
+export function registerDynamicBlocks(dynamicBlocks: CustomBlockDTO[]): void {
+  if (!dynamicBlocks || dynamicBlocks.length === 0) return;
+
+  dynamicBlocks.forEach(blockConfig => {
+    const { blockType, definition, generatorCode } = blockConfig;
+
+    // 1. Nạp giao diện (UI Definition) cho khối lệnh nếu chưa có
+    if (!Blockly.Blocks[blockType]) {
+      Blockly.Blocks[blockType] = {
+        init: function () {
+          this.jsonInit(definition);
+        },
+      };
+    }
+
+    // 2. Nạp logic dịch code Python (Generator) nếu chưa có
+    if (!pythonGenerator.forBlock[blockType]) {
+      try {
+        // Biến chuỗi string từ Database thành một hàm JavaScript chạy được
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        pythonGenerator.forBlock[blockType] = new Function('block', 'generator', generatorCode) as any;
+      } catch (error) {
+        console.error(`Lỗi biên dịch generator code cho block ${blockType}:`, error);
+      }
+    }
+  });
 }

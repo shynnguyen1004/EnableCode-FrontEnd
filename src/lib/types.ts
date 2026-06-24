@@ -64,9 +64,9 @@ export interface Lesson {
   description: string | null;
   order: number;
   difficulty: Difficulty;
-  problemStatement: string;
   toolboxConfig: Record<string, unknown>;
   initialBlocks: Record<string, unknown>;
+  allowedBlocks: string[];
   solution: Record<string, unknown>;
   hint: Hint[];
   publicTestcases: Testcase[];
@@ -157,11 +157,14 @@ export interface CustomBlock {
 }
 
 export interface LeaderboardEntry {
-  userId: ObjectId;
+  rank: number;
+  _id: ObjectId;
   name: string;
   avatar: string | null;
   totalScore: number;
   lessonsCompleted: number;
+  streak: number;
+  level: number;
 }
 
 // ========================================
@@ -172,6 +175,23 @@ export interface AuthResponse {
   success: boolean;
   accessToken?: string;
   user?: UserProfileResponse;
+}
+
+export interface UserProfileApiResponse {
+  success: boolean;
+  user: UserProfileResponse;
+  message?: string;
+}
+
+export interface UserStatsApiResponse {
+  success: boolean;
+  stats: UserStats;
+}
+
+export interface CalibrationApiResponse {
+  success: boolean;
+  calibration: Calibration;
+  message?: string;
 }
 
 export interface MessageResponse {
@@ -196,7 +216,7 @@ export interface ForgotPasswordRequest {
 
 export interface ResetPasswordRequest {
   token: string;
-  newPassword: string;
+  password: string;
 }
 
 export interface SubmitLessonRequest {
@@ -232,7 +252,6 @@ export interface CreateLessonRequest {
   description?: string;
   order?: number;
   difficulty?: Difficulty;
-  problemStatement?: string;
   toolboxConfig?: Record<string, unknown>;
   initialBlocks?: Record<string, unknown>;
   solution?: Record<string, unknown>;
@@ -278,11 +297,15 @@ export interface PaginatedLessonsResponse {
   };
 }
 
-export interface PaginatedLeaderboardResponse {
-  data: LeaderboardEntry[];
-  total: number;
-  page: number;
-  limit: number;
+export interface LeaderboardResponse {
+  success: boolean;
+  leaderboard: LeaderboardEntry[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
 }
 
 export interface ForgotPasswordResponse {
@@ -316,4 +339,47 @@ export interface ErrorResponse {
 export interface LocalizedCurriculumText {
   title: string;
   description: string | null;
+}
+
+export interface CustomBlockDTO {
+  blockType: string;
+  definition: Record<string, unknown>;
+  generatorCode: string;
+}
+
+export interface LessonDetailResponse {
+  success: boolean;
+  lesson: Lesson;
+  requiredBlocks: CustomBlockDTO[];
+}
+
+export interface TopicsListResponse {
+  success: boolean;
+  topics: Topic[];
+}
+
+export interface TopicLessonsResponse {
+  success: boolean;
+  lessons: Lesson[];
+}
+
+export interface UserProgressResponse {
+  success: boolean;
+  progress: UserProgress;
+}
+
+export interface SaveProgressResponse {
+  success: boolean;
+  message: string;
+  progress: UserProgress;
+}
+
+export interface CustomBlocksListResponse {
+  success: boolean;
+  blocks: CustomBlock[];
+}
+
+export interface CustomBlockResponse {
+  success: boolean;
+  block: CustomBlock;
 }

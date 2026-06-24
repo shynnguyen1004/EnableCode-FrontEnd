@@ -4,6 +4,8 @@ import type {
   AuthResponse,
   RegisterRequest,
   LoginRequest,
+  ForgotPasswordRequest,
+  ForgotPasswordResponse,
   ResetPasswordRequest,
   MessageResponse,
   ResetPasswordResponse,
@@ -31,6 +33,11 @@ export const authApi = {
     return response.data;
   },
 
+  forgotPassword: async (data: ForgotPasswordRequest): Promise<ForgotPasswordResponse> => {
+    const response = await axiosAuth.post<ForgotPasswordResponse>('/auth/forgot-password', data);
+    return response.data;
+  },
+
   resetPassword: async (data: ResetPasswordRequest): Promise<ResetPasswordResponse> => {
     const response = await axiosAuth.post<ResetPasswordResponse>('/auth/reset-password', data);
     return response.data;
@@ -41,8 +48,5 @@ export const authApi = {
     return response.data;
   },
 
-  logout: async (): Promise<MessageResponse> => {
-    const response = await axiosClient.post<unknown, MessageResponse>('/auth/logout');
-    return response;
-  },
+  logout: () => axiosClient.post<unknown, MessageResponse>('/auth/logout'),
 };

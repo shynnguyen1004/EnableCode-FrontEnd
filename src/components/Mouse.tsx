@@ -287,7 +287,7 @@ const Mouse: React.FC = () => {
               updateAction('moving');
             }
           }
-        } else {
+        } else if (!elAtPoint?.closest('.workspace-page')) {
           // Fallback cuộn toàn trang nếu không đứng trên panel đặc biệt nào
           if (cursorY < VIEWPORT_EDGE_THRESHOLD) {
             window.scrollBy({ top: -SCROLL_STEP, behavior: 'auto' });
@@ -298,6 +298,8 @@ const Mouse: React.FC = () => {
           } else if (actionKindRef.current.startsWith('scroll')) {
             updateAction('moving');
           }
+        } else if (actionKindRef.current.startsWith('scroll')) {
+          updateAction('moving');
         }
       } else {
         canvasCtx.restore();

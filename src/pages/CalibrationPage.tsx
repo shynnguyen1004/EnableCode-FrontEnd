@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, ArrowLeft, CheckCircle, RefreshCw, Crosshair, ArrowRight } from 'lucide-react';
+import { Eye, ArrowLeft, CheckCircle, RefreshCw, Target, Crosshair, ArrowRight, CircleX } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
 import { useEyeTracking } from '../context/EyeTrackingContext';
@@ -410,9 +410,18 @@ export default function CalibrationPage() {
                 <h1>{getSafeTranslation('calibration.title', 'Cân chỉnh Eye-Tracking')}</h1>
                 <p>Thực hiện các bước sau để thiết lập giới hạn khuôn mặt</p>
               </div>
-              <button type="button" className="calibration-primary-btn group" onClick={startCalibration}>
-                <Crosshair size={32} strokeWidth={3} className="btn-icon calibration-crosshair-icon" /> Bắt đầu
-              </button>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <button type="button" className="calibration-primary-btn group" onClick={startCalibration}>
+                  <Crosshair size={32} strokeWidth={3} className="btn-icon calibration-crosshair-icon" />
+                  {t('calibration.begin')}
+                </button>
+
+                <Link to="/lessons" className="calibration-primary-btn group" style={{ background: '#E53A36' }}>
+                  <CircleX size={32} strokeWidth={3} className="btn-icon" />
+                  {t('calibration.cancel')}
+                </Link>
+              </div>
             </section>
           </main>
         </>
@@ -482,50 +491,50 @@ export default function CalibrationPage() {
             {getInstructionText()}
           </p>
 
-          <div
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              zIndex: 10,
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              width: '50vmin',
-              height: '50vmin',
-            }}
-          >
-            <svg
-              viewBox="0 0 100 100"
-              style={{ position: 'absolute', width: '108%', height: '108%', pointerEvents: 'none', zIndex: 11 }}
-            >
-              <circle
-                cx="50"
-                cy="50"
-                r="46"
-                fill="none"
-                stroke="#ff7700"
-                strokeWidth="3"
-                strokeDasharray={2 * Math.PI * 46}
-                strokeDashoffset={2 * Math.PI * 46 * (1 - dwellProgress / 100)}
-                strokeLinecap="round"
-                transform="rotate(-90 50 50)"
-                style={{ transition: 'none' }}
-              />
-            </svg>
+          {CAL_POINTS.map((point, index) => {
+            if (!completedPoints.includes(index)) return null;
+
+            return (
+              <div
+                key={`done-${index}`}
+                className="calibration-point calibration-point--done"
+                style={{ left: `${point.x}%`, top: `${point.y}%` }}>
+                <div className="calibration-point-done-dot">
+                  <CheckCircle size={16} strokeWidth={3} />
+                </div>
+              </div>
+            );
+          })}
+
+          {!captured && (
+            <div
+              className="calibration-point calibration-point--active"
+              style={{ left: `${currentPoint.x}%`, top: `${currentPoint.y}%` }}>
+              <div className="calibration-point-pulse" />
+              <svg width="88" height="88" className="calibration-point-ring" viewBox="0 0 88 88">
+                <circle
+                  cx="44"
+                  cy="44"
+                  r={RING_RADIUS}
+                  fill="none"
+                  stroke="#ff7700"
+                  strokeWidth="8"
+                  strokeDasharray={RING_CIRCUMFERENCE}
+                  strokeDashoffset={RING_CIRCUMFERENCE * (1 - dwellProgress / 100)}
+                  strokeLinecap="round"
+                  transform="rotate(-90 44 44)"
+                />
+              </svg>
+              <div className="calibration-point-core" />
+            </div>
+          )}
 
             <div
-              style={{
-                width: '100%',
-                height: '100%',
-                borderRadius: '50%',
-                overflow: 'hidden',
-                border: '4px solid #2d3748',
-                backgroundColor: '#1a202c',
-              }}
-            >
-              <canvas ref={canvasRef} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              className="calibration-point calibration-point--flash"
+              style={{ left: `${currentPoint.x}%`, top: `${currentPoint.y}%` }}>
+              <div className="calibration-point-flash-dot">
+                <CheckCircle size={36} strokeWidth={3} />
+              </div>
             </div>
           </div>
 

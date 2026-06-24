@@ -9,7 +9,7 @@ import { isTopicLocked, calculateTopicCompletionPercentage } from '../lib/progre
 import { topicApi } from '../api/topicApi';
 import { lessonApi } from '../api/lessonApi';
 import { progressApi } from '../api/progressApi';
-import { extractTopics } from '../utils/lessonMapper';
+import { extractTopics, extractLessons } from '../utils/lessonMapper';
 
 export default function TopicPage() {
   const { t, localizeTopic, difficultyLabel } = useI18n();
@@ -34,7 +34,7 @@ export default function TopicPage() {
 
         setTopics(formattedTopics.filter(topic => topic.isActive));
 
-        setAllLessons(lessonsRes.lessons || []);
+        setAllLessons(extractLessons(lessonsRes));
         setUserProgressList(progressRes);
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
@@ -52,7 +52,9 @@ export default function TopicPage() {
         <CourseSidebar active="lessons" />
         <main className="lessons-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Loader2 size={40} className="animate-spin text-orange-500 mr-3" />
-          <p style={{ color: '#666', fontSize: '1.2rem', fontWeight: 500 }}>Loading topics...</p>
+          <p style={{ color: '#666', fontSize: '1.2rem', fontWeight: 500 }}>
+            {t('topics.loadingTopics') || 'Loading topics...'}
+          </p>
         </main>
       </div>
     );

@@ -1,5 +1,5 @@
 import type { Block, Workspace } from 'blockly/core';
-
+import { pythonGenerator } from 'blockly/python';
 export type LogLineType = 'info' | 'dim' | 'step' | 'success' | 'error' | 'output';
 
 export type LogLine = {
@@ -132,23 +132,24 @@ export function evaluateWorkspaceRun(workspace: Workspace): WorkspaceRunResult {
   const context = createContext();
   pushLog(context, '▶  Running program…', 'info');
 
-  const startBlock = workspace.getBlocksByType('controls_start', false)[0] ?? workspace.getTopBlocks(false)[0];
-  if (startBlock) {
-    executeChain(startBlock.getNextBlock(), context);
-  } else {
-    pushLog(context, '   No blocks connected to On Start', 'dim');
-  }
+  let generatedPythonCode = '';
 
-  if (context.outputs.length === 0) {
-    pushLog(context, '   (no print output)', 'dim');
-  }
+  try {
+    generatedPythonCode = pythonGenerator.workspaceToCode(workspace);
 
+    if (!generatedPythonCode.trim()) {
+      pushLog(context, '   (Workspace is empty, no code generated)', 'dim');
+    } else {
+      pushLog(context, '   Code generated successfully, sending to server...', 'info');
+    }
+  } catch (error) {
+    pushLog(context, ` ❌ Code generation error: ${error}`, 'error');
+  }
   return {
-    output: context.outputs.join('\n'),
+    output: generatedPythonCode,
     logs: context.logs,
   };
 }
-
 export function evaluateWorkspaceOutput(workspace: Workspace): string {
   return evaluateWorkspaceRun(workspace).output;
 }

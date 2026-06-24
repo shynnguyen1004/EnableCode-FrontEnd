@@ -14,6 +14,7 @@ import { lessonApi } from '../api/lessonApi';
 import { topicApi } from '../api/topicApi';
 import { progressApi } from '../api/progressApi';
 import { extractTopics, extractLessons, extractSingleLesson } from '../utils/lessonMapper';
+import { registerDynamicBlocks } from '../blockly/blocks';
 
 import type { Topic, Lesson, UserProgress } from '../lib/types';
 
@@ -26,15 +27,31 @@ export default function WorkspacePage() {
   const [topic, setTopic] = useState<Topic | null>(null);
   const [lessonsInTopic, setLessonsInTopic] = useState<Lesson[]>([]);
   const [userProgressList, setUserProgressList] = useState<UserProgress[]>([]);
+  const [currentLessonProgress, setCurrentLessonProgress] = useState<UserProgress | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isNotFound, setIsNotFound] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hintIndex, setHintIndex] = useState(0);
+  const hasMoreHints = !!(lesson?.hint && lesson.hint.length > 0 && hintIndex < lesson.hint.length);
   const [outputLines, setOutputLines] = useState<LogLine[]>([]);
   const [outputOpen, setOutputOpen] = useState(false);
   const [hasRun, setHasRun] = useState(false);
   const [runPassed, setRunPassed] = useState<boolean | null>(null);
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+    };
+  }, []);
 
   useEffect(() => {
     if (!lessonId) return;
@@ -43,33 +60,35 @@ export default function WorkspacePage() {
       try {
         const lessonRes = await lessonApi.getLessonDetails(lessonId);
         const fetchedLesson = extractSingleLesson(lessonRes);
-
+        const requiredBlocks = lessonRes.requiredBlocks || [];
         if (!fetchedLesson?.topicId) {
           setIsNotFound(true);
           return;
         }
-
+        if (requiredBlocks.length > 0) {
+          registerDynamicBlocks(requiredBlocks);
+        }
         const actualTopicId = fetchedLesson.topicId;
 
-        const [topicsRes, topicLessonsRes, progressRes] = await Promise.all([
+        const [topicsRes, topicLessonsRes, allProgressRes, detailProgressRes] = await Promise.all([
           topicApi.getAllTopics(),
           topicApi.getLessonsByTopic(actualTopicId),
           progressApi.getAllUserProgress(),
+          progressApi.getUserLessonProgress(lessonId),
         ]);
 
         const rawTopics = extractTopics(topicsRes);
         const rawLessons = extractLessons(topicLessonsRes);
         const matchedTopic = rawTopics.find(item => item._id === actualTopicId);
-
         if (!matchedTopic) {
           setIsNotFound(true);
           return;
         }
-
+        setCurrentLessonProgress(detailProgressRes);
         setLesson(fetchedLesson);
         setTopic(matchedTopic);
         setLessonsInTopic(rawLessons.filter(item => item.isActive));
-        setUserProgressList(progressRes);
+        setUserProgressList(allProgressRes);
         setHintIndex(0);
         setOutputLines([]);
         setOutputOpen(false);
@@ -128,12 +147,54 @@ export default function WorkspacePage() {
         pythonCode: output,
         time: 0,
       });
-
       const resultLogs: LogLine[] = [...logs];
+      if (response.output) {
+        resultLogs.push({
+          id: 'program-output',
+          text: `▶ Output:\n${response.output}\n`,
+          type: 'info',
+        });
+      }
       const passed = isSandbox
         ? true
         : (response.passed ?? output.trim() === String(lesson.publicTestcases[0]?.expectedOutput ?? '').trim());
+      if (!isSandbox && response.testcaseResults && Array.isArray(response.testcaseResults)) {
+        resultLogs.push({
+          id: 'testcase-header',
+          text: '--- Testcases ---',
+          type: 'dim',
+        });
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        response.testcaseResults.forEach((tc: any, index: number) => {
+          const isPass = tc.passed;
+          const icon = isPass ? '✓' : '✗';
+
+          resultLogs.push({
+            id: `tc-${index}-status`,
+            text: `${icon} Testcase ${index + 1}: ${tc.description}`,
+            type: isPass ? 'success' : 'error',
+          });
+          if (!isPass) {
+            resultLogs.push({
+              id: `tc-${index}-expected`,
+              text: `    Expected: ${tc.expectedOutput}`,
+              type: 'dim',
+            });
+            resultLogs.push({
+              id: `tc-${index}-actual`,
+              text: `    Actual:   ${tc.actualOutput}`,
+              type: 'dim',
+            });
+          }
+        });
+
+        resultLogs.push({
+          id: 'testcase-footer',
+          text: '-----------------',
+          type: 'dim',
+        });
+      }
       if (passed) {
         resultLogs.push({
           id: 'result-pass',
@@ -144,8 +205,13 @@ export default function WorkspacePage() {
         });
         setRunPassed(true);
 
-        const updatedProgress = await progressApi.getAllUserProgress();
-        setUserProgressList(updatedProgress);
+        const [updatedAllProgress, updatedDetailProgress] = await Promise.all([
+          progressApi.getAllUserProgress(),
+          progressApi.getUserLessonProgress(lessonId),
+        ]);
+
+        setUserProgressList(updatedAllProgress);
+        setCurrentLessonProgress(updatedDetailProgress);
       } else {
         resultLogs.push({
           id: 'result-fail',
@@ -192,6 +258,7 @@ export default function WorkspacePage() {
   const localizedTopic = localizeTopic(topic) || topic;
   const activeHint = lesson.hint[Math.min(hintIndex, lesson.hint.length) - 1];
 
+  const savedWorkspaceState = currentLessonProgress?.workspaceState;
   return (
     <div className="workspace-page">
       <header className="workspace-topbar">
@@ -223,7 +290,7 @@ export default function WorkspacePage() {
             <div className="objective-chip">{t('workspace.objective')}</div>
             <h1>{localizedLesson.title}</h1>
             <div className="workspace-panel-copy">
-              <ReactMarkdown>{localizedLesson.description || lesson.problemStatement || ''}</ReactMarkdown>
+              <ReactMarkdown>{localizedLesson.description || lesson.description || ''}</ReactMarkdown>
             </div>
 
             {activeHint && (
@@ -237,10 +304,22 @@ export default function WorkspacePage() {
           </div>
 
           <div className="workspace-panel-actions">
-            <button type="button" className="workspace-panel-btn hint group" onClick={handleHint}>
-              <Lightbulb size={36} strokeWidth={3} className="btn-icon text-orange" />
-              {t('workspace.needHint')}
-            </button>
+            <div style={{ cursor: hasMoreHints ? 'pointer' : 'not-allowed' }}>
+              <button
+                type="button"
+                className="workspace-panel-btn hint group"
+                onClick={handleHint}
+                disabled={!hasMoreHints}
+                style={{
+                  opacity: hasMoreHints ? 1 : 0.5,
+                  pointerEvents: hasMoreHints ? 'auto' : 'none',
+                  width: '100%',
+                }}
+              >
+                <Lightbulb size={36} strokeWidth={3} className="btn-icon text-orange" />
+                {t('workspace.needHint')}
+              </button>
+            </div>
             <button
               type="button"
               className={`workspace-panel-btn run group${isSubmitting ? ' is-disabled' : ''}`}
@@ -264,6 +343,7 @@ export default function WorkspacePage() {
               ref={editorRef}
               lessonKey={lesson._id}
               toolboxConfig={lesson.toolboxConfig}
+              savedWorkspaceState={savedWorkspaceState}
               initialBlocks={lesson.initialBlocks}
               toolboxTitle={t('workspace.blockLibrary')}
             />

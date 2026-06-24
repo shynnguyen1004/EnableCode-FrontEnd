@@ -1,143 +1,205 @@
-# Enable Code
+# Enable Code — Frontend
 
-**Enable Code** là nền tảng học lập trình dễ tiếp cận, cho phép người dùng điều khiển giao diện bằng mắt và lập trình qua các khối lệnh trực quan (kéo-thả). Dự án hướng tới người có hạn chế vận động, giúp học lập trình mà không phụ thuộc hoàn toàn vào chuột và bàn phím.
+Accessible block-based programming platform that lets learners control the interface with their eyes and build programs through visual drag-and-drop blocks. Enable Code is designed for people with motor limitations, so coding does not depend entirely on a mouse and keyboard.
 
-## Tính năng chính
+---
 
-- **Điều khiển bằng mắt** — Sử dụng [MediaPipe Face Mesh](https://developers.google.com/mediapipe/solutions/vision/face_landmarker) để theo dõi ánh nhìn và điều khiển con trỏ trên màn hình. Bật/tắt nhanh bằng phím tắt `Ctrl/Cmd + M`.
-- **Lập trình khối lệnh** — Giao diện workspace với thư viện khối lệnh trực quan, vùng thả rộng, phù hợp điều khiển bằng mắt.
-- **Lộ trình học có cấu trúc** — Chủ đề và bài học theo thứ tự, có trạng thái khóa/mở và theo dõi tiến độ.
-- **Hiệu chuẩn (Calibration)** — Trang hiệu chuẩn 9 điểm giúp tinh chỉnh độ chính xác của theo dõi mắt.
-- **Đa ngôn ngữ** — Hỗ trợ tiếng Việt và tiếng Anh.
-- **Xác thực người dùng** — Đăng nhập, đăng ký, quản lý hồ sơ; tích hợp API backend qua JWT.
+## Table of Contents
 
-## Công nghệ
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Getting Started](#getting-started)
+- [Environment Variables](#environment-variables)
+- [Available Scripts](#available-scripts)
+- [Project Structure](#project-structure)
+- [Application Routes](#application-routes)
+- [Eye Tracking](#eye-tracking)
+- [Backend Integration](#backend-integration)
+- [Deployment](#deployment)
+- [Development Guidelines](#development-guidelines)
+- [Design Reference](#design-reference)
+- [License](#license)
 
-| Thành phần   | Công nghệ                 |
-| ------------ | ------------------------- |
-| Framework    | React 19 + TypeScript     |
-| Build tool   | Vite 8                    |
-| Routing      | React Router 7            |
-| HTTP client  | Axios                     |
-| Icons        | Lucide React              |
-| Eye tracking | MediaPipe Face Mesh (CDN) |
-| Triển khai   | Vercel (SPA)              |
+---
 
-## Yêu cầu hệ thống
+## Features
 
-- **Node.js** 18 trở lên
-- **npm** (hoặc pnpm/yarn)
-- **Webcam** — Cần thiết khi sử dụng tính năng điều khiển bằng mắt
-- **Trình duyệt desktop** — Ứng dụng hiện chưa hỗ trợ thiết bị di động
+- **Eye-based navigation** — Uses [MediaPipe Face Mesh](https://developers.google.com/mediapipe/solutions/vision/face_landmarker) to track gaze and drive an on-screen cursor. Toggle quickly with `Ctrl/Cmd + M`.
+- **Visual block programming** — Blockly-powered workspace with a large drop zone and custom lesson blocks, optimized for eye-controlled interaction.
+- **Structured learning path** — Topics and lessons with lock/unlock states, progress tracking, hints, and submission flow.
+- **9-point calibration** — Dedicated calibration flow to improve gaze-tracking accuracy before extended use.
+- **Internationalization** — Full UI support for English and Vietnamese.
+- **Authentication & profiles** — Login, registration, JWT-based sessions with refresh tokens, profile management, and user stats.
+- **Leaderboard** — Global rankings integrated via the backend API.
 
-## Cài đặt và chạy
+---
+
+## Tech Stack
+
+| Layer        | Technology                          |
+| ------------ | ----------------------------------- |
+| UI framework | React 19 + TypeScript               |
+| Build tool   | Vite 8                              |
+| Routing      | React Router 7                      |
+| HTTP client  | Axios (interceptors, token refresh) |
+| Block editor | Blockly 12                          |
+| Icons        | Lucide React                        |
+| Markdown     | react-markdown                      |
+| Eye tracking | MediaPipe Face Mesh (CDN)           |
+| Deployment   | Vercel (SPA)                        |
+
+---
+
+## Prerequisites
+
+- **Node.js** 18 or later
+- **npm** (or pnpm / yarn)
+- **Webcam** — required for eye-tracking features
+- **Desktop browser** — mobile devices are intentionally blocked (`MobileUnsupported`)
+
+---
+
+## Getting Started
 
 ```bash
-# Clone repository
+# Clone the repository
 git clone <repository-url>
-cd EnableCode
+cd EnableCode/EnableCode_FE
 
-# Cài dependencies
+# Install dependencies
 npm install
 
-# Chạy development server
+# Start the development server
 npm run dev
 ```
 
-Mở trình duyệt tại địa chỉ Vite hiển thị (mặc định `http://localhost:5173`).
+Open the URL printed by Vite in your terminal (default: `http://localhost:5173`).
 
-### Biến môi trường
+To run against a local backend, start the API server first (default: `http://localhost:5000/api`), then launch the frontend.
 
-Tạo file `.env` ở thư mục gốc nếu cần kết nối backend:
+---
+
+## Environment Variables
+
+Create a `.env` file in the project root when you need to point at a non-default API:
 
 ```env
 VITE_API_URL=http://localhost:5000/api
 ```
 
-Nếu không cấu hình, ứng dụng mặc định gọi API tại `http://localhost:5000/api`.
+If `VITE_API_URL` is not set, the app falls back to `http://localhost:5000/api`.
 
-## Scripts
+> Vite only exposes variables prefixed with `VITE_`. Restart the dev server after changing `.env`.
 
-| Lệnh              | Mô tả                                   |
-| ----------------- | --------------------------------------- |
-| `npm run dev`     | Khởi chạy dev server với HMR            |
-| `npm run build`   | Kiểm tra TypeScript và build production |
-| `npm run preview` | Xem trước bản build production          |
-| `npm run lint`    | Chạy ESLint                             |
+---
 
-## Cấu trúc thư mục
+## Available Scripts
+
+| Command           | Description                                               |
+| ----------------- | --------------------------------------------------------- |
+| `npm run dev`     | Start the Vite dev server with HMR                        |
+| `npm run build`   | Type-check with TypeScript and produce a production build |
+| `npm run preview` | Serve the production build locally                        |
+| `npm run lint`    | Run ESLint across the project                             |
+
+---
+
+## Project Structure
 
 ```
 src/
-├── api/            # Client gọi REST API (auth, lesson, profile)
-├── components/     # UI dùng chung (Mouse, sidebar, toggle, ...)
-├── context/        # React Context (Auth, EyeTracking)
-├── hooks/          # Custom hooks (useIsMobile, ...)
-├── i18n/           # Đa ngôn ngữ (vi, en) và curriculum
-├── lib/            # Logic nghiệp vụ (curriculum, progress, ...)
-├── pages/          # Các trang ứng dụng
-├── styles/         # CSS variables, base, components
-├── types/          # TypeScript types
-└── utils/          # Tiện ích (lesson mapper, ...)
-public/
-├── logo/           # Logo sáng/tối
-└── images/         # Tài nguyên tĩnh
+├── api/              # REST clients (auth, lessons, topics, profile, progress, leaderboard)
+├── blockly/          # Blockly blocks, toolbox, theme, workspace evaluation
+├── components/       # Shared UI (Mouse cursor, BlocklyEditor, sidebar, toggles, …)
+├── context/          # React context providers (Auth, EyeTracking)
+├── hooks/            # Custom hooks (e.g. useIsMobile)
+├── i18n/             # Locale messages (en, vi) and I18n provider
+├── lib/              # Domain helpers (progress, curriculum, avatar, types)
+├── pages/            # Route-level page components
+├── styles/           # Global CSS, component styles, Blockly overrides
+└── utils/            # Mappers and small utilities
+
+public/               # Static assets (favicon, icons)
 ```
 
-## Các trang
+---
 
-| Đường dẫn              | Mô tả                                                   |
-| ---------------------- | ------------------------------------------------------- |
-| `/`                    | Trang chủ — giới thiệu, bật điều khiển mắt, CTA bắt đầu |
-| `/login`               | Đăng nhập (email/mật khẩu hoặc quét mắt)                |
-| `/register`            | Đăng ký tài khoản                                       |
-| `/lessons`             | Danh sách chủ đề                                        |
-| `/lessons/:topicId`    | Danh sách bài học theo chủ đề                           |
-| `/workspace/:lessonId` | Không gian lập trình (mục tiêu + khối lệnh)             |
-| `/settings`            | Hồ sơ và cài đặt theo dõi mắt                           |
-| `/calibration`         | Hiệu chuẩn theo dõi mắt 9 điểm                          |
+## Application Routes
 
-## Điều khiển bằng mắt
+| Path                   | Page        | Description                                                 |
+| ---------------------- | ----------- | ----------------------------------------------------------- |
+| `/`                    | Home        | Product overview, eye-control toggle, call-to-action        |
+| `/login`               | Login       | Email/password sign-in                                      |
+| `/register`            | Register    | Account creation                                            |
+| `/lessons`             | Topics      | Browse learning topics                                      |
+| `/lessons/:topicId`    | Lessons     | Lessons within a topic                                      |
+| `/workspace/:lessonId` | Workspace   | Block editor, objectives, and output panel                  |
+| `/settings`            | Profile     | User profile, stats, language, and eye-tracking preferences |
+| `/calibration`         | Calibration | 9-point gaze calibration                                    |
 
-1. Bật tính năng từ trang chủ hoặc dùng phím tắt `Ctrl/Cmd + M`.
-2. Cho phép trình duyệt truy cập webcam khi được hỏi.
-3. (Khuyến nghị) Chạy hiệu chuẩn tại `/calibration` trước khi sử dụng lâu dài.
-4. Con trỏ ảo sẽ theo ánh nhìn; các hành động click/drag được xử lý qua nhận diện khuôn mặt.
+Protected flows rely on JWT access tokens stored in `localStorage`, with automatic refresh via HTTP-only cookies.
 
-Trạng thái bật/tắt được lưu trong `localStorage` (`enablecode.eyeTrackingEnabled`).
+---
 
-## Backend API
+## Eye Tracking
 
-Frontend kỳ vọng một REST API backend cung cấp các endpoint:
+1. Enable tracking from the home page or press `Ctrl/Cmd + M`.
+2. Grant webcam permission when prompted.
+3. Run calibration at `/calibration` before long sessions for better accuracy.
+4. A virtual cursor follows your gaze; click and drag actions are derived from face landmarks.
 
-- `POST /auth/login`, `/auth/register`, `/auth/refresh-token`
-- `GET` topics, lessons, lesson details
-- Profile và calibration settings
+The enabled/disabled state persists in `localStorage` under the key `enablecode.eyeTrackingEnabled`.
 
-Chi tiết xem trong `src/api/`.
+---
 
-## Triển khai
+## Backend Integration
 
-Dự án cấu hình sẵn cho [Vercel](https://vercel.com) với SPA fallback (`vercel.json`). Build command:
+The frontend expects a REST API compatible with the clients in `src/api/`. Key endpoint groups:
+
+| Area          | Endpoints                                                                                   |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| Auth          | `POST /auth/login`, `/auth/register`, `/auth/refresh-token`, `/auth/logout`, password reset |
+| Topics        | `GET /topics`, `GET /topics/:id/lessons`                                                    |
+| Lessons       | `GET /lessons`, `GET /lessons/:id`, progress, submit, hints, solution                       |
+| Users         | `GET/PUT/DELETE /users/profile`, `GET /users/stats`, calibration settings                   |
+| Progress      | `GET /progress`, `GET /progress/:lessonId`                                                  |
+| Leaderboard   | `GET /leaderboard`                                                                          |
+| Custom blocks | `GET/POST/PUT /custom-blocks`                                                               |
+
+Requests use `withCredentials: true` for refresh-token cookies. See `src/api/axiosClient.ts` for interceptor behavior (401 handling, token refresh, session expiry events).
+
+---
+
+## Deployment
+
+The project is configured for [Vercel](https://vercel.com) as a single-page application. `vercel.json` rewrites all routes to `index.html`.
 
 ```bash
 npm run build
 ```
 
-Output nằm trong thư mục `dist/`.
+Build output is written to `dist/`. Set `VITE_API_URL` in your hosting provider to the production API base URL before building.
 
-## Quy ước phát triển
+---
 
-- **Logo**: `/logo/TL_App_Logo.png` trên nền sáng, `/logo/TD_App_Logo.png` trên nền tối.
-- **Commit**: Tuân theo [Conventional Commits](https://www.conventionalcommits.org/) (commitlint + husky).
-- **Format**: Prettier và ESLint chạy qua lint-staged trước mỗi commit.
+## Development Guidelines
 
-## Thiết kế UI
+- **Commits** — Follow [Conventional Commits](https://www.conventionalcommits.org/); enforced via Husky and Commitlint.
+- **Formatting** — Prettier and ESLint run on staged files through lint-staged before each commit.
+- **Branding** — Use `/logo/TL_App_Logo.png` on light backgrounds and `/logo/TD_App_Logo.png` on dark backgrounds.
+- **Scope** — Keep API changes in sync with the backend (`EnableCode_BE`). Types live in `src/lib/types.ts`.
 
-Giao diện được triển khai theo thiết kế Figma Make:
+---
+
+## Design Reference
+
+UI implementation follows the Enable Code Figma design:
 
 [Figma — Enable Code UI/UX Design](https://www.figma.com/make/RlxTkeDp7lExAGRl7ocRjg/Enable-Code-%7C-UI-UX-Dessign)
 
-## Giấy phép
+---
 
-Dự án private — liên hệ chủ sở hữu repository để biết điều khoản sử dụng.
+## License
+
+Private project — contact the repository owner for usage terms.

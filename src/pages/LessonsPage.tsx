@@ -83,7 +83,9 @@ export default function LessonsPage() {
         <CourseSidebar active="lessons" />
         <main className="lessons-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Loader2 size={40} className="animate-spin text-orange-500 mr-3" />
-          <p style={{ color: '#666', fontSize: '1.2rem', fontWeight: 500 }}>Loading lessons...</p>
+          <p style={{ color: '#666', fontSize: '1.2rem', fontWeight: 500 }}>
+            {t('course.loadingLessons') || 'Loading lessons...'}
+          </p>
         </main>
       </div>
     );

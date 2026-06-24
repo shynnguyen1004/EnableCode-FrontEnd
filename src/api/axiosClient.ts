@@ -5,9 +5,7 @@ interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
 }
 
-// Lấy URL gốc và XỬ LÝ TRIỆT ĐỂ: Tự động loại bỏ dấu "/" ở cuối nếu có
-const rawBaseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/';
-const baseURL = rawBaseURL.replace(/\/$/, '');
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const axiosClient = axios.create({
   baseURL,

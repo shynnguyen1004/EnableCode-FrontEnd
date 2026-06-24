@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Eye, MousePointerSquareDashed, BookOpenCheck, ArrowRight, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import FaceControlToggle from '../components/FaceControlToggle';
@@ -12,6 +12,8 @@ export default function HomePage() {
   const { isLoggedIn, logout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  const navigate = useNavigate();
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
@@ -21,6 +23,7 @@ export default function HomePage() {
     } finally {
       setIsLoggingOut(false);
       logout();
+      navigate('/');
     }
   };
 
@@ -96,7 +99,7 @@ export default function HomePage() {
 
         <div className="hero-actions">
           <FaceControlToggle />
-          <Link to={isLoggedIn ? '/lessons' : '/login'} className="btn btn-primary hero-cta group">
+          <Link to={isLoggedIn ? '/calibration' : '/login'} className="btn btn-primary hero-cta group">
             {t('home.getStarted')}
             <ArrowRight size={32} className="hero-arrow" strokeWidth={3} style={{ marginLeft: '12px' }} />
           </Link>
