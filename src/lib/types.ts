@@ -116,6 +116,34 @@ export interface Calibration {
   updatedAt?: string;
 }
 
+export interface UpdateCalibrationRequest {
+  bounds?: CalibrationBounds;
+  preferences?: CalibrationPreferences;
+}
+
+interface FaceLandmark {
+  x: number;
+  y: number;
+  z?: number;
+}
+
+export interface FaceMeshResults {
+  image: CanvasImageSource;
+  multiFaceLandmarks?: FaceLandmark[][];
+}
+
+export interface FaceMeshType {
+  close: () => void;
+  send: (config: { image: HTMLVideoElement }) => Promise<void>;
+  setOptions: (options: Record<string, unknown>) => void;
+  onResults: (callback: (results: FaceMeshResults) => void) => void;
+}
+
+export interface CameraType {
+  start: () => Promise<void>;
+  stop: () => void;
+}
+
 // ========================================
 // EXTENSIONS & GAMIFICATION
 // ========================================
