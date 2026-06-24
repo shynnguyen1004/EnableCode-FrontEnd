@@ -71,7 +71,8 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
     if (!hostRef.current) return;
 
     registerEnableCodeBlocks();
-
+    Blockly.config.snapRadius = 48;
+    Blockly.config.connectingSnapRadius = 96;
     const workspace = Blockly.inject(hostRef.current, {
       toolbox: buildToolbox(toolboxConfig) as Blockly.utils.toolbox.ToolboxDefinition,
       theme: enableCodeTheme,
