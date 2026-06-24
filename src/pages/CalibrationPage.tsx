@@ -1,31 +1,32 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, ArrowLeft, CheckCircle, RefreshCw, Target, Crosshair, ArrowRight, CircleX } from 'lucide-react';
+import { Eye, ArrowLeft, CheckCircle, Target, RefreshCw, Crosshair, ArrowRight, CircleX } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
 import { useEyeTracking } from '../context/EyeTrackingContext';
-import { profileApi } from '../api/profileApi';
+import { calibrationApi } from '../api/calibrationApi';
 import PageScale from '../components/PageScale';
+import type { FaceMeshResults, FaceMeshType, CameraType } from '../lib/types';
 
-// Midpoints of the four screen edges: top → right → bottom → left
+declare global {
+  interface Window {
+    FaceMesh: new (config: { locateFile: (file: string) => string }) => FaceMeshType;
+    Camera: new (
+      video: HTMLVideoElement,
+      options: { onFrame: () => Promise<void>; width: number; height: number },
+    ) => CameraType;
+  }
+}
+
 const CAL_POINTS = [
-  { x: 50, y: 0 },
-  { x: 100, y: 50 },
-  { x: 50, y: 100 },
-  { x: 0, y: 50 },
+  { x: 50, y: 50, isMouth: true },
+  { x: 50, y: 0, isMouth: false },
+  { x: 100, y: 50, isMouth: false },
+  { x: 50, y: 100, isMouth: false },
+  { x: 0, y: 50, isMouth: false },
 ];
 
-const CAL_HOLD_KEYS = [
-  'calibration.holdTop',
-  'calibration.holdRight',
-  'calibration.holdBottom',
-  'calibration.holdLeft',
-] as const;
-
-const RING_RADIUS = 36;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-
-type Step = 'intro' | 'calibrating' | 'success';
+type Step = 'intro' | 'countdown' | 'calibrating' | 'success';
 
 export default function CalibrationPage() {
   const { t } = useI18n();
@@ -37,88 +38,331 @@ export default function CalibrationPage() {
   const [dwellProgress, setDwellProgress] = useState(0);
   const [completedPoints, setCompletedPoints] = useState<number[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [introCountdown, setIntroCountdown] = useState(3);
 
-  const startCalibration = () => {
-    setEyeTrackingEnabled(true);
-    setStep('calibrating');
-    setPointIndex(0);
-    setDwellProgress(0);
-    setCompletedPoints([]);
-    setIsCapturing(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const faceMeshRef = useRef<FaceMeshType | null>(null);
+  const cameraRef = useRef<CameraType | null>(null);
+
+  const stepRef = useRef(step);
+  useEffect(() => {
+    stepRef.current = step;
+  }, [step]);
+
+  const pointIndexRef = useRef(pointIndex);
+  useEffect(() => {
+    pointIndexRef.current = pointIndex;
+  }, [pointIndex]);
+
+  const latestRawRef = useRef({ x: 0.5, y: 0.5 });
+  const mouthGapRawRef = useRef(0);
+
+  const boundsRef = useRef({ leftX: 0, rightX: 1, topY: 0, bottomY: 1, mouthThreshold: 0.05 });
+
+  const getSafeTranslation = (key: string, fallbackText: string): string => {
+    if (!key) return fallbackText;
+    try {
+      const val = t(key);
+      if (!val || val === key || val.includes(key)) return fallbackText;
+      return val;
+    } catch {
+      return fallbackText;
+    }
+  };
+
+  const getInstructionText = (): string => {
+    if (completedPoints.includes(pointIndex)) return getSafeTranslation('calibration.captured', 'Đã ghi nhận vị trí!');
+    const edgeKeys = [
+      'calibration.holdMouth',
+      'calibration.holdTop',
+      'calibration.holdRight',
+      'calibration.holdBottom',
+      'calibration.holdLeft',
+    ];
+    const defaultTexts = [
+      'Há miệng nhẹ để xác nhận vị trí',
+      'Hướng đầu về mép trên màn hình',
+      'Hướng đầu về mép phải màn hình',
+      'Hướng đầu về mép dưới màn hình',
+      'Hướng đầu về mép trái màn hình',
+    ];
+    return getSafeTranslation(edgeKeys[pointIndex], defaultTexts[pointIndex]);
+  };
+
+  useEffect(() => {
+    const shouldHideMouse = step === 'countdown' || step === 'calibrating';
+    if (shouldHideMouse) document.body.classList.add('hide-global-mouse-tracking');
+    else document.body.classList.remove('hide-global-mouse-tracking');
+    return () => document.body.classList.remove('hide-global-mouse-tracking');
+  }, [step]);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (stepRef.current === 'countdown' || stepRef.current === 'calibrating') {
+        e.stopPropagation();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown, true);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown, true);
+  }, []);
+
+  const stopCamera = useCallback(() => {
+    if (cameraRef.current) {
+      try {
+        cameraRef.current.stop();
+      } catch (e) {
+        console.error('[AI-Tracker-Log] Error closing camera instance:', e);
+      }
+      cameraRef.current = null;
+    }
+    if (faceMeshRef.current) {
+      const instance = faceMeshRef.current;
+      faceMeshRef.current = null;
+      try {
+        instance.close();
+      } catch {
+        console.error('[AI-Tracker-Log] Error closing FaceMesh instance');
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => stopCamera();
+  }, [stopCamera]);
+
+  const startCalibration = async () => {
+    try {
+      const { FaceMesh, Camera } = window;
+      if (!FaceMesh || !Camera) {
+        alert('Chưa tải xong thư viện AI. Vui lòng đợi vài giây và thử lại.');
+        return;
+      }
+
+      const videoElement = videoRef.current;
+      if (!videoElement) {
+        console.error('[AI-Tracker-Log] Error: Video element not found.');
+        return;
+      }
+
+      const faceMesh = new FaceMesh({
+        locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+      });
+      faceMesh.setOptions({
+        maxNumFaces: 1,
+        refineLandmarks: true,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5,
+      });
+
+      faceMesh.onResults((results: FaceMeshResults) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        canvas.width = 640;
+        canvas.height = 480;
+
+        ctx.save();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Flip the image from camera horizontally for a mirror effect
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+
+        if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+          const landmarks = results.multiFaceLandmarks[0];
+          const noseTip = landmarks[1];
+          const topLip = landmarks[13];
+          const bottomLip = landmarks[14];
+
+          // Update calibration points from camera into Ref
+          latestRawRef.current = { x: noseTip.x, y: noseTip.y };
+          mouthGapRawRef.current = Math.sqrt(Math.pow(topLip.x - bottomLip.x, 2) + Math.pow(topLip.y - bottomLip.y, 2));
+
+          if (stepRef.current === 'calibrating') {
+            const pi = pointIndexRef.current;
+            if (pi === 0) {
+              ctx.fillStyle = '#2dd4bf'; // lip landmarks
+              [topLip, bottomLip].forEach(pt => {
+                ctx.beginPath();
+                ctx.arc(pt.x * canvas.width, pt.y * canvas.height, 6, 0, 2 * Math.PI);
+                ctx.fill();
+              });
+            } else {
+              ctx.fillStyle = '#ff7700'; // nose landmark
+              ctx.beginPath();
+              ctx.arc(noseTip.x * canvas.width, noseTip.y * canvas.height, 8, 0, 2 * Math.PI);
+              ctx.fill();
+            }
+          }
+        }
+        ctx.restore();
+      });
+
+      const cameraInstance = new Camera(videoElement, {
+        onFrame: async () => {
+          if (videoElement.readyState >= 2 && faceMeshRef.current === faceMesh) {
+            try {
+              await faceMesh.send({ image: videoElement });
+            } catch {
+              console.warn(
+                '[AI-Tracker-Log] Warning: FaceMesh send() failed. Possibly due to camera not ready or frame skipped.',
+              );
+            }
+          }
+        },
+        width: 640,
+        height: 480,
+      });
+
+      await cameraInstance.start();
+
+      faceMeshRef.current = faceMesh;
+      cameraRef.current = cameraInstance;
+
+      setEyeTrackingEnabled(true);
+      setIntroCountdown(3);
+      setStep('countdown');
+    } catch (err) {
+      console.error('[AI-Tracker-Log] Failed to open Camera:', err);
+      alert('Ứng dụng cần quyền truy cập Camera để có thể tiếp tục nhận diện khuôn mặt!');
+    }
   };
 
   const saveCalibration = useCallback(async () => {
-    if (!isLoggedIn) return;
+    const finalData = {
+      bounds: boundsRef.current,
+      preferences: {},
+    };
 
+    if (!isLoggedIn) {
+      return;
+    }
     try {
-      await profileApi.updateCalibration({
-        bounds: { leftX: 0.1, rightX: 0.9, topY: 0.1, bottomY: 0.9 },
-      });
-    } catch {
-      // UI flow continues even if API save fails during development
+      await calibrationApi.updateCalibration(finalData);
+      console.log('[AI-Tracker-Log] Successfully update to database.');
+    } catch (err) {
+      console.error('[AI-Tracker-Log] Error connecting to API Server:', err);
     }
   }, [isLoggedIn]);
 
+  const cancelCalibration = () => {
+    stopCamera();
+    setStep('intro');
+  };
+
+  // Countdown number before starting calibration
+  useEffect(() => {
+    if (step !== 'countdown') return;
+    const timer = window.setInterval(() => {
+      setIntroCountdown(prev => {
+        if (prev <= 1) {
+          window.clearInterval(timer);
+          setStep('calibrating');
+          setPointIndex(0);
+          setDwellProgress(0);
+          setCompletedPoints([]);
+          setIsCapturing(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [step]);
+
+  // Loading circle
   useEffect(() => {
     if (step !== 'calibrating' || isCapturing) return;
 
-    const interval = window.setInterval(() => {
-      setDwellProgress(prev => {
-        if (prev >= 100) return prev;
-        return Math.min(prev + 2.5, 100);
-      });
-    }, 40);
+    let startTime: number | null = null;
+    let animationFrameId: number;
+    const duration = 2000;
 
-    return () => window.clearInterval(interval);
-  }, [step, pointIndex, isCapturing]);
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min((elapsed / duration) * 100, 100);
+      setDwellProgress(progress);
 
-  useEffect(() => {
-    if (dwellProgress < 100 || step !== 'calibrating' || isCapturing) return;
+      if (progress < 100) {
+        animationFrameId = requestAnimationFrame(animate);
+      } else {
+        setIsCapturing(true);
 
-    let advanceTimeout: number | undefined;
+        const currentX = latestRawRef.current.x;
+        const currentY = latestRawRef.current.y;
+        const currentMouth = mouthGapRawRef.current;
 
-    const captureTimeout = window.setTimeout(() => {
-      setIsCapturing(true);
-
-      advanceTimeout = window.setTimeout(() => {
-        setCompletedPoints(prev => [...prev, pointIndex]);
-
-        if (pointIndex < CAL_POINTS.length - 1) {
-          setPointIndex(pi => pi + 1);
-          setDwellProgress(0);
-          setIsCapturing(false);
-        } else {
-          window.setTimeout(() => {
-            void saveCalibration();
-            setStep('success');
-          }, 400);
+        if (pointIndex === 0) {
+          boundsRef.current.mouthThreshold = currentMouth * 0.8;
         }
-      }, 500);
-    }, 0);
+        if (pointIndex === 1) {
+          boundsRef.current.topY = currentY;
+        }
+        if (pointIndex === 2) {
+          boundsRef.current.rightX = currentX;
+        }
+        if (pointIndex === 3) {
+          boundsRef.current.bottomY = currentY;
+        }
+        if (pointIndex === 4) {
+          boundsRef.current.leftX = currentX;
+        }
 
-    return () => {
-      window.clearTimeout(captureTimeout);
-      if (advanceTimeout !== undefined) {
-        window.clearTimeout(advanceTimeout);
+        window.setTimeout(() => {
+          setCompletedPoints(prev => {
+            const nextList = !prev.includes(pointIndex) ? [...prev, pointIndex] : prev;
+            return nextList;
+          });
+
+          if (pointIndex < CAL_POINTS.length - 1) {
+            const nextIdx = pointIndex + 1;
+            setPointIndex(nextIdx);
+            setDwellProgress(0);
+            setIsCapturing(false);
+          } else {
+            window.setTimeout(() => {
+              void saveCalibration();
+              stopCamera();
+              setStep('success');
+            }, 1000);
+          }
+        }, 500);
       }
     };
-  }, [dwellProgress, step, pointIndex, isCapturing, saveCalibration]);
 
-  const currentPoint = CAL_POINTS[pointIndex];
+    animationFrameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [step, pointIndex, isCapturing, saveCalibration, stopCamera]);
+
   const captured = completedPoints.includes(pointIndex);
 
   return (
     <PageScale scale={0.75} className="calibration-page">
+      <style>{`
+        .hide-global-mouse-tracking [class*="mouse"],
+        .hide-global-mouse-tracking [id*="mouse"],
+        .hide-global-mouse-tracking .mouse-pointer,
+        .hide-global-mouse-tracking div[style*="position: fixed"] {
+          pointer-events: none !important; display: none !important; opacity: 0 !important; visibility: hidden !important;
+        }
+      `}</style>
+
+      {/* ĐẶT THỂ VIDEO TOÀN CỤC Ở ĐÂY ĐỂ TRÁNH BỊ UNMOUNT KHI CHUYỂN STEP */}
+      <video ref={videoRef} autoPlay playsInline muted style={{ display: 'none' }} />
+
+      {/* STEP 1: INTRO */}
       {step === 'intro' && (
         <>
           <header className="login-header container">
             <Link to="/settings" className="login-back group">
               <ArrowLeft size={28} strokeWidth={3} className="nav-icon" />
-              <span>{t('nav.back')}</span>
-            </Link>
-
-            <Link to="/" className="login-logo-link" aria-label={t('brand.homeAria')}>
-              <img src="/logo/TD_App_Logo.png" alt={t('brand.logoDarkAlt')} className="login-logo" />
+              <span>{getSafeTranslation('nav.back', 'Quay lại')}</span>
             </Link>
           </header>
 
@@ -175,6 +419,46 @@ export default function CalibrationPage() {
         </>
       )}
 
+      {/* STEP 2: COUNTDOWN */}
+      {step === 'countdown' && (
+        <div
+          className="calibration-active"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '80vh',
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              width: '60vmin',
+              height: '60vmin',
+              borderRadius: '50%',
+              overflow: 'hidden',
+              border: '6px solid #ff7700',
+            }}
+          >
+            <canvas ref={canvasRef} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: 'rgba(0,0,0,0.5)',
+              }}
+            >
+              <span style={{ fontSize: '10rem', fontWeight: '900', color: '#fff' }}>{introCountdown}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* STEP 3: CALIBRATING */}
       {step === 'calibrating' && (
         <div className="calibration-active">
           <div className="calibration-active-top">
@@ -187,71 +471,107 @@ export default function CalibrationPage() {
                 style={{ width: `${(completedPoints.length / CAL_POINTS.length) * 100}%` }}
               />
             </div>
-            <button type="button" className="calibration-cancel-btn" onClick={() => setStep('intro')}>
-              {t('calibration.cancel')}
+            <button type="button" className="calibration-cancel-btn" onClick={cancelCalibration}>
+              Hủy
             </button>
           </div>
 
-          <p className="calibration-instruction">
-            {captured ? t('calibration.captured') : t(CAL_HOLD_KEYS[pointIndex])}
+          <p className="calibration-instruction" style={{ color: '#e65c00', fontWeight: 'bold', fontSize: '1.5rem' }}>
+            {getInstructionText()}
           </p>
 
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 10,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              width: '60vmin',
+              height: '60vmin',
+            }}
+          >
+            <svg
+              viewBox="0 0 100 100"
+              style={{ position: 'absolute', width: '108%', height: '108%', pointerEvents: 'none', zIndex: 11 }}
+            >
+              <circle
+                cx="50"
+                cy="50"
+                r="46"
+                fill="none"
+                stroke="#ff7700"
+                strokeWidth="2"
+                strokeDasharray={2 * Math.PI * 46}
+                strokeDashoffset={2 * Math.PI * 46 * (1 - dwellProgress / 100)}
+                strokeLinecap="round"
+                transform="rotate(-90 50 50)"
+                style={{ transition: 'none' }}
+              />
+            </svg>
+
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                borderRadius: '50%',
+                overflow: 'hidden',
+                border: '4px solid #2d3748',
+                backgroundColor: '#1a202c',
+              }}
+            >
+              <canvas ref={canvasRef} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          </div>
+
           {CAL_POINTS.map((point, index) => {
-            if (!completedPoints.includes(index)) return null;
+            if (point.isMouth) return null;
 
-            return (
-              <div
-                key={`done-${index}`}
-                className="calibration-point calibration-point--done"
-                style={{ left: `${point.x}%`, top: `${point.y}%` }}>
-                <div className="calibration-point-done-dot">
-                  <CheckCircle size={16} strokeWidth={3} />
+            if (completedPoints.includes(index)) {
+              return (
+                <div
+                  key={`done-${index}`}
+                  className="calibration-point calibration-point--done"
+                  style={{ left: `${point.x}%`, top: `${point.y}%`, transform: 'translate(-50%, -50%)' }}
+                >
+                  <div className="calibration-point-done-dot">
+                    <CheckCircle size={20} strokeWidth={3} />
+                  </div>
                 </div>
-              </div>
-            );
+              );
+            }
+
+            if (!captured && index === pointIndex) {
+              return (
+                <div
+                  key={`active-${index}`}
+                  className="calibration-point calibration-point--active"
+                  style={{ left: `${point.x}%`, top: `${point.y}%`, transform: 'translate(-50%, -50%)' }}
+                >
+                  <div className="calibration-point-pulse" style={{ backgroundColor: 'rgba(255, 119, 0, 0.3)' }} />
+                  <div
+                    className="calibration-point-core"
+                    style={{ backgroundColor: '#ff7700', width: '24px', height: '24px' }}
+                  />
+                </div>
+              );
+            }
+
+            return null;
           })}
-
-          {!captured && (
-            <div
-              className="calibration-point calibration-point--active"
-              style={{ left: `${currentPoint.x}%`, top: `${currentPoint.y}%` }}>
-              <div className="calibration-point-pulse" />
-              <svg width="88" height="88" className="calibration-point-ring" viewBox="0 0 88 88">
-                <circle
-                  cx="44"
-                  cy="44"
-                  r={RING_RADIUS}
-                  fill="none"
-                  stroke="#ff7700"
-                  strokeWidth="8"
-                  strokeDasharray={RING_CIRCUMFERENCE}
-                  strokeDashoffset={RING_CIRCUMFERENCE * (1 - dwellProgress / 100)}
-                  strokeLinecap="round"
-                  transform="rotate(-90 44 44)"
-                />
-              </svg>
-              <div className="calibration-point-core" />
-            </div>
-          )}
-
-          {captured && (
-            <div
-              className="calibration-point calibration-point--flash"
-              style={{ left: `${currentPoint.x}%`, top: `${currentPoint.y}%` }}>
-              <div className="calibration-point-flash-dot">
-                <CheckCircle size={36} strokeWidth={3} />
-              </div>
-            </div>
-          )}
         </div>
       )}
 
+      {/* STEP 4: SUCCESS */}
       {step === 'success' && (
         <>
           <header className="login-header container calibration-success-header">
             <div className="calibration-header-spacer" />
-            <Link to="/" className="login-logo-link" aria-label={t('brand.homeAria')}>
-              <img src="/logo/TD_App_Logo.png" alt={t('brand.logoDarkAlt')} className="login-logo" />
+            <Link to="/" className="login-logo-link">
+              <img src="/logo/TD_App_Logo.png" alt="Logo" className="login-logo" />
             </Link>
           </header>
 
@@ -260,36 +580,23 @@ export default function CalibrationPage() {
               <div className="calibration-success-icon">
                 <CheckCircle size={96} strokeWidth={2} />
               </div>
-
               <div className="calibration-intro">
-                <h1>{t('calibration.completeTitle')}</h1>
-                <p>{t('calibration.completeBody')}</p>
-              </div>
-
-              <div className="calibration-stats">
-                <div>
-                  <span>{t('calibration.accuracyLabel')}</span>
-                  <strong className="calibration-stat-green">98%</strong>
-                </div>
-                <div>
-                  <span>{t('calibration.pointsLabel')}</span>
-                  <strong className="calibration-stat-orange">
-                    {CAL_POINTS.length}/{CAL_POINTS.length}
-                  </strong>
-                </div>
-                <div>
-                  <span>{t('calibration.qualityLabel')}</span>
-                  <strong>{t('calibration.qualityValue')}</strong>
-                </div>
+                <h1>{getSafeTranslation('calibration.completeTitle', 'Cân chỉnh thành công!')}</h1>
+                <p>
+                  {getSafeTranslation(
+                    'calibration.completeBody',
+                    'Hệ thống đã đồng bộ hóa chính xác ánh mắt và các landmark cơ mặt của bạn.',
+                  )}
+                </p>
               </div>
 
               <div className="calibration-actions">
                 <button type="button" className="calibration-secondary-btn group" onClick={startCalibration}>
                   <RefreshCw size={28} strokeWidth={3} className="btn-icon calibration-refresh-icon" />
-                  {t('calibration.recalibrate')}
+                  {getSafeTranslation('calibration.recalibrate', 'Cân chỉnh lại')}
                 </button>
                 <Link to="/lessons" className="calibration-primary-btn group calibration-primary-btn--compact">
-                  {t('calibration.startCoding')}
+                  {getSafeTranslation('calibration.startCoding', 'Bắt đầu học')}
                   <ArrowRight size={28} strokeWidth={3} className="btn-icon" />
                 </Link>
               </div>
