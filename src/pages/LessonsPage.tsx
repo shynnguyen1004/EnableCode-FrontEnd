@@ -119,7 +119,7 @@ export default function LessonsPage() {
       <main className="lessons-content">
         <header className="lessons-header">
           <Link to="/lessons" className="lessons-back-link">
-            <ArrowLeft size={24} strokeWidth={3} />
+            <ArrowLeft size={50} strokeWidth={3} />
             {t('nav.allTopics')}
           </Link>
           <h1>{localizedTopic.title}</h1>
