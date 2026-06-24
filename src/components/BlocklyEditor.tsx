@@ -72,6 +72,11 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
 
     registerEnableCodeBlocks();
 
+    // Tăng bán kính hút vào lưới (Mặc định là 12)
+    Blockly.config.snapRadius = 24; // không hiệu quả lắm
+    // Tăng bán kính hút dính giữa hai khối với nhau (Mặc định là 28)
+    Blockly.config.connectingSnapRadius = 90; // không hiệu quả lắm
+
     const workspace = Blockly.inject(hostRef.current, {
       toolbox: buildToolbox(toolboxConfig) as Blockly.utils.toolbox.ToolboxDefinition,
       theme: enableCodeTheme,
@@ -79,7 +84,7 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
       toolboxPosition: 'end',
       horizontalLayout: false,
       grid: {
-        spacing: 28,
+        spacing: 20,
         length: 3,
         colour: 'rgba(255, 249, 220, 0.18)',
         snap: true,
@@ -114,7 +119,7 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
           const svgRoot = block?.getSvgRoot();
 
           if (svgRoot) {
-            svgRoot.setAttribute('id', 'draggable');
+            svgRoot.setAttribute('draggable', 'true');
           }
         });
       }
@@ -149,7 +154,7 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
       workspace.dispose();
       workspaceRef.current = null;
     };
-  }, []);
+  }, [toolboxConfig, toolboxTitle]);
   useEffect(() => {
     if (workspaceRef.current && toolboxConfig) {
       const newToolbox = buildToolbox(toolboxConfig);
@@ -183,7 +188,7 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
       startBlock.render();
       startBlock.moveBy(56, 56);
     }
-  }, [lessonKey]);
+  }, [lessonKey, initialBlocks, savedWorkspaceState]);
   return <div ref={hostRef} className="blockly-editor-host" aria-label="Blockly workspace" />;
 });
 

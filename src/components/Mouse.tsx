@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useI18n } from '../i18n/I18nProvider';
+import type { FaceMeshResults, CameraType, FaceMeshType } from '../lib/types';
 
 type ActionKind =
   | 'moving'
@@ -22,46 +23,13 @@ const ACTION_LABEL_KEYS: Record<ActionKind, string> = {
   scrollDownPanel: 'faceControl.scrollDownPanel',
 };
 
-// Định nghĩa các interface tường minh để dập tắt hoàn toàn lỗi ESLint "no-explicit-any"
-interface NormalizedLandmark {
-  x: number;
-  y: number;
-  z?: number;
-}
-
-interface FaceMeshResults {
-  multiFaceLandmarks?: NormalizedLandmark[][];
-  image: HTMLVideoElement | HTMLCanvasElement;
-}
-
-interface FaceMeshOptions {
-  maxNumFaces?: number;
-  refineLandmarks?: boolean;
-  minDetectionConfidence?: number;
-}
-
-interface CameraOptions {
-  onFrame: () => Promise<void>;
-  width: number;
-  height: number;
-}
-
-interface FaceMeshInstance {
-  setOptions(options: FaceMeshOptions): void;
-  onResults(callback: (results: FaceMeshResults) => void): void;
-  send(input: { image: HTMLVideoElement | HTMLCanvasElement }): Promise<void>;
-  close(): Promise<void>;
-}
-
-interface CameraInstance {
-  start(): Promise<void>;
-  stop(): void;
-}
-
 declare global {
   interface Window {
-    FaceMesh: new (config?: { locateFile: (file: string) => string }) => FaceMeshInstance;
-    Camera: new (video: HTMLVideoElement, options: CameraOptions) => CameraInstance;
+    FaceMesh: new (config: { locateFile: (file: string) => string }) => FaceMeshType;
+    Camera: new (
+      video: HTMLVideoElement,
+      options: { onFrame: () => Promise<void>; width: number; height: number },
+    ) => CameraType;
   }
 }
 
@@ -77,6 +45,7 @@ const Mouse: React.FC = () => {
 
   const actionKindRef = useRef<ActionKind>('moving');
   const isDraggingRef = useRef(false);
+  const draggedElRef = useRef<HTMLElement | SVGElement | null>(null);
 
   const updateAction = (kind: ActionKind) => {
     actionKindRef.current = kind;
@@ -156,18 +125,29 @@ const Mouse: React.FC = () => {
         });
         canvasCtx.restore();
 
-        const SENSITIVITY = { X: 0.3, Y: 0.25 };
+        const SENSITIVITY = { X: 0.4, Y: 0.35 };
         const MOUTH_OPEN_LIMIT = 0.025;
         const MOUTH_CLOSE_LIMIT = 0.018;
         const SCROLL_STEP = 25;
         const VIEWPORT_EDGE_THRESHOLD = 60;
 
         const nose = landmarks[1];
-        smoothedRaw.current.x += (nose.x - smoothedRaw.current.x) * 0.2;
-        smoothedRaw.current.y += (nose.y - smoothedRaw.current.y) * 0.2;
+        smoothedRaw.current.x += (nose.x - smoothedRaw.current.x) * 0.25;
+        smoothedRaw.current.y += (nose.y - smoothedRaw.current.y) * 0.25;
 
-        const tx = ((1 - smoothedRaw.current.x - (0.5 - SENSITIVITY.X / 2)) / SENSITIVITY.X) * window.innerWidth;
-        const ty = ((smoothedRaw.current.y - (0.5 - SENSITIVITY.Y / 2)) / SENSITIVITY.Y) * window.innerHeight;
+        // Hàm chuyển đổi tuyến tính có cân bằng lại trọng tâm (Tâm camera thường bị lệch khi xoay đầu)
+        // Trục X từ Camera MediaPipe bị ngược nên ta dùng (1 - nose.x)
+        let rawX = (1 - smoothedRaw.current.x - 0.5) / SENSITIVITY.X;
+        let rawY = (smoothedRaw.current.y - 0.5) / SENSITIVITY.Y;
+
+        // Áp dụng thuật toán "Deadzone & Power Curve" tinh chỉnh:
+        // Càng ra xa tâm, chuột di chuyển mượt hơn thay vì bị văng mạnh do góc quay mặt
+        rawX = Math.sign(rawX) * Math.pow(Math.abs(rawX), 1.2);
+        rawY = Math.sign(rawY) * Math.pow(Math.abs(rawY), 1.2);
+
+        // Tính toán tọa độ thực tế trên màn hình dựa trên tâm màn hình
+        const tx = (rawX + 0.5) * window.innerWidth;
+        const ty = (rawY + 0.5) * window.innerHeight;
 
         currentPos.current = {
           x: Math.max(0, Math.min(window.innerWidth, tx)),
@@ -220,6 +200,29 @@ const Mouse: React.FC = () => {
           );
         }
 
+        if (isDraggingRef.current && draggedElRef.current) {
+          // Gửi sự kiện di chuyển song song cả MouseEvent và PointerEvent cho toàn hệ thống
+          const mouseMoveEvent = new MouseEvent('mousemove', {
+            bubbles: true,
+            cancelable: true,
+            clientX: currentPos.current.x,
+            clientY: currentPos.current.y,
+            buttons: 1,
+          });
+          document.dispatchEvent(mouseMoveEvent);
+
+          const pointerMoveEvent = new PointerEvent('pointermove', {
+            bubbles: true,
+            cancelable: true,
+            clientX: currentPos.current.x,
+            clientY: currentPos.current.y,
+            buttons: 1,
+            pointerId: 1,
+            isPrimary: true,
+          });
+          document.dispatchEvent(pointerMoveEvent);
+        }
+
         // --- THAO TÁC HÁ MIỆNG / CÀI ĐẶT DRAGGABLE ---
         const mouthGap = Math.abs(landmarks[13].y - landmarks[14].y);
 
@@ -227,26 +230,51 @@ const Mouse: React.FC = () => {
           if (!wasMouthOpenRef.current) {
             wasMouthOpenRef.current = true;
 
-            const isDraggableElement =
-              elAtPoint &&
-              (elAtPoint.getAttribute('draggable') === 'true' ||
-                elAtPoint.id.toLowerCase().includes('drag') ||
-                elAtPoint.closest('[draggable="true"]') ||
-                elAtPoint.closest('[id*="drag"]'));
+            if (elAtPoint && (elAtPoint instanceof HTMLElement || elAtPoint instanceof SVGElement)) {
+              // Tìm kiếm block Blockly (Blockly thường bọc trong các thẻ g có class blocklyDraggable)
+              const targetDraggable =
+                (elAtPoint.closest('.blocklyDraggable') as HTMLElement | SVGElement | null) ||
+                (elAtPoint.hasAttribute('draggable')
+                  ? elAtPoint
+                  : (elAtPoint.closest('[draggable]') as HTMLElement | SVGElement | null));
 
-            if (isDraggableElement) {
-              isDraggingRef.current = true;
-              setIsDragging(true);
-              updateAction('drag');
-              if (elAtPoint) elAtPoint.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true }));
-            } else {
-              updateAction('click');
-              if (elAtPoint && elAtPoint instanceof HTMLElement && typeof elAtPoint.click === 'function') {
-                elAtPoint.click();
+              if (targetDraggable) {
+                draggedElRef.current = targetDraggable;
+                isDraggingRef.current = true;
+                setIsDragging(true);
+                updateAction('drag');
+
+                // 1. Kích hoạt mousedown/pointerdown trên chính block đó để Blockly tạo Gesture
+                const mouseDownEvent = new MouseEvent('mousedown', {
+                  bubbles: true,
+                  cancelable: true,
+                  clientX: currentPos.current.x,
+                  clientY: currentPos.current.y,
+                  buttons: 1,
+                });
+                targetDraggable.dispatchEvent(mouseDownEvent);
+
+                // Hỗ trợ thêm PointerEvent nếu Blockly bản mới sử dụng PointerEvents
+                const pointerDownEvent = new PointerEvent('pointerdown', {
+                  bubbles: true,
+                  cancelable: true,
+                  clientX: currentPos.current.x,
+                  clientY: currentPos.current.y,
+                  buttons: 1,
+                  pointerId: 1,
+                  isPrimary: true,
+                });
+                targetDraggable.dispatchEvent(pointerDownEvent);
+              } else {
+                // Nếu không phải block Blockly thì kích hoạt click như bình thường
+                updateAction('click');
+                if (elAtPoint && elAtPoint instanceof HTMLElement && typeof elAtPoint.click === 'function') {
+                  elAtPoint.click();
+                }
+                setTimeout(() => {
+                  if (!isDraggingRef.current) updateAction('moving');
+                }, 500);
               }
-              setTimeout(() => {
-                if (!isDraggingRef.current) updateAction('moving');
-              }, 500);
             }
           }
         } else if (mouthGap < MOUTH_CLOSE_LIMIT) {
@@ -254,13 +282,30 @@ const Mouse: React.FC = () => {
             wasMouthOpenRef.current = false;
 
             if (isDraggingRef.current) {
+              // 2. Thả block bằng cách gửi mouseup/pointerup tới chính phần tử đang kéo hoặc document
+              const mouseUpEvent = new MouseEvent('mouseup', {
+                bubbles: true,
+                cancelable: true,
+                clientX: currentPos.current.x,
+                clientY: currentPos.current.y,
+                buttons: 0,
+              });
+              document.dispatchEvent(mouseUpEvent);
+
+              const pointerUpEvent = new PointerEvent('pointerup', {
+                bubbles: true,
+                cancelable: true,
+                clientX: currentPos.current.x,
+                clientY: currentPos.current.y,
+                buttons: 0,
+                pointerId: 1,
+              });
+              document.dispatchEvent(pointerUpEvent);
+
+              draggedElRef.current = null;
               isDraggingRef.current = false;
               setIsDragging(false);
               updateAction('drop');
-              if (elAtPoint) {
-                elAtPoint.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true }));
-                elAtPoint.dispatchEvent(new DragEvent('dragend', { bubbles: true, cancelable: true }));
-              }
               setTimeout(() => updateAction('moving'), 500);
             }
           }
