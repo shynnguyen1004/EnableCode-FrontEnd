@@ -80,7 +80,7 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
       toolboxPosition: 'end',
       horizontalLayout: false,
       grid: {
-        spacing: 28,
+        spacing: 20,
         length: 3,
         colour: 'rgba(255, 249, 220, 0.18)',
         snap: true,
@@ -115,7 +115,7 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
           const svgRoot = block?.getSvgRoot();
 
           if (svgRoot) {
-            svgRoot.setAttribute('id', 'draggable');
+            svgRoot.setAttribute('draggable', 'true');
           }
         });
       }
@@ -150,7 +150,7 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
       workspace.dispose();
       workspaceRef.current = null;
     };
-  }, []);
+  }, [toolboxConfig, toolboxTitle]);
   useEffect(() => {
     if (workspaceRef.current && toolboxConfig) {
       const newToolbox = buildToolbox(toolboxConfig);
@@ -184,7 +184,7 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
       startBlock.render();
       startBlock.moveBy(56, 56);
     }
-  }, [lessonKey]);
+  }, [lessonKey, initialBlocks, savedWorkspaceState]);
   return <div ref={hostRef} className="blockly-editor-host" aria-label="Blockly workspace" />;
 });
 
