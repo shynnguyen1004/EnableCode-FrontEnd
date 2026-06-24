@@ -33,7 +33,7 @@ export default function WorkspacePage() {
   const [isNotFound, setIsNotFound] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hintIndex, setHintIndex] = useState(0);
-  const hasHints = lesson?.hint && lesson.hint.length > 0;
+  const hasMoreHints = !!(lesson?.hint && lesson.hint.length > 0 && hintIndex < lesson.hint.length);
   const [outputLines, setOutputLines] = useState<LogLine[]>([]);
   const [outputOpen, setOutputOpen] = useState(false);
   const [hasRun, setHasRun] = useState(false);
@@ -165,6 +165,7 @@ export default function WorkspacePage() {
           type: 'dim',
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         response.testcaseResults.forEach((tc: any, index: number) => {
           const isPass = tc.passed;
           const icon = isPass ? '✓' : '✗';
@@ -303,15 +304,15 @@ export default function WorkspacePage() {
           </div>
 
           <div className="workspace-panel-actions">
-            <div style={{ cursor: hasHints ? 'pointer' : 'not-allowed' }}>
+            <div style={{ cursor: hasMoreHints ? 'pointer' : 'not-allowed' }}>
               <button
                 type="button"
                 className="workspace-panel-btn hint group"
                 onClick={handleHint}
-                disabled={!hasHints}
+                disabled={!hasMoreHints}
                 style={{
-                  opacity: hasHints ? 1 : 0.5,
-                  pointerEvents: hasHints ? 'auto' : 'none',
+                  opacity: hasMoreHints ? 1 : 0.5,
+                  pointerEvents: hasMoreHints ? 'auto' : 'none',
                   width: '100%',
                 }}
               >

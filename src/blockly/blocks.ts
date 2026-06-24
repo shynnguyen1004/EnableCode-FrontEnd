@@ -202,6 +202,7 @@ export function registerDynamicBlocks(dynamicBlocks: CustomBlockDTO[]): void {
     if (!pythonGenerator.forBlock[blockType]) {
       try {
         // Biến chuỗi string từ Database thành một hàm JavaScript chạy được
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pythonGenerator.forBlock[blockType] = new Function('block', 'generator', generatorCode) as any;
       } catch (error) {
         console.error(`Lỗi biên dịch generator code cho block ${blockType}:`, error);

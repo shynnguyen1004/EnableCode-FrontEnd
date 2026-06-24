@@ -13,6 +13,7 @@ export const registerCustomBlocks = (customBlocks: CustomBlockDTO[]) => {
     }
     if (!pythonGenerator.forBlock[blockType]) {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pythonGenerator.forBlock[blockType] = new Function('block', 'generator', generatorCode) as any;
       } catch (err) {
         console.error(`Failed to parse generator code for block: ${blockType}`, err);
