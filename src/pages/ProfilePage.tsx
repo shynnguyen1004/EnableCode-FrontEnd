@@ -35,7 +35,7 @@ function formatDisplayName(name?: string): string {
 }
 
 export default function ProfilePage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { isLoggedIn, logout, updateUser } = useAuth();
   const navigate = useNavigate();
 
@@ -171,7 +171,8 @@ export default function ProfilePage() {
     return (
       <div
         className="profile-page"
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}
+      >
         <Loader2 size={40} className="animate-spin text-orange-500 mr-3" />
         <p style={{ color: '#666', fontSize: '1.2rem', fontWeight: 500 }}>
           {t('settings.loadingProfile') || 'Profile is loading...'}
@@ -191,7 +192,8 @@ export default function ProfilePage() {
           alignItems: 'center',
           justifyContent: 'center',
           height: '100vh',
-        }}>
+        }}
+      >
         <AlertTriangle size={64} className="text-orange-500 mb-4" />
         <h2 style={{ color: '#fff', marginBottom: '1rem' }}>{t('settings.errorTitle')}</h2>
         <p style={{ color: '#aaa', marginBottom: '2rem' }}>{t('settings.errorDesc')}</p>
@@ -202,9 +204,17 @@ export default function ProfilePage() {
     );
   }
 
-  const memberSinceStr = profileData.createdAt
-    ? new Date(profileData.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-    : '...';
+  let memberSinceStr = '...';
+  if (profileData?.createdAt) {
+    const date = new Date(profileData.createdAt);
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    if (locale.includes('vi')) {
+      memberSinceStr = `tháng ${month} năm ${year}`;
+    } else {
+      memberSinceStr = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    }
+  }
 
   return (
     <PageScale scale={0.8} className="profile-page">
@@ -268,7 +278,8 @@ export default function ProfilePage() {
             <section className="profile-language-section" style={{ marginBottom: '2.5rem' }}>
               <div
                 className="profile-language-header"
-                style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}
+              >
                 <div className="profile-heading-icon-wrap profile-heading-icon-wrap--language">
                   <Languages size={28} strokeWidth={2.5} color="#FFF9DC" />
                 </div>
@@ -288,7 +299,8 @@ export default function ProfilePage() {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 marginBottom: '1.5rem',
-              }}>
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div className="profile-heading-icon-wrap">
                   <Eye size={28} strokeWidth={2.5} color="#FFF9DC" />
@@ -314,7 +326,8 @@ export default function ProfilePage() {
                     type="button"
                     onClick={handleLogout}
                     disabled={isLoggingOut}
-                    className="profile-action-btn profile-action-btn--logout group">
+                    className="profile-action-btn profile-action-btn--logout group"
+                  >
                     {isLoggingOut ? (
                       <Loader2 size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon animate-spin" />
                     ) : (
@@ -336,12 +349,14 @@ export default function ProfilePage() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="profile-edit-title"
-            onClick={event => event.stopPropagation()}>
+            onClick={event => event.stopPropagation()}
+          >
             <button
               type="button"
               className="profile-edit-close"
               onClick={closeEditModal}
-              aria-label={t('settings.editProfileCancel')}>
+              aria-label={t('settings.editProfileCancel')}
+            >
               <X size={28} strokeWidth={3} />
             </button>
 
@@ -383,7 +398,8 @@ export default function ProfilePage() {
                   type="button"
                   className="profile-edit-upload-btn"
                   onClick={() => avatarInputRef.current?.click()}
-                  disabled={isSavingProfile}>
+                  disabled={isSavingProfile}
+                >
                   {t('settings.editProfileChooseFile')}
                 </button>
                 {editAvatar && (
@@ -391,7 +407,8 @@ export default function ProfilePage() {
                     type="button"
                     className="profile-edit-remove-btn"
                     onClick={handleRemoveAvatar}
-                    disabled={isSavingProfile}>
+                    disabled={isSavingProfile}
+                  >
                     {t('settings.editProfileRemoveAvatar')}
                   </button>
                 )}
@@ -405,7 +422,8 @@ export default function ProfilePage() {
                   type="button"
                   className="profile-edit-cancel"
                   onClick={closeEditModal}
-                  disabled={isSavingProfile}>
+                  disabled={isSavingProfile}
+                >
                   {t('settings.editProfileCancel')}
                 </button>
                 <button type="submit" className="profile-edit-save" disabled={isSavingProfile}>
