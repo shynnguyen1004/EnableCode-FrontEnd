@@ -66,9 +66,6 @@ export default function HomePage() {
         </Link>
 
         <nav className="menu">
-          <a href="#features" className="btn btn-ghost">
-            {t('nav.features')}
-          </a>
           <a href="#about" className="btn btn-ghost">
             {t('nav.about')}
           </a>
@@ -138,11 +135,6 @@ export default function HomePage() {
           <Link to="/" className="footer-brand-link" aria-label={t('brand.homeAria')}>
             <img src="/logo/TD_App_Logo.png" alt={t('brand.logoDarkAlt')} className="footer-logo" />
           </Link>
-          <div className="footer-links">
-            <a href="#">{t('home.privacy')}</a>
-            <a href="#">{t('home.terms')}</a>
-            <a href="#">{t('home.contact')}</a>
-          </div>
         </div>
       </footer>
     </PageScale>

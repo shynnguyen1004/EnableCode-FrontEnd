@@ -12,7 +12,6 @@ const en = {
     home: 'Home',
     lessons: 'Lessons',
     settings: 'Settings',
-    features: 'Features',
     about: 'About',
     logIn: 'Log In',
     back: 'Back',
@@ -39,9 +38,6 @@ const en = {
     featureLearnTitle: 'Inclusive Learning',
     featureLearnBody:
       'Step-by-step interactive tutorials adapted for diverse physical abilities. Learn at your own pace comfortably.',
-    privacy: 'Privacy',
-    terms: 'Terms',
-    contact: 'Contact',
   },
   login: {
     welcome: 'Welcome Back',

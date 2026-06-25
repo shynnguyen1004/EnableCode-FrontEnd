@@ -15,7 +15,6 @@ const vi = {
     home: 'Trang chủ',
     lessons: 'Bài học',
     settings: 'Cài đặt',
-    features: 'Tính năng',
     about: 'Giới thiệu',
     logIn: 'Đăng nhập',
     back: 'Quay lại',
@@ -40,9 +39,6 @@ const vi = {
     featureDragBody: 'Ghép các khối lệnh dễ dàng. Vùng thả lớn giúp bạn không bỏ lỡ mục tiêu.',
     featureLearnTitle: 'Học tập hòa nhập',
     featureLearnBody: 'Hướng dẫn từng bước phù hợp nhiều khả năng vận động. Học theo tốc độ của riêng bạn.',
-    privacy: 'Quyền riêng tư',
-    terms: 'Điều khoản',
-    contact: 'Liên hệ',
   },
   login: {
     welcome: 'Chào mừng trở lại',
