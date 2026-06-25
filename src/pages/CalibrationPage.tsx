@@ -480,9 +480,7 @@ export default function CalibrationPage() {
             </button>
           </div>
 
-          <p className="calibration-instruction" style={{ color: '#e65c00', fontWeight: 'bold', fontSize: '1.5rem' }}>
-            {getInstructionText()}
-          </p>
+          <p className="calibration-instruction">{getInstructionText()}</p>
 
           <div
             style={{
