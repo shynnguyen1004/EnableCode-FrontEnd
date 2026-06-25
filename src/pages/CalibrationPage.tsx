@@ -2,11 +2,11 @@ import { useCallback, useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, ArrowLeft, CheckCircle, Target, RefreshCw, Crosshair, ArrowRight, CircleX } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
+import { useAuth } from '../context/AuthContext';
 import { useEyeTracking } from '../context/EyeTrackingContext';
 import { profileApi } from '../api/profileApi';
 import PageScale from '../components/PageScale';
 import type { FaceMeshResults, FaceMeshType, CameraType } from '../lib/types';
-import { useCalibration } from '../context/CalibrationContext';
 
 declare global {
   interface Window {
@@ -30,8 +30,8 @@ type Step = 'intro' | 'countdown' | 'calibrating' | 'success';
 
 export default function CalibrationPage() {
   const { t } = useI18n();
+  const { isLoggedIn } = useAuth();
   const { setEnabled: setEyeTrackingEnabled } = useEyeTracking();
-  const { setCalibration } = useCalibration();
 
   const navigate = useNavigate();
 
@@ -131,16 +131,6 @@ export default function CalibrationPage() {
     }
   }, []);
 
-  // Định nghĩa hàm hủy cân chỉnh (Sửa lỗi: Cannot find name 'cancelCalibration')
-  const cancelCalibration = useCallback(() => {
-    stopCamera();
-    setStep('intro');
-    setPointIndex(0);
-    setDwellProgress(0);
-    setCompletedPoints([]);
-    setIsCapturing(false);
-  }, [stopCamera]);
-
   useEffect(() => {
     return () => stopCamera();
   }, [stopCamera]);
@@ -149,7 +139,7 @@ export default function CalibrationPage() {
     try {
       const { FaceMesh, Camera } = window;
       if (!FaceMesh || !Camera) {
-        alert('MediaPipe is not ready yet. Please wait a second and retry.');
+        alert('Chưa tải xong thư viện AI. Vui lòng đợi vài giây và thử lại.');
         return;
       }
 
@@ -181,6 +171,7 @@ export default function CalibrationPage() {
         ctx.save();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+        // Flip the image from camera horizontally for a mirror effect
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
         ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
@@ -191,20 +182,21 @@ export default function CalibrationPage() {
           const topLip = landmarks[13];
           const bottomLip = landmarks[14];
 
+          // Update calibration points from camera into Ref
           latestRawRef.current = { x: noseTip.x, y: noseTip.y };
           mouthGapRawRef.current = Math.sqrt(Math.pow(topLip.x - bottomLip.x, 2) + Math.pow(topLip.y - bottomLip.y, 2));
 
           if (stepRef.current === 'calibrating') {
             const pi = pointIndexRef.current;
             if (pi === 0) {
-              ctx.fillStyle = '#2dd4bf';
+              ctx.fillStyle = '#2dd4bf'; // lip landmarks
               [topLip, bottomLip].forEach(pt => {
                 ctx.beginPath();
                 ctx.arc(pt.x * canvas.width, pt.y * canvas.height, 6, 0, 2 * Math.PI);
                 ctx.fill();
               });
             } else {
-              ctx.fillStyle = '#ff7700';
+              ctx.fillStyle = '#ff7700'; // nose landmark
               ctx.beginPath();
               ctx.arc(noseTip.x * canvas.width, noseTip.y * canvas.height, 8, 0, 2 * Math.PI);
               ctx.fill();
@@ -240,25 +232,33 @@ export default function CalibrationPage() {
       setStep('countdown');
     } catch (err) {
       console.error('[AI-Tracker-Log] Failed to open Camera:', err);
-      alert('MediaPipe is not ready yet. Please wait a second and retry.');
+      alert('Ứng dụng cần quyền truy cập Camera để có thể tiếp tục nhận diện khuôn mặt!');
     }
   };
 
-  // Sử dụng useCallback để giữ vững tham chiếu hàm (Sửa lỗi: eslint exhaustive-deps)
-  const handleSaveCalibration = useCallback(async () => {
-    try {
-      const payload = {
-        bounds: boundsRef.current,
-        preferences: prefRef.current,
-      };
+  const saveCalibration = useCallback(async () => {
+    const finalData = {
+      bounds: boundsRef.current,
+      preferences: prefRef.current,
+    };
 
-      const updatedData = await profileApi.updateCalibration(payload);
-      setCalibration(updatedData);
-    } catch (error) {
-      console.error('Lỗi không lưu được cấu hình vùng biên:', error);
+    if (!isLoggedIn) {
+      return;
     }
-  }, [setCalibration]);
+    try {
+      await profileApi.updateCalibration(finalData);
+      console.log('[AI-Tracker-Log] Successfully update to database.');
+    } catch (err) {
+      console.error('[AI-Tracker-Log] Error connecting to API Server:', err);
+    }
+  }, [isLoggedIn]);
 
+  const cancelCalibration = () => {
+    stopCamera();
+    setStep('intro');
+  };
+
+  // Countdown number before starting calibration
   useEffect(() => {
     if (step !== 'countdown') return;
     const timer = window.setInterval(() => {
@@ -278,6 +278,7 @@ export default function CalibrationPage() {
     return () => window.clearInterval(timer);
   }, [step]);
 
+  // Loading circle
   useEffect(() => {
     if (step !== 'calibrating' || isCapturing) return;
 
@@ -329,7 +330,7 @@ export default function CalibrationPage() {
             setIsCapturing(false);
           } else {
             window.setTimeout(() => {
-              void handleSaveCalibration();
+              void saveCalibration();
               stopCamera();
               setStep('success');
             }, 1000);
@@ -340,7 +341,7 @@ export default function CalibrationPage() {
 
     animationFrameId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [step, pointIndex, isCapturing, handleSaveCalibration, stopCamera]);
+  }, [step, pointIndex, isCapturing, saveCalibration, stopCamera]);
 
   const captured = completedPoints.includes(pointIndex);
 
@@ -355,8 +356,10 @@ export default function CalibrationPage() {
         }
       `}</style>
 
+      {/* ĐẶT THỂ VIDEO TOÀN CỤC Ở ĐÂY ĐỂ TRÁNH BỊ UNMOUNT KHI CHUYỂN STEP */}
       <video ref={videoRef} autoPlay playsInline muted style={{ display: 'none' }} />
 
+      {/* STEP 1: INTRO */}
       {step === 'intro' && (
         <>
           <header className="login-header container">
@@ -414,7 +417,7 @@ export default function CalibrationPage() {
 
                 <button
                   type="button"
-                  onClick={() => navigate(-1)}
+                  onClick={() => navigate('/lessons')}
                   className="calibration-primary-btn group"
                   style={{ background: '#E53A36' }}
                 >
@@ -427,6 +430,7 @@ export default function CalibrationPage() {
         </>
       )}
 
+      {/* STEP 2: COUNTDOWN */}
       {step === 'countdown' && (
         <div
           className="calibration-active"
@@ -465,6 +469,7 @@ export default function CalibrationPage() {
         </div>
       )}
 
+      {/* STEP 3: CALIBRATING */}
       {step === 'calibrating' && (
         <div className="calibration-active">
           <div className="calibration-active-top">
@@ -569,6 +574,7 @@ export default function CalibrationPage() {
         </div>
       )}
 
+      {/* STEP 4: SUCCESS */}
       {step === 'success' && (
         <>
           <header className="login-header container calibration-success-header">
