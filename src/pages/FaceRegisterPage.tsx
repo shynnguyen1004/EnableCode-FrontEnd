@@ -4,7 +4,19 @@ import { ArrowLeft, Camera, RefreshCw, CheckCircle, ScanFace, Loader2 } from 'lu
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
 import PageScale from '../components/PageScale';
-// import { profileApi } from '../api/profileApi';
+import { authApi } from '../api/authApi';
+import type { FaceMeshResults, FaceMeshType, CameraType } from '../lib/types';
+
+// Khai báo kiểu dữ liệu Window đồng bộ theo chuẩn hệ thống
+declare global {
+  interface Window {
+    FaceMesh: new (config: { locateFile: (file: string) => string }) => FaceMeshType;
+    Camera: new (
+      video: HTMLVideoElement,
+      options: { onFrame: () => Promise<void>; width: number; height: number },
+    ) => CameraType;
+  }
+}
 
 export default function FaceRegisterPage() {
   const { t } = useI18n();
@@ -14,13 +26,14 @@ export default function FaceRegisterPage() {
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
 
-  // Sửa Lỗi 1: Thêm số 0 làm giá trị khởi tạo cho useRef
-  const animationFrameRef = useRef<number>(0);
+  const faceMeshRef = useRef<FaceMeshType | null>(null);
+  const cameraRef = useRef<CameraType | null>(null);
+  const mouthOpenStartRef = useRef<number | null>(null);
 
   const getSafeTranslation = (key: string, fallbackText: string): string => {
     try {
@@ -32,82 +45,201 @@ export default function FaceRegisterPage() {
     }
   };
 
-  // Sửa Lỗi 2: Dùng function thường (hoisting) để tránh lỗi 'accessed before declared'
-  function drawToCanvas() {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (video && canvas && video.readyState >= 2) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        canvas.width = 640;
-        canvas.height = 480;
-
-        ctx.save();
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
-
-        const size = Math.min(video.videoWidth, video.videoHeight);
-        const startX = (video.videoWidth - size) / 2;
-        const startY = (video.videoHeight - size) / 2;
-
-        ctx.drawImage(video, startX, startY, size, size, 0, 0, canvas.width, canvas.height);
-        ctx.restore();
-      }
-    }
-    animationFrameRef.current = requestAnimationFrame(drawToCanvas);
-  }
-
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
-      });
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-      setIsCameraReady(true);
-      animationFrameRef.current = requestAnimationFrame(drawToCanvas);
-    } catch (error) {
-      console.error('Không thể truy cập camera:', error);
-      alert('Vui lòng cấp quyền camera để thiết lập đăng nhập bằng khuôn mặt!');
-    }
-  };
-
-  const stopCamera = () => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    setIsCameraReady(false);
-  };
-
-  // Sửa Lỗi 3: Bỏ setState đồng bộ (synchronous) khởi tạo khỏi useEffect
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    startCamera();
-    return () => stopCamera();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let isMounted = true;
+
+    const initFaceMeshAndCamera = async () => {
+      try {
+        const { FaceMesh, Camera } = window;
+        if (!FaceMesh || !Camera) {
+          console.warn('MediaPipe FaceMesh hoặc Camera chưa sẵn sàng trên đối tượng window.');
+          return;
+        }
+
+        const videoElement = videoRef.current;
+        const canvasElement = canvasRef.current;
+        if (!videoElement || !canvasElement) return;
+
+        const faceMesh = new FaceMesh({
+          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+        });
+
+        faceMesh.setOptions({
+          maxNumFaces: 1,
+          refineLandmarks: true,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        });
+
+        faceMesh.onResults((results: FaceMeshResults) => {
+          if (!isMounted) return;
+
+          const canvas = canvasRef.current;
+          const video = videoRef.current;
+          if (!canvas || !video || video.readyState < 2) return;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+
+          canvas.width = 640;
+          canvas.height = 480;
+
+          ctx.save();
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.translate(canvas.width, 0);
+          ctx.scale(-1, 1);
+
+          // FIX ESLINT: Lấy kích thước chuẩn tuyệt đối từ luồng Video gốc thay vì results.image
+          const vw = video.videoWidth;
+          const vh = video.videoHeight;
+
+          if (vw > 0 && vh > 0) {
+            const size = Math.min(vw, vh);
+            const startX = (vw - size) / 2;
+            const startY = (vh - size) / 2;
+
+            // Vẽ ảnh sạch, không chứa bất kỳ đường line landmark nào lên giao diện
+            ctx.drawImage(results.image, startX, startY, size, size, 0, 0, canvas.width, canvas.height);
+          }
+          ctx.restore();
+
+          // LOGIC XỬ LÝ HÁ MIỆNG NGẦM (LIVENESS DETECTION)
+          if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+            const landmarks = results.multiFaceLandmarks[0];
+            const topLip = landmarks[13]; // Tâm môi trên
+            const bottomLip = landmarks[14]; // Tâm môi dưới
+            const leftCorner = landmarks[78]; // Khóe môi trái
+            const rightCorner = landmarks[308]; // Khóe môi phải
+
+            if (topLip && bottomLip && leftCorner && rightCorner) {
+              const mouthHeight = Math.sqrt(Math.pow(topLip.x - bottomLip.x, 2) + Math.pow(topLip.y - bottomLip.y, 2));
+              const mouthWidth = Math.sqrt(
+                Math.pow(leftCorner.x - rightCorner.x, 2) + Math.pow(leftCorner.y - rightCorner.y, 2),
+              );
+
+              const mar = mouthWidth !== 0 ? mouthHeight / mouthWidth : 0;
+              const MOUTH_OPEN_THRESHOLD = 0.03;
+
+              if (mar > MOUTH_OPEN_THRESHOLD) {
+                if (mouthOpenStartRef.current === null) {
+                  mouthOpenStartRef.current = performance.now();
+                }
+
+                const elapsed = (performance.now() - mouthOpenStartRef.current) / 1000;
+                const remaining = Math.max(0, 1 - elapsed);
+                setCountdown(Math.ceil(remaining));
+
+                if (remaining <= 0) {
+                  // Đủ 1 giây liên tục -> Chụp tự động thành công!
+                  mouthOpenStartRef.current = null;
+                  setCountdown(null);
+
+                  const imageUrl = canvas.toDataURL('image/jpeg', 0.9);
+                  setCapturedImage(imageUrl);
+
+                  if (cameraRef.current) {
+                    try {
+                      cameraRef.current.stop();
+                    } catch (e) {
+                      console.error(e);
+                    }
+                  }
+                }
+              } else {
+                // Khách hàng khép miệng lại -> Huỷ ngay bộ đếm thời gian
+                mouthOpenStartRef.current = null;
+                setCountdown(null);
+              }
+            }
+          } else {
+            // Không thấy mặt trong khung hình -> Reset
+            mouthOpenStartRef.current = null;
+            setCountdown(null);
+          }
+        });
+
+        const cameraInstance = new Camera(videoElement, {
+          onFrame: async () => {
+            if (videoElement.readyState >= 2 && faceMeshRef.current === faceMesh) {
+              try {
+                await faceMesh.send({ image: videoElement });
+              } catch {
+                // Bỏ qua log cảnh báo skip frame để tránh spam console
+              }
+            }
+          },
+          width: 640,
+          height: 480,
+        });
+
+        await cameraInstance.start();
+
+        if (isMounted) {
+          faceMeshRef.current = faceMesh;
+          cameraRef.current = cameraInstance;
+          setIsCameraReady(true);
+        } else {
+          cameraInstance.stop();
+          faceMesh.close();
+        }
+      } catch (err) {
+        console.error('Lỗi khởi động MediaPipe Camera:', err);
+      }
+    };
+
+    void initFaceMeshAndCamera();
+
+    return () => {
+      isMounted = false;
+      setIsCameraReady(false);
+      if (cameraRef.current) {
+        try {
+          cameraRef.current.stop();
+        } catch (e) {
+          console.error(e);
+        }
+        cameraRef.current = null;
+      }
+      if (faceMeshRef.current) {
+        try {
+          faceMeshRef.current.close();
+        } catch (e) {
+          console.error(e);
+        }
+        faceMeshRef.current = null;
+      }
+    };
   }, []);
 
   const handleCapture = () => {
     const canvas = canvasRef.current;
     if (canvas) {
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      if (cameraRef.current) {
+        try {
+          cameraRef.current.stop();
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      mouthOpenStartRef.current = null;
+      setCountdown(null);
       const imageUrl = canvas.toDataURL('image/jpeg', 0.9);
       setCapturedImage(imageUrl);
     }
   };
 
-  // Chuyển việc xóa ảnh (setCapturedImage(null)) sang sự kiện chủ động từ người dùng
-  const handleRetake = () => {
+  const handleRetake = async () => {
     setCapturedImage(null);
-    startCamera();
+    mouthOpenStartRef.current = null;
+    setCountdown(null);
+
+    if (cameraRef.current) {
+      try {
+        await cameraRef.current.start();
+      } catch (err) {
+        console.error('Không thể kích hoạt lại Camera:', err);
+      }
+    }
   };
 
   const handleSaveFace = async () => {
@@ -115,12 +247,10 @@ export default function FaceRegisterPage() {
 
     setIsSaving(true);
     try {
-      // await profileApi.registerFace({ imageBase64: capturedImage });
-      console.log('Đã lưu ảnh khuôn mặt thành công!', capturedImage.substring(0, 50) + '...');
+      await authApi.saveFaceEmbedding(capturedImage);
       navigate('/settings');
     } catch (error) {
       console.error('Lỗi khi lưu khuôn mặt:', error);
-      alert('Có lỗi xảy ra khi lưu khuôn mặt. Vui lòng thử lại!');
     } finally {
       setIsSaving(false);
     }
@@ -160,7 +290,7 @@ export default function FaceRegisterPage() {
             <p>
               {getSafeTranslation(
                 'faceRegister.subtitle',
-                'Hãy nhìn thẳng vào camera và đảm bảo khuôn mặt nằm gọn trong khung hình.',
+                'Hãy há miệng to và giữ nguyên trong 3 giây để hệ thống tự động chụp ảnh khuôn mặt.',
               )}
             </p>
           </div>
@@ -188,13 +318,38 @@ export default function FaceRegisterPage() {
                   flexDirection: 'column',
                   alignItems: 'center',
                   color: '#ff7700',
+                  zIndex: 5,
                 }}
               >
                 <Loader2 size={48} className="animate-spin" style={{ marginBottom: '1rem' }} />
                 <span style={{ fontWeight: 800 }}>Đang mở Camera...</span>
               </div>
             )}
-            <canvas ref={canvasRef} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+
+            {countdown !== null && !capturedImage && (
+              <div
+                style={{
+                  position: 'absolute',
+                  background: 'rgba(0, 0, 0, 0.8)',
+                  color: '#ff7700',
+                  padding: '10px 22px',
+                  borderRadius: '24px',
+                  fontWeight: 900,
+                  fontSize: '1.4rem',
+                  zIndex: 10,
+                  boxShadow: '0 0 15px rgba(255, 119, 0, 0.4)',
+                  pointerEvents: 'none',
+                }}
+              >
+                Giữ há miệng: {countdown}s
+              </div>
+            )}
+
+            {capturedImage ? (
+              <img src={capturedImage} alt="Captured" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <canvas ref={canvasRef} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            )}
           </div>
 
           <div
@@ -213,10 +368,10 @@ export default function FaceRegisterPage() {
                 className="calibration-primary-btn group"
                 onClick={handleCapture}
                 disabled={!isCameraReady}
-                style={{ width: '100%', opacity: isCameraReady ? 1 : 0.5, fontSize: '1.4rem', maxHeight: '64x' }}
+                style={{ width: '100%', opacity: isCameraReady ? 1 : 0.5, fontSize: '1.4rem', maxHeight: '64px' }}
               >
                 <Camera size={48} strokeWidth={3} className="btn-icon" />
-                {getSafeTranslation('faceRegister.capture', 'Chụp khuôn mặt')}
+                {getSafeTranslation('faceRegister.capture', 'Chụp thủ công')}
               </button>
             ) : (
               <>
@@ -242,7 +397,7 @@ export default function FaceRegisterPage() {
                   ) : (
                     <CheckCircle size={28} strokeWidth={3} className="btn-icon" />
                   )}
-                  {isSaving ? 'Đang lưu...' : getSafeTranslation('faceRegister.save', 'Xác nhận')}
+                  {isSaving ? 'Đang xử lý...' : getSafeTranslation('faceRegister.save', 'Xác nhận')}
                 </button>
               </>
             )}
