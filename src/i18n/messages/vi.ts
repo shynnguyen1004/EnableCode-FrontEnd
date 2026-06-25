@@ -75,8 +75,9 @@ const vi = {
   forgotPassword: {
     title: 'Đặt lại mật khẩu',
     subtitle: 'Nhập địa chỉ email để đặt lại mật khẩu.',
-    sendLink: 'Xác nhận',
+    sendLink: 'Gửi',
     rememberPassword: 'Đã nhớ mật khẩu?',
+    sending: 'Đang gửi...',
   },
   topics: {
     dashboardTitle: 'Bảng khóa học',

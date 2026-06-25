@@ -74,8 +74,9 @@ const en = {
   forgotPassword: {
     title: 'Reset Password',
     subtitle: 'Enter your email to reset your password.',
-    sendLink: 'Submit',
+    sendLink: 'Send',
     rememberPassword: 'Remember Password?',
+    sending: 'Sending...',
   },
   topics: {
     dashboardTitle: 'Course Dashboard',
