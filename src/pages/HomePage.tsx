@@ -6,6 +6,7 @@ import PageScale from '../components/PageScale';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/authApi';
+import { useCalibration } from '../context/CalibrationContext';
 
 export default function HomePage() {
   const { t } = useI18n();
@@ -13,6 +14,10 @@ export default function HomePage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const navigate = useNavigate();
+
+  const { calibration } = useCalibration();
+
+  const isCalibrated = !!calibration;
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -25,6 +30,11 @@ export default function HomePage() {
       logout();
       navigate('/');
     }
+  };
+
+  const getStartedPath = () => {
+    if (!isLoggedIn) return '/login';
+    return isCalibrated ? '/lessons' : '/calibration';
   };
 
   const features = [
@@ -56,9 +66,6 @@ export default function HomePage() {
         </Link>
 
         <nav className="menu">
-          <a href="#features" className="btn btn-ghost">
-            {t('nav.features')}
-          </a>
           <a href="#about" className="btn btn-ghost">
             {t('nav.about')}
           </a>
@@ -99,7 +106,7 @@ export default function HomePage() {
 
         <div className="hero-actions">
           <FaceControlToggle />
-          <Link to={isLoggedIn ? '/calibration' : '/login'} className="btn btn-primary hero-cta group">
+          <Link to={getStartedPath()} className="btn btn-primary hero-cta group">
             {t('home.getStarted')}
             <ArrowRight size={32} className="hero-arrow" strokeWidth={3} style={{ marginLeft: '12px' }} />
           </Link>
@@ -128,11 +135,6 @@ export default function HomePage() {
           <Link to="/" className="footer-brand-link" aria-label={t('brand.homeAria')}>
             <img src="/logo/TD_App_Logo.png" alt={t('brand.logoDarkAlt')} className="footer-logo" />
           </Link>
-          <div className="footer-links">
-            <a href="#">{t('home.privacy')}</a>
-            <a href="#">{t('home.terms')}</a>
-            <a href="#">{t('home.contact')}</a>
-          </div>
         </div>
       </footer>
     </PageScale>
