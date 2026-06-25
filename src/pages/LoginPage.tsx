@@ -1,7 +1,7 @@
 import type { UserProfileResponse } from '../lib/types';
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogIn, Eye } from 'lucide-react';
+import { ArrowLeft, LogIn, ScanFace } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { authApi } from '../api/authApi';
 import { useAuth } from '../context/AuthContext';
@@ -119,8 +119,8 @@ export default function LoginPage() {
             </div>
 
             <button type="button" className="login-btn login-btn-secondary group">
-              <Eye size={32} strokeWidth={3} className="btn-icon" />
-              {t('login.eyeScan')}
+              <ScanFace size={32} strokeWidth={3} className="btn-icon" />
+              {t('login.faceScan')}
             </button>
 
             <p className="register-sign-in">

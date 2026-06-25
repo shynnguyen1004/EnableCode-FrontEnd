@@ -318,7 +318,7 @@ export default function ProfilePage() {
                     <Target size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
                     {t('settings.startCalibration')}
                   </Link>
-                  <Link to="/login" className="profile-action-btn profile-action-btn--face-login group">
+                  <Link to="/face-register" className="profile-action-btn profile-action-btn--face-login group">
                     <ScanFace size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
                     {t('settings.setupFaceLogin')}
                   </Link>

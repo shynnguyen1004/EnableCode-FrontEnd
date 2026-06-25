@@ -48,7 +48,7 @@ const vi = {
     emailPlaceholder: 'xin-chao@vidu.com',
     login: 'Đăng nhập',
     or: 'hoặc',
-    eyeScan: 'Đăng nhập bằng nhận diện khuôn mặt',
+    faceScan: 'Đăng nhập bằng nhận diện khuôn mặt',
     noAccount: 'Chưa có tài khoản?',
     register: 'Đăng ký',
   },

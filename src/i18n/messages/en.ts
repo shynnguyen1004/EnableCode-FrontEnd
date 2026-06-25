@@ -47,7 +47,7 @@ const en = {
     emailPlaceholder: 'hello@example.com',
     login: 'Login',
     or: 'or',
-    eyeScan: 'Login with Face Recognition',
+    faceScan: 'Login with Face Recognition',
     noAccount: "Don't have an account?",
     register: 'Register',
   },
