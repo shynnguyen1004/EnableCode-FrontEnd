@@ -43,6 +43,11 @@ export const authApi = {
     return response.data;
   },
 
+  saveFaceEmbedding: async (image: string): Promise<{ success: boolean; message: string }> => {
+    const response = await axiosClient.put('/auth/embedding', { image });
+    return response.data;
+  },
+
   refreshToken: async (): Promise<RefreshTokenResponse> => {
     const response = await axiosAuth.post<RefreshTokenResponse>('/auth/refresh-token');
     return response.data;
