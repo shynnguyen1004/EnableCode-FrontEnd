@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Eye, ArrowLeft, CheckCircle, Target, RefreshCw, Crosshair, ArrowRight, CircleX } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
@@ -32,6 +32,8 @@ export default function CalibrationPage() {
   const { t } = useI18n();
   const { isLoggedIn } = useAuth();
   const { setEnabled: setEyeTrackingEnabled } = useEyeTracking();
+
+  const navigate = useNavigate();
 
   const [step, setStep] = useState<Step>('intro');
   const [pointIndex, setPointIndex] = useState(0);
@@ -413,10 +415,15 @@ export default function CalibrationPage() {
                   {t('calibration.begin')}
                 </button>
 
-                <Link to="/lessons" className="calibration-primary-btn group" style={{ background: '#E53A36' }}>
+                <button
+                  type="button"
+                  onClick={() => navigate(-1)}
+                  className="calibration-primary-btn group"
+                  style={{ background: '#E53A36' }}
+                >
                   <CircleX size={32} strokeWidth={3} className="btn-icon" />
                   {t('calibration.cancel')}
-                </Link>
+                </button>
               </div>
             </section>
           </main>
