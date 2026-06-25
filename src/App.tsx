@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage';
 import LessonsPage from './pages/LessonsPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import FaceLoginPage from './pages/FaceLoginPage';
 import FaceRegisterPage from './pages/FaceRegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import CalibrationPage from './pages/CalibrationPage';
@@ -34,6 +35,7 @@ function AppRoutes() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/face-login" element={<FaceLoginPage />} />
         <Route path="/face-register" element={<FaceRegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/lessons" element={<TopicPage />} />

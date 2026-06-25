@@ -133,7 +133,7 @@ export default function LoginPage() {
             <button
               type="button"
               className="login-btn login-btn-secondary group"
-              onClick={() => navigate('/face-register')}
+              onClick={() => navigate('/face-login')}
             >
               <ScanFace size={32} strokeWidth={3} className="btn-icon" />
               {t('login.faceScan')}
