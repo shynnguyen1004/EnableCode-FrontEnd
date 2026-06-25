@@ -45,6 +45,7 @@ const vi = {
     subtitle: 'Đăng nhập để tiếp tục hành trình lập trình dễ tiếp cận.',
     email: 'Địa chỉ email',
     password: 'Mật khẩu',
+    forgotPassword: 'Quên mật khẩu?',
     emailPlaceholder: 'xin-chao@vidu.com',
     login: 'Đăng nhập',
     or: 'hoặc',
@@ -70,6 +71,13 @@ const vi = {
     signIn: 'Đăng nhập',
     passwordMismatch: 'Mật khẩu xác nhận không khớp.',
     failed: 'Đăng ký thất bại. Vui lòng thử lại.',
+  },
+  forgotPassword: {
+    title: 'Đặt lại mật khẩu',
+    subtitle: 'Nhập địa chỉ email để đặt lại mật khẩu.',
+    sendLink: 'Gửi',
+    rememberPassword: 'Đã nhớ mật khẩu?',
+    sending: 'Đang gửi...',
   },
   topics: {
     dashboardTitle: 'Bảng khóa học',

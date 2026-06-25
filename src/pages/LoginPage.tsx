@@ -4,7 +4,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, LogIn, ScanFace } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { authApi } from '../api/authApi';
+import { profileApi } from '../api/profileApi';
 import { useAuth } from '../context/AuthContext';
+import { useCalibration } from '../context/CalibrationContext';
 import { isAxiosError } from 'axios';
 import PageScale from '../components/PageScale';
 
@@ -12,6 +14,7 @@ export default function LoginPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { setCalibration } = useCalibration();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,15 +28,18 @@ export default function LoginPage() {
 
     try {
       const response = await authApi.login({ email, password });
-
       const { accessToken, user } = response;
 
       if (accessToken && user) {
         login(accessToken, user as unknown as UserProfileResponse);
 
-        if ((user as unknown as UserProfileResponse).isCalibrated) {
-          navigate('/lessons');
-        } else {
+        try {
+          const calibrationData = await profileApi.getCalibration();
+
+          setCalibration(calibrationData);
+
+          navigate('/home');
+        } catch {
           navigate('/calibration');
         }
       } else {
@@ -102,6 +108,12 @@ export default function LoginPage() {
               required
             />
 
+            <div style={{ textAlign: 'right', marginTop: '0.5rem', marginBottom: '1rem' }}>
+              <Link to="/forgot-password" className="register-sign-in-link">
+                {t('login.forgotPassword') || 'Forgot Password?'}
+              </Link>
+            </div>
+
             <button
               type="submit"
               className="login-btn login-btn-primary group"
@@ -118,7 +130,11 @@ export default function LoginPage() {
               <span />
             </div>
 
-            <button type="button" className="login-btn login-btn-secondary group">
+            <button
+              type="button"
+              className="login-btn login-btn-secondary group"
+              onClick={() => navigate('/face-register')}
+            >
               <ScanFace size={32} strokeWidth={3} className="btn-icon" />
               {t('login.faceScan')}
             </button>
