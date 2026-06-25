@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useI18n } from '../i18n/I18nProvider';
 import type { FaceMeshResults, CameraType, FaceMeshType } from '../lib/types';
+import { useCalibration } from '../context/CalibrationContext';
 
 type ActionKind =
   | 'moving'
@@ -35,6 +36,14 @@ declare global {
 
 const Mouse: React.FC = () => {
   const { t } = useI18n();
+  const { calibration } = useCalibration();
+
+  // Giữ ref luôn đồng bộ với dữ liệu calibration mới nhất từ Context mà không trigger re-run useEffect
+  const calibRef = useRef(calibration);
+  useEffect(() => {
+    calibRef.current = calibration;
+  }, [calibration]);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cursorRef = useRef<HTMLDivElement | null>(null);
@@ -73,7 +82,6 @@ const Mouse: React.FC = () => {
 
     let active = true;
 
-    // Chuyển hàm tìm kiếm panel vào TRONG useEffect để sửa triệt để lỗi dependency của ESLint
     const getScrollableParent = (el: Element | null): Element | null => {
       if (!el) return null;
       const style = window.getComputedStyle(el);
@@ -110,14 +118,12 @@ const Mouse: React.FC = () => {
       if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
         const landmarks = results.multiFaceLandmarks[0];
 
-        // --- CAMERA: CHỈ HIỂN THỊ LANDMARK CẦN THIẾT ---
-        // Chỉ vẽ Mũi (1) để track hướng và 2 điểm Môi trong (13, 14) để tính độ há miệng
+        // --- CAMERA LANDMARKS ---
         const essentialIndices = [1, 13, 14];
         essentialIndices.forEach(idx => {
           const pt = landmarks[idx];
           if (pt) {
             canvasCtx.beginPath();
-            // Đốm đỏ cho mũi, đốm xanh ngọc cho môi
             canvasCtx.fillStyle = idx === 1 ? '#f43f5e' : '#2dd4bf';
             canvasCtx.arc((1 - pt.x) * -canvasElement.width, pt.y * canvasElement.height, 3, 0, 2 * Math.PI);
             canvasCtx.fill();
@@ -125,9 +131,24 @@ const Mouse: React.FC = () => {
         });
         canvasCtx.restore();
 
-        const SENSITIVITY = { X: 0.4, Y: 0.35 };
-        const MOUTH_OPEN_LIMIT = 0.025;
-        const MOUTH_CLOSE_LIMIT = 0.018;
+        // --- ĐỌC CẤU HÌNH DỮ LIỆU CALIBRATION ---
+        const currentCalib = calibRef.current;
+        const preferences = currentCalib?.preferences;
+        const bounds = currentCalib?.bounds;
+
+        // Tự động điều chỉnh độ nhạy (Hệ số nhạy càng cao thì mẫu số SENSITIVITY càng nhỏ -> Chuột di chuyển nhanh hơn)
+        const sensitivityFactor = preferences?.trackingSensitivity || 1;
+        const SENSITIVITY = {
+          X: 0.4 / sensitivityFactor,
+          Y: 0.35 / sensitivityFactor,
+        };
+
+        // Đồng bộ ngưỡng há miệng động từ profile user
+        const MOUTH_OPEN_LIMIT = preferences?.mouthDragThreshold || 0.025;
+        const MOUTH_CLOSE_LIMIT = preferences?.mouthDragThreshold
+          ? preferences.mouthDragThreshold * 0.72 // Giữ tỉ lệ khép miệng tối ưu tương ứng
+          : 0.018;
+
         const SCROLL_STEP = 25;
         const VIEWPORT_EDGE_THRESHOLD = 60;
 
@@ -135,17 +156,35 @@ const Mouse: React.FC = () => {
         smoothedRaw.current.x += (nose.x - smoothedRaw.current.x) * 0.25;
         smoothedRaw.current.y += (nose.y - smoothedRaw.current.y) * 0.25;
 
-        // Hàm chuyển đổi tuyến tính có cân bằng lại trọng tâm (Tâm camera thường bị lệch khi xoay đầu)
-        // Trục X từ Camera MediaPipe bị ngược nên ta dùng (1 - nose.x)
-        let rawX = (1 - smoothedRaw.current.x - 0.5) / SENSITIVITY.X;
-        let rawY = (smoothedRaw.current.y - 0.5) / SENSITIVITY.Y;
+        let rawX: number;
+        let rawY: number;
 
-        // Áp dụng thuật toán "Deadzone & Power Curve" tinh chỉnh:
-        // Càng ra xa tâm, chuột di chuyển mượt hơn thay vì bị văng mạnh do góc quay mặt
+        // Kiểm tra xem user đã từng thực hiện cân chỉnh vùng biên (Bounds Calibration) chưa
+        if (
+          bounds &&
+          bounds.leftX !== undefined &&
+          bounds.rightX !== undefined &&
+          bounds.topY !== undefined &&
+          bounds.bottomY !== undefined &&
+          bounds.leftX !== bounds.rightX &&
+          bounds.topY !== bounds.bottomY
+        ) {
+          // Tính toán tọa độ dựa trên không gian vùng biên thực tế của riêng user
+          const pctX = (smoothedRaw.current.x - bounds.leftX) / (bounds.rightX - bounds.leftX);
+          const pctY = (smoothedRaw.current.y - bounds.topY) / (bounds.bottomY - bounds.topY);
+
+          rawX = pctX - 0.5;
+          rawY = pctY - 0.5;
+        } else {
+          // Fallback sử dụng cấu hình mặc định ban đầu của hệ thống
+          rawX = (1 - smoothedRaw.current.x - 0.5) / SENSITIVITY.X;
+          rawY = (smoothedRaw.current.y - 0.5) / SENSITIVITY.Y;
+        }
+
+        // Áp dụng thuật toán Power Curve ổn định tâm màn hình
         rawX = Math.sign(rawX) * Math.pow(Math.abs(rawX), 1.2);
         rawY = Math.sign(rawY) * Math.pow(Math.abs(rawY), 1.2);
 
-        // Tính toán tọa độ thực tế trên màn hình dựa trên tâm màn hình
         const tx = (rawX + 0.5) * window.innerWidth;
         const ty = (rawY + 0.5) * window.innerHeight;
 
@@ -159,9 +198,6 @@ const Mouse: React.FC = () => {
         }
 
         const elAtPoint = document.elementFromPoint(currentPos.current.x, currentPos.current.y);
-
-        // --- HIỆU ỨNG HOVER ĐƯỢC GIỮ NGUYÊN (FIX FLICKER) ---
-        // Tìm element tương tác cha (như button, thẻ a) thay vì chỉ lấy thẻ text con bên trong
         const interactiveTarget =
           elAtPoint?.closest('button, a, [role="button"], input, select, [draggable="true"]') || elAtPoint;
 
@@ -201,7 +237,6 @@ const Mouse: React.FC = () => {
         }
 
         if (isDraggingRef.current && draggedElRef.current) {
-          // Gửi sự kiện di chuyển song song cả MouseEvent và PointerEvent cho toàn hệ thống
           const mouseMoveEvent = new MouseEvent('mousemove', {
             bubbles: true,
             cancelable: true,
@@ -223,7 +258,7 @@ const Mouse: React.FC = () => {
           document.dispatchEvent(pointerMoveEvent);
         }
 
-        // --- THAO TÁC HÁ MIỆNG / CÀI ĐẶT DRAGGABLE ---
+        // --- XỬ LÝ HÁ MIỆNG (SỬ DỤNG LIMIT MỚI) ---
         const mouthGap = Math.abs(landmarks[13].y - landmarks[14].y);
 
         if (mouthGap > MOUTH_OPEN_LIMIT) {
@@ -231,7 +266,6 @@ const Mouse: React.FC = () => {
             wasMouthOpenRef.current = true;
 
             if (elAtPoint && (elAtPoint instanceof HTMLElement || elAtPoint instanceof SVGElement)) {
-              // Tìm kiếm block Blockly (Blockly thường bọc trong các thẻ g có class blocklyDraggable)
               const targetDraggable =
                 (elAtPoint.closest('.blocklyDraggable') as HTMLElement | SVGElement | null) ||
                 (elAtPoint.hasAttribute('draggable')
@@ -244,7 +278,6 @@ const Mouse: React.FC = () => {
                 setIsDragging(true);
                 updateAction('drag');
 
-                // 1. Kích hoạt mousedown/pointerdown trên chính block đó để Blockly tạo Gesture
                 const mouseDownEvent = new MouseEvent('mousedown', {
                   bubbles: true,
                   cancelable: true,
@@ -254,7 +287,6 @@ const Mouse: React.FC = () => {
                 });
                 targetDraggable.dispatchEvent(mouseDownEvent);
 
-                // Hỗ trợ thêm PointerEvent nếu Blockly bản mới sử dụng PointerEvents
                 const pointerDownEvent = new PointerEvent('pointerdown', {
                   bubbles: true,
                   cancelable: true,
@@ -266,7 +298,6 @@ const Mouse: React.FC = () => {
                 });
                 targetDraggable.dispatchEvent(pointerDownEvent);
               } else {
-                // Nếu không phải block Blockly thì kích hoạt click như bình thường
                 updateAction('click');
                 if (elAtPoint && elAtPoint instanceof HTMLElement && typeof elAtPoint.click === 'function') {
                   elAtPoint.click();
@@ -282,7 +313,6 @@ const Mouse: React.FC = () => {
             wasMouthOpenRef.current = false;
 
             if (isDraggingRef.current) {
-              // 2. Thả block bằng cách gửi mouseup/pointerup tới chính phần tử đang kéo hoặc document
               const mouseUpEvent = new MouseEvent('mouseup', {
                 bubbles: true,
                 cancelable: true,
@@ -311,16 +341,15 @@ const Mouse: React.FC = () => {
           }
         }
 
-        // --- SCROLL PANEL: TỰ ĐỘNG CUỘN THEO BIÊN BOX ---
+        // --- SCROLL PANEL ---
         const activeScrollTarget = getScrollableParent(elAtPoint);
         const cursorX = currentPos.current.x;
         const cursorY = currentPos.current.y;
 
         if (activeScrollTarget && activeScrollTarget !== document.documentElement) {
           const rect = activeScrollTarget.getBoundingClientRect();
-          const PANEL_EDGE_PADDING = 40; // Khoảng cách vùng kích hoạt cuộn tính từ biên trong của Panel
+          const PANEL_EDGE_PADDING = 40;
 
-          // Đảm bảo chuột đang nằm thực sự trong phạm vi chiều ngang của Box đó
           if (cursorX >= rect.left && cursorX <= rect.right) {
             if (cursorY >= rect.top && cursorY <= rect.top + PANEL_EDGE_PADDING) {
               activeScrollTarget.scrollBy({ top: -SCROLL_STEP, behavior: 'auto' });
@@ -333,7 +362,6 @@ const Mouse: React.FC = () => {
             }
           }
         } else if (!elAtPoint?.closest('.workspace-page')) {
-          // Fallback cuộn toàn trang nếu không đứng trên panel đặc biệt nào
           if (cursorY < VIEWPORT_EDGE_THRESHOLD) {
             window.scrollBy({ top: -SCROLL_STEP, behavior: 'auto' });
             updateAction('scrollUp');
@@ -370,12 +398,9 @@ const Mouse: React.FC = () => {
 
   return (
     <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9999 }}>
-      {/* Cấu hình lại CSS giả lập hiệu ứng hover: Đổi sang VIỀN ĐEN và giữ ổn định */}
       <style>{`
         .virtual-hover {
           cursor: pointer !important;
-          opacity: 0.9 !important;
-          filter: brightness(1.08) !important;
         }
         button.virtual-hover, a.virtual-hover, [role="button"].virtual-hover, [draggable="true"].virtual-hover {
           outline: 2.5px dashed #000000 !important;
@@ -384,6 +409,7 @@ const Mouse: React.FC = () => {
         }
       `}</style>
 
+      {/* Chuột ảo luôn hiển thị để điều khiển hệ thống */}
       <div
         ref={cursorRef}
         style={{
@@ -406,6 +432,7 @@ const Mouse: React.FC = () => {
         <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#2dd4bf' }} />
       </div>
 
+      {/* Hộp xem trước Camera: Ẩn/Hiện phản hồi trực quan theo thuộc tính visualFeedback cấu hình của user */}
       <div
         style={{
           position: 'fixed',
@@ -419,6 +446,7 @@ const Mouse: React.FC = () => {
           boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
           border: '2px solid #1e293b',
           pointerEvents: 'auto',
+          display: (calibration?.preferences?.visualFeedback ?? true) ? 'block' : 'none',
         }}
       >
         <video ref={videoRef} style={{ display: 'none' }} playsInline muted />
