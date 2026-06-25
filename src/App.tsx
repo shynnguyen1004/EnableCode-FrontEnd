@@ -12,6 +12,7 @@ import WorkspacePage from './pages/WorkspacePage';
 import Mouse from './components/Mouse';
 import MobileUnsupported from './components/MobileUnsupported';
 import { useIsMobile } from './hooks/useIsMobile';
+import { CalibrationProvider } from './context/CalibrationContext';
 
 function EyeTrackingLayer() {
   const { isEnabled } = useEyeTracking();
@@ -47,9 +48,11 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <EyeTrackingProvider>
-        <AppRoutes />
-      </EyeTrackingProvider>
+      <CalibrationProvider>
+        <EyeTrackingProvider>
+          <AppRoutes />
+        </EyeTrackingProvider>
+      </CalibrationProvider>
     </AuthProvider>
   );
 }

@@ -4,7 +4,7 @@ import { Eye, ArrowLeft, CheckCircle, Target, RefreshCw, Crosshair, ArrowRight, 
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
 import { useEyeTracking } from '../context/EyeTrackingContext';
-import { calibrationApi } from '../api/calibrationApi';
+import { profileApi } from '../api/profileApi';
 import PageScale from '../components/PageScale';
 import type { FaceMeshResults, FaceMeshType, CameraType } from '../lib/types';
 
@@ -59,7 +59,8 @@ export default function CalibrationPage() {
   const latestRawRef = useRef({ x: 0.5, y: 0.5 });
   const mouthGapRawRef = useRef(0);
 
-  const boundsRef = useRef({ leftX: 0, rightX: 1, topY: 0, bottomY: 1, mouthThreshold: 0.05 });
+  const boundsRef = useRef({ leftX: 0, rightX: 1, topY: 0, bottomY: 1 });
+  const prefRef = useRef({ mouthDragThreshold: 0.05, trackingSensitivity: 1, visualFeedback: true });
 
   const getSafeTranslation = (key: string, fallbackText: string): string => {
     if (!key) return fallbackText;
@@ -236,14 +237,14 @@ export default function CalibrationPage() {
   const saveCalibration = useCallback(async () => {
     const finalData = {
       bounds: boundsRef.current,
-      preferences: {},
+      preferences: prefRef.current,
     };
 
     if (!isLoggedIn) {
       return;
     }
     try {
-      await calibrationApi.updateCalibration(finalData);
+      await profileApi.updateCalibration(finalData);
       console.log('[AI-Tracker-Log] Successfully update to database.');
     } catch (err) {
       console.error('[AI-Tracker-Log] Error connecting to API Server:', err);
@@ -299,7 +300,7 @@ export default function CalibrationPage() {
         const currentMouth = mouthGapRawRef.current;
 
         if (pointIndex === 0) {
-          boundsRef.current.mouthThreshold = currentMouth * 0.8;
+          prefRef.current.mouthDragThreshold = currentMouth * 0.8;
         }
         if (pointIndex === 1) {
           boundsRef.current.topY = currentY;
@@ -363,6 +364,9 @@ export default function CalibrationPage() {
             <Link to="/settings" className="login-back group">
               <ArrowLeft size={28} strokeWidth={3} className="nav-icon" />
               <span>{getSafeTranslation('nav.back', 'Quay lại')}</span>
+            </Link>
+            <Link to="/" className="login-logo-link">
+              <img src="/logo/TD_App_Logo.png" alt="Logo" className="login-logo" />
             </Link>
           </header>
 
