@@ -1258,7 +1258,7 @@
 }
 
 .workspace-topbar {
-  height: 80px;
+  height: 96px;
   flex-shrink: 0;
   border-bottom: 4px solid #111;
   padding: 0 1.5rem;
@@ -1305,10 +1305,10 @@
 }
 
 .workspace-icon-btn {
-  min-height: 56px;
-  min-width: 56px;
+  min-height: 64px;
+  min-width: 64px;
   border: 3px solid transparent;
-  border-radius: 14px;
+  border-radius: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

@@ -264,22 +264,22 @@ export default function WorkspacePage() {
       <header className="workspace-topbar">
         <div className="workspace-left">
           <Link to={topicPath} className="workspace-icon-btn" aria-label={t('nav.backToLessons')}>
-            <ArrowLeft size={28} strokeWidth={3} />
+            <ArrowLeft size={36} strokeWidth={3} />
           </Link>
           <nav className="workspace-breadcrumbs" aria-label="Breadcrumb">
             <Link to="/lessons">{t('nav.topics')}</Link>
-            <ChevronRight size={24} strokeWidth={4} className="crumb-icon" />
+            <ChevronRight size={28} strokeWidth={4} className="crumb-icon" />
             <Link to={topicPath}>{localizedTopic.title}</Link>
-            <ChevronRight size={24} strokeWidth={4} className="crumb-icon" />
+            <ChevronRight size={28} strokeWidth={4} className="crumb-icon" />
             <strong>{localizedLesson.title}</strong>
           </nav>
         </div>
         <div className="workspace-right">
           <button className="workspace-icon-btn" type="button" aria-label={t('workspace.reset')} onClick={handleReset}>
-            <RefreshCw size={28} strokeWidth={3} />
+            <RefreshCw size={36} strokeWidth={3} />
           </button>
           <Link to="/settings" className="workspace-icon-btn" aria-label={t('workspace.settings')}>
-            <Settings size={28} strokeWidth={3} />
+            <Settings size={36} strokeWidth={3} />
           </Link>
         </div>
       </header>

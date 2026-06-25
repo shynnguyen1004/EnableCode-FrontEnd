@@ -71,12 +71,8 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
     if (!hostRef.current) return;
 
     registerEnableCodeBlocks();
-
-    // Tăng bán kính hút vào lưới (Mặc định là 12)
-    Blockly.config.snapRadius = 24; // không hiệu quả lắm
-    // Tăng bán kính hút dính giữa hai khối với nhau (Mặc định là 28)
-    Blockly.config.connectingSnapRadius = 90; // không hiệu quả lắm
-
+    Blockly.config.snapRadius = 48;
+    Blockly.config.connectingSnapRadius = 96;
     const workspace = Blockly.inject(hostRef.current, {
       toolbox: buildToolbox(toolboxConfig) as Blockly.utils.toolbox.ToolboxDefinition,
       theme: enableCodeTheme,
