@@ -363,7 +363,7 @@ export default function CalibrationPage() {
       {step === 'intro' && (
         <>
           <header className="login-header container">
-            <Link to="/settings" className="login-back group">
+            <Link to="/home" className="login-back group">
               <ArrowLeft size={28} strokeWidth={3} className="nav-icon" />
               <span>{getSafeTranslation('nav.back', 'Quay lại')}</span>
             </Link>

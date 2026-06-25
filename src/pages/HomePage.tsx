@@ -6,18 +6,19 @@ import PageScale from '../components/PageScale';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/authApi';
+import { profileApi } from '../api/profileApi'; // -> Thêm API
 import { useCalibration } from '../context/CalibrationContext';
 
 export default function HomePage() {
   const { t } = useI18n();
   const { isLoggedIn, logout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isCheckingStart, setIsCheckingStart] = useState(false); // -> Thêm state loading cho nút Get Started
 
   const navigate = useNavigate();
 
-  const { calibration } = useCalibration();
-
-  const isCalibrated = !!calibration;
+  // Lấy thêm hàm setCalibration để đồng bộ dữ liệu nếu cần
+  const { calibration, setCalibration } = useCalibration();
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -32,9 +33,33 @@ export default function HomePage() {
     }
   };
 
-  const getStartedPath = () => {
-    if (!isLoggedIn) return '/login';
-    return isCalibrated ? '/lessons' : '/calibration';
+  // Logic kiểm tra khi người dùng bấm Get Started
+  const handleGetStartedClick = async (e: React.MouseEvent) => {
+    e.preventDefault(); // Chặn việc chuyển trang ngay lập tức của thẻ Link
+
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+
+    // Nếu Context đã có dữ liệu (API load kịp) -> Phóng thẳng tới trang học
+    if (calibration) {
+      navigate('/lessons');
+      return;
+    }
+
+    // Nếu Context rỗng (có thể do load chậm hoặc chưa calibrate thật), gọi API để chắc chắn 100%
+    setIsCheckingStart(true);
+    try {
+      const data = await profileApi.getCalibration();
+      setCalibration(data); // Cập nhật lại Context
+      navigate('/lessons'); // Đã có dữ liệu thì vào lessons
+    } catch {
+      // API báo lỗi 404 (chưa calibrate) -> Bắt đi calibrate
+      navigate('/calibration');
+    } finally {
+      setIsCheckingStart(false);
+    }
   };
 
   const features = [
@@ -106,9 +131,28 @@ export default function HomePage() {
 
         <div className="hero-actions">
           <FaceControlToggle />
-          <Link to={getStartedPath()} className="btn btn-primary hero-cta group">
-            {t('home.getStarted')}
-            <ArrowRight size={32} className="hero-arrow" strokeWidth={3} style={{ marginLeft: '12px' }} />
+
+          {/* Nút Get Started đã được nâng cấp */}
+          <Link
+            to="#"
+            onClick={handleGetStartedClick}
+            className="btn btn-primary hero-cta group"
+            style={{
+              pointerEvents: isCheckingStart ? 'none' : 'auto',
+              opacity: isCheckingStart ? 0.8 : 1,
+            }}
+          >
+            {isCheckingStart ? (
+              <>
+                <Loader2 size={24} className="animate-spin mr-2" style={{ marginRight: '8px' }} />
+                Checking...
+              </>
+            ) : (
+              <>
+                {t('home.getStarted')}
+                <ArrowRight size={32} className="hero-arrow" strokeWidth={3} style={{ marginLeft: '12px' }} />
+              </>
+            )}
           </Link>
         </div>
       </main>
