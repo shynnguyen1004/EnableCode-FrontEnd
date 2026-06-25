@@ -44,6 +44,7 @@ const en = {
     subtitle: 'Sign in to continue your accessible coding journey.',
     email: 'Email Address',
     password: 'Password',
+    forgotPassword: 'Forgot Password?',
     emailPlaceholder: 'hello@example.com',
     login: 'Login',
     or: 'or',
@@ -69,6 +70,12 @@ const en = {
     signIn: 'Sign In',
     passwordMismatch: 'Passwords do not match.',
     failed: 'Registration failed. Please try again.',
+  },
+  forgotPassword: {
+    title: 'Reset Password',
+    subtitle: 'Enter your email to reset your password.',
+    sendLink: 'Submit',
+    rememberPassword: 'Remember Password?',
   },
   topics: {
     dashboardTitle: 'Course Dashboard',

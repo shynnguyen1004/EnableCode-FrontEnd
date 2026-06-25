@@ -102,6 +102,13 @@ export default function LoginPage() {
               required
             />
 
+            {/* Link Quên mật khẩu nằm dưới ô input */}
+            <div style={{ textAlign: 'right', marginTop: '0.5rem', marginBottom: '1rem' }}>
+              <Link to="/forgot-password" className="register-sign-in-link">
+                {t('login.forgotPassword') || 'Forgot Password?'}
+              </Link>
+            </div>
+
             <button
               type="submit"
               className="login-btn login-btn-primary group"
