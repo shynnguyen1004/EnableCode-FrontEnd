@@ -38,11 +38,11 @@ export function EyeTrackingProvider({ children }: EyeTrackingProviderProps) {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() !== 'm') return;
+      if (!e.key || typeof e.key !== 'string' || e.key.toLowerCase() !== 'm') return;
       if (!e.metaKey && !e.ctrlKey) return;
 
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+      if (target?.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
 
       e.preventDefault();
       toggle();
