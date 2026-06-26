@@ -1,7 +1,7 @@
 import type { UserProfileResponse } from '../lib/types';
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, UserPlus, CheckCircle } from 'lucide-react';
+import { ArrowLeft, UserPlus, CheckCircle, ScanFace } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { authApi } from '../api/authApi';
 import { useAuth } from '../context/AuthContext';
@@ -158,6 +158,21 @@ export default function RegisterPage() {
             >
               <UserPlus size={32} strokeWidth={3} className="btn-icon" />
               {isLoading ? t('register.processing') : t('register.submit')}
+            </button>
+
+            <div className="login-divider">
+              <span />
+              <strong>{t('login.or')}</strong>
+              <span />
+            </div>
+
+            <button
+              type="button"
+              className="login-btn login-btn-secondary group"
+              onClick={() => navigate('/face-register')}
+            >
+              <ScanFace size={32} strokeWidth={3} className="btn-icon" />
+              {t('register.faceScan')}
             </button>
 
             <p className="register-sign-in">

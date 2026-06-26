@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera, RefreshCw, CheckCircle, ScanFace, Loader2 } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
-import { useAuth } from '../context/AuthContext';
 import PageScale from '../components/PageScale';
 import { authApi } from '../api/authApi';
 import type { FaceMeshResults, FaceMeshType, CameraType } from '../lib/types';
@@ -20,7 +19,6 @@ declare global {
 
 export default function FaceRegisterPage() {
   const { t } = useI18n();
-  const { isLoggedIn } = useAuth();
   const navigate = useNavigate();
 
   const [isCameraReady, setIsCameraReady] = useState(false);
@@ -255,11 +253,6 @@ export default function FaceRegisterPage() {
       setIsSaving(false);
     }
   };
-
-  if (!isLoggedIn) {
-    navigate('/login');
-    return null;
-  }
 
   return (
     <PageScale scale={0.75} className="calibration-page">

@@ -8,6 +8,7 @@ import RegisterPage from './pages/RegisterPage';
 import FaceLoginPage from './pages/FaceLoginPage';
 import FaceRegisterPage from './pages/FaceRegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import CalibrationPage from './pages/CalibrationPage';
 import ProfilePage from './pages/ProfilePage';
 import TopicPage from './pages/TopicPage';
@@ -38,6 +39,7 @@ function AppRoutes() {
         <Route path="/face-login" element={<FaceLoginPage />} />
         <Route path="/face-register" element={<FaceRegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/lessons" element={<TopicPage />} />
         <Route path="/lessons/:topicId" element={<LessonsPage />} />
         <Route path="/workspace/:lessonId" element={<WorkspacePage />} />
