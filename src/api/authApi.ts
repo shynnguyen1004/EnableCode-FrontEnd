@@ -43,6 +43,11 @@ export const authApi = {
     return response.data;
   },
 
+  loginByFace: async (image: string): Promise<AuthResponse> => {
+    const response = await axiosAuth.post<AuthResponse>('/auth/face-login', { image });
+    return response.data;
+  },
+
   saveFaceEmbedding: async (image: string): Promise<{ success: boolean; message: string }> => {
     const response = await axiosClient.put('/auth/embedding', { image });
     return response.data;
