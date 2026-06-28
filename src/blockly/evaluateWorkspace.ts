@@ -123,6 +123,26 @@ function createContext(): RuntimeContext {
   };
 }
 
+function generateCodeFromStartBlock(workspace: Workspace): string {
+  const topBlocks = workspace.getTopBlocks(true);
+  const startBlock = topBlocks.find(block => block.type === 'controls_start');
+
+  if (!startBlock) return '';
+
+  const codeLines: string[] = [];
+  let current = startBlock.getNextBlock();
+
+  while (current) {
+    const line = pythonGenerator.blockToCode(current);
+    if (typeof line === 'string') {
+      codeLines.push(line);
+    }
+    current = current.getNextBlock();
+  }
+
+  return codeLines.join('');
+}
+
 export type WorkspaceRunResult = {
   output: string;
   logs: LogLine[];
@@ -135,7 +155,18 @@ export function evaluateWorkspaceRun(workspace: Workspace): WorkspaceRunResult {
   let generatedPythonCode = '';
 
   try {
-    generatedPythonCode = pythonGenerator.workspaceToCode(workspace);
+    const topBlocks = workspace.getTopBlocks(true);
+    const orphanCount = topBlocks.filter(block => block.type !== 'controls_start' && block.previousConnection).length;
+
+    if (orphanCount > 0) {
+      pushLog(
+        context,
+        `   ⚠ ${orphanCount} disconnected block(s) were ignored — connect blocks to the "On Start" block to run them.`,
+        'dim',
+      );
+    }
+
+    generatedPythonCode = generateCodeFromStartBlock(workspace);
 
     if (!generatedPythonCode.trim()) {
       pushLog(context, '   (Workspace is empty, no code generated)', 'dim');
