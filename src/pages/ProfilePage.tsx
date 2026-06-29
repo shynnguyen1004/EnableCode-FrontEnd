@@ -39,7 +39,7 @@ export default function ProfilePage() {
   const { isLoggedIn, logout, updateUser } = useAuth();
   const navigate = useNavigate();
 
-  // Chỉ giữ lại state quản lý dữ liệu Profile và trạng thái tải trang
+  // State quản lý dữ liệu
   const [profileData, setProfileData] = useState<UserProfileResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
@@ -50,6 +50,10 @@ export default function ProfilePage() {
   const [avatarFileName, setAvatarFileName] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [editError, setEditError] = useState('');
+
+  // -> THÊM STATE QUẢN LÝ TỐC ĐỘ CHUỘT
+  const [mouseSpeed, setMouseSpeed] = useState<'low' | 'medium' | 'high'>('medium');
+
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -59,9 +63,9 @@ export default function ProfilePage() {
       setIsLoading(true);
       setFetchError(false);
       try {
-        // Chỉ gọi API lấy thông tin user
         const profileRes = await profileApi.getProfile();
         setProfileData(profileRes);
+        // Gợi ý: Nếu API profile có trả về trackingSensitivity, bạn có thể setMouseSpeed ở đây
       } catch (error) {
         console.error('Error fetching profile:', error);
         setFetchError(true);
@@ -162,11 +166,19 @@ export default function ProfilePage() {
     }
   };
 
+  // -> THÊM HÀM XỬ LÝ ĐỔI TỐC ĐỘ CHUỘT
+  const handleSpeedChange = async (speed: 'low' | 'medium' | 'high') => {
+    setMouseSpeed(speed);
+
+    // Gợi ý: Bạn có thể gọi API updateCalibration hoặc update Context ở đây để lưu thiết lập
+    // const sensitivityMap = { low: 0.5, medium: 1.0, high: 2.0 };
+    // await profileApi.updateCalibration({ preferences: { trackingSensitivity: sensitivityMap[speed] } });
+  };
+
   if (!isLoggedIn) {
     return <Navigate to="/" replace />;
   }
 
-  // Xử lý hiển thị loading
   if (isLoading) {
     return (
       <div
@@ -181,7 +193,6 @@ export default function ProfilePage() {
     );
   }
 
-  // Xử lý khi server lỗi
   if (fetchError || !profileData) {
     return (
       <div
@@ -259,7 +270,7 @@ export default function ProfilePage() {
             </article>
             <article className="profile-stat-card" tabIndex={0}>
               <Award size={52} strokeWidth={3} className="icon-orange" />
-              <strong>{/* Giả sử bạn có trường badges */ 0}</strong>
+              <strong>0</strong>
               <span>{t('settings.badges')}</span>
             </article>
             <article className="profile-stat-card wide" tabIndex={0}>
@@ -273,7 +284,6 @@ export default function ProfilePage() {
         </aside>
 
         <main className="profile-controls">
-          {/* Cài đặt Ngôn ngữ */}
           <div className="profile-controls-inner">
             <section className="profile-language-section" style={{ marginBottom: '2.5rem' }}>
               <div
@@ -290,7 +300,6 @@ export default function ProfilePage() {
             </section>
           </div>
 
-          {/* Face Control settings */}
           <div className="profile-controls-inner">
             <div
               className="profile-controls-header"
@@ -305,22 +314,54 @@ export default function ProfilePage() {
                 <div className="profile-heading-icon-wrap">
                   <Eye size={28} strokeWidth={2.5} color="#FFF9DC" />
                 </div>
-                <h3 style={{ margin: 0 }}>{t('settings.eyeTrackingTitle')}</h3>
+                <h3 style={{ margin: 0 }}>{t('settings.eyeTrackingTitle') || 'Face Control Settings'}</h3>
               </div>
             </div>
 
             <div className="profile-settings-stack">
+              {/* ---> PHẦN MỚI THÊM: CHỈNH TỐC ĐỘ CHUỘT <--- */}
+              <section className="profile-calibration-section" style={{ marginBottom: '2rem' }}>
+                <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px', textTransform: 'uppercase' }}>
+                  {t('settings.mouseSpeedTitle') || 'TRACKING SENSITIVITY'}
+                </h4>
+                <p>{t('settings.mouseSpeedDesc') || 'Adjust how fast the cursor moves when you turn your head.'}</p>
+
+                <div style={{ display: 'flex', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
+                  {[
+                    { id: 'low', label: t('settings.speedLow') || 'Low' },
+                    { id: 'medium', label: t('settings.speedMedium') || 'Medium' },
+                    { id: 'high', label: t('settings.speedHigh') || 'High' },
+                  ].map(item => {
+                    const isActive = mouseSpeed === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleSpeedChange(item.id as 'low' | 'medium' | 'high')}
+                        className={`language-toggle-btn ${isActive ? 'is-active' : ''}`}
+                      >
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+              {/* ---> KẾT THÚC PHẦN CHỈNH TỐC ĐỘ <--- */}
+
               <section className="profile-calibration-section">
-                <h4>{t('settings.calibrationTitle')}</h4>
-                <p>{t('settings.calibrationBody')}</p>
+                <h4>{t('settings.calibrationTitle') || 'SYSTEM CALIBRATION'}</h4>
+                <p>
+                  {t('settings.calibrationBody') ||
+                    "Recalibrate if the cursor isn't following your head movement accurately."}
+                </p>
                 <div className="profile-action-stack">
                   <Link to="/calibration" className="profile-action-btn group">
                     <Target size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
-                    {t('settings.startCalibration')}
+                    {t('settings.startCalibration') || 'Start Calibration'}
                   </Link>
                   <Link to="/face-register" className="profile-action-btn profile-action-btn--face-login group">
                     <ScanFace size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
-                    {t('settings.setupFaceLogin')}
+                    {t('settings.setupFaceLogin') || 'Setup Face Login'}
                   </Link>
                   <button
                     type="button"
@@ -333,7 +374,7 @@ export default function ProfilePage() {
                     ) : (
                       <LogOut size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
                     )}
-                    {t('settings.logoutAccount')}
+                    {t('settings.logoutAccount') || 'Log Out Account'}
                   </button>
                 </div>
               </section>

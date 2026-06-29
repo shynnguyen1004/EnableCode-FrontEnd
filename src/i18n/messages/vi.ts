@@ -196,6 +196,12 @@ const vi = {
     errorTitle: 'Lỗi tải dữ liệu',
     errorDesc: 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau.',
     backToHome: 'Quay lại trang chủ',
+
+    mouseSpeedTitle: 'ĐỘ NHẠY CON TRỎ',
+    mouseSpeedDesc: 'Điều chỉnh tốc độ di chuyển của con trỏ khi bạn di chuyển đầu.',
+    speedLow: 'Thấp',
+    speedMedium: 'Trung bình',
+    speedHigh: 'Cao',
   },
   mobile: {
     title: 'Vui lòng dùng máy tính',

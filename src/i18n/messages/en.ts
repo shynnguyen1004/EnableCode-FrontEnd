@@ -195,6 +195,12 @@ const en = {
     errorTitle: 'Data Loading Error',
     errorDesc: 'Cannot connect to server. Please try again later.',
     backToHome: 'Back to Home',
+
+    mouseSpeedTitle: 'TRACKING SENSITIVITY',
+    mouseSpeedDesc: 'Adjust how fast the cursor moves when you turn your head.',
+    speedLow: 'Low',
+    speedMedium: 'Medium',
+    speedHigh: 'High',
   },
   mobile: {
     title: 'Please use a desktop',
