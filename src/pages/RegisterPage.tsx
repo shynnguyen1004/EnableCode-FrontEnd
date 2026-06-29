@@ -1,25 +1,19 @@
-import type { UserProfileResponse } from '../lib/types';
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, UserPlus, CheckCircle, ScanFace } from 'lucide-react';
+import { ArrowLeft, UserPlus, ScanFace } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { authApi } from '../api/authApi';
-import { useAuth } from '../context/AuthContext';
-import { useEyeTracking } from '../context/EyeTrackingContext';
 import PageScale from '../components/PageScale';
 import { isAxiosError } from 'axios';
 
 export default function RegisterPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const { login } = useAuth();
-  const { setEnabled: setEyeTrackingEnabled } = useEyeTracking();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [enableEyeTracking, setEnableEyeTracking] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -37,29 +31,10 @@ export default function RegisterPage() {
       // 1. Gọi API Đăng ký
       const response = await authApi.register({ name, email, password, role: 'student' });
 
-      // 2. Kiểm tra đăng ký thành công (Backend trả về success hoặc user)
+      // 2. Nếu đăng ký thành công -> Đẩy về thẳng trang Login
       if (response.success || response.user) {
-        try {
-          // 3. Tự động gọi API Đăng nhập để lấy accessToken
-          const loginResponse = await authApi.login({ email, password });
-
-          if (loginResponse.accessToken && loginResponse.user) {
-            // Cập nhật Context Auth
-            login(loginResponse.accessToken, loginResponse.user as unknown as UserProfileResponse);
-
-            // Điều hướng dựa theo lựa chọn Eye Tracking
-            if (enableEyeTracking) {
-              setEyeTrackingEnabled(true);
-              navigate('/calibration');
-            } else {
-              navigate('/lessons');
-            }
-          }
-        } catch (loginError) {
-          console.error('Auto-login failed:', loginError);
-          // Đẩy ra trang đăng nhập nếu auto-login thất bại
-          navigate('/login', { state: { message: 'Đăng ký thành công! Vui lòng đăng nhập.' } });
-        }
+        // Truyền thêm một message nhỏ để trang Login có thể hiển thị thông báo "Đăng ký thành công" (nếu bạn muốn)
+        navigate('/login', { state: { message: 'Đăng ký thành công! Vui lòng đăng nhập.' } });
       } else {
         setErrorMsg(t('register.failed') || 'Registration failed. Please try again.');
       }
@@ -148,24 +123,6 @@ export default function RegisterPage() {
                 />
               </div>
             </div>
-
-            <button
-              type="button"
-              className={`register-opt-in${enableEyeTracking ? ' register-opt-in--checked' : ''}`}
-              aria-pressed={enableEyeTracking}
-              onClick={() => setEnableEyeTracking(prev => !prev)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setEnableEyeTracking(prev => !prev);
-                }
-              }}
-            >
-              <span className="register-opt-in-box" aria-hidden="true">
-                {enableEyeTracking && <CheckCircle size={28} strokeWidth={3} />}
-              </span>
-              <span>{t('register.eyeTrackingOptIn')}</span>
-            </button>
 
             <button
               type="submit"
