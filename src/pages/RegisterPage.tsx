@@ -28,29 +28,46 @@ export default function RegisterPage() {
     setErrorMsg('');
 
     if (password !== confirmPassword) {
-      setErrorMsg(t('register.passwordMismatch'));
+      setErrorMsg(t('register.passwordMismatch') || 'Passwords do not match.');
       return;
     }
 
     setIsLoading(true);
     try {
+      // 1. Gọi API Đăng ký
       const response = await authApi.register({ name, email, password, role: 'student' });
 
-      const { accessToken, user } = response;
+      // 2. Kiểm tra đăng ký thành công (Backend trả về success hoặc user)
+      if (response.success || response.user) {
+        try {
+          // 3. Tự động gọi API Đăng nhập để lấy accessToken
+          const loginResponse = await authApi.login({ email, password });
 
-      if (accessToken && user) {
-        if (enableEyeTracking) {
-          setEyeTrackingEnabled(true);
+          if (loginResponse.accessToken && loginResponse.user) {
+            // Cập nhật Context Auth
+            login(loginResponse.accessToken, loginResponse.user as unknown as UserProfileResponse);
+
+            // Điều hướng dựa theo lựa chọn Eye Tracking
+            if (enableEyeTracking) {
+              setEyeTrackingEnabled(true);
+              navigate('/calibration');
+            } else {
+              navigate('/lessons');
+            }
+          }
+        } catch (loginError) {
+          console.error('Auto-login failed:', loginError);
+          // Đẩy ra trang đăng nhập nếu auto-login thất bại
+          navigate('/login', { state: { message: 'Đăng ký thành công! Vui lòng đăng nhập.' } });
         }
-        login(accessToken, user as unknown as UserProfileResponse);
+      } else {
+        setErrorMsg(t('register.failed') || 'Registration failed. Please try again.');
       }
-
-      navigate('/calibration');
     } catch (error) {
       console.error('Registration failed:', error);
 
       if (isAxiosError(error)) {
-        const backendMessage = error.response?.data?.error?.message;
+        const backendMessage = error.response?.data?.error?.message || error.response?.data?.message;
         setErrorMsg(backendMessage || t('register.failed') || 'Registration failed. Please try again.');
       } else {
         setErrorMsg(t('register.failed') || 'An unexpected error occurred.');

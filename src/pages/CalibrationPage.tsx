@@ -4,6 +4,7 @@ import { Eye, ArrowLeft, CheckCircle, Target, RefreshCw, Crosshair, ArrowRight, 
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
 import { useEyeTracking } from '../context/EyeTrackingContext';
+import { useCalibration } from '../context/CalibrationContext';
 import { profileApi } from '../api/profileApi';
 import PageScale from '../components/PageScale';
 import type { FaceMeshResults, FaceMeshType, CameraType } from '../lib/types';
@@ -32,6 +33,7 @@ export default function CalibrationPage() {
   const { t } = useI18n();
   const { isLoggedIn } = useAuth();
   const { setEnabled: setEyeTrackingEnabled } = useEyeTracking();
+  const { setCalibration } = useCalibration();
 
   const navigate = useNavigate();
 
@@ -275,12 +277,17 @@ export default function CalibrationPage() {
       return;
     }
     try {
-      await profileApi.updateCalibration(finalData);
+      // 1. Gọi API lưu lên server và lấy kết quả trả về
+      const updatedData = await profileApi.updateCalibration(finalData);
+
+      // 2. NẠP DỮ LIỆU VÀO CONTEXT NGAY LẬP TỨC
+      setCalibration(updatedData);
+
       console.log('[AI-Tracker-Log] Successfully update to database.');
     } catch (err) {
       console.error('[AI-Tracker-Log] Error connecting to API Server:', err);
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, setCalibration]); // ---> Nhớ thêm setCalibration vào mảng dependency
 
   const cancelCalibration = () => {
     stopCamera();
