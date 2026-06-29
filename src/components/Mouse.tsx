@@ -49,7 +49,6 @@ const Mouse: React.FC = () => {
   const cursorRef = useRef<HTMLDivElement | null>(null);
 
   const [actionKind, setActionKind] = useState<ActionKind>('moving');
-  const [fps, setFps] = useState<number>(0);
   const [isDragging, setIsDragging] = useState(false);
 
   const actionKindRef = useRef<ActionKind>('moving');
@@ -106,9 +105,7 @@ const Mouse: React.FC = () => {
       const now = performance.now();
       if (now - lastFrameTimeRef.current < 40) return;
 
-      const currentFps = Math.round(1000 / (now - lastFrameTimeRef.current));
       lastFrameTimeRef.current = now;
-      if (Math.random() > 0.8) setFps(currentFps);
 
       canvasCtx.save();
       canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
@@ -119,47 +116,79 @@ const Mouse: React.FC = () => {
         const landmarks = results.multiFaceLandmarks[0];
 
         // --- CAMERA LANDMARKS ---
-        const essentialIndices = [1, 13, 14];
+        const essentialIndices = [1, 13, 14, 10, 152, 234, 454];
         essentialIndices.forEach(idx => {
           const pt = landmarks[idx];
           if (pt) {
             canvasCtx.beginPath();
-            canvasCtx.fillStyle = idx === 1 ? '#f43f5e' : '#2dd4bf';
+            canvasCtx.fillStyle = idx === 1 ? '#f2ff00' : [13, 14].includes(idx) ? '#00aeff' : '#66ff00';
             canvasCtx.arc((1 - pt.x) * -canvasElement.width, pt.y * canvasElement.height, 3, 0, 2 * Math.PI);
             canvasCtx.fill();
           }
         });
         canvasCtx.restore();
 
-        // --- ĐỌC CẤU HÌNH DỮ LIỆU CALIBRATION ---
+        // --- ĐỌC CẤU HÌNH DỮ LIỆU CALIBRATION MỚI ---
         const currentCalib = calibRef.current;
         const preferences = currentCalib?.preferences;
         const bounds = currentCalib?.bounds;
 
-        // Tự động điều chỉnh độ nhạy (Hệ số nhạy càng cao thì mẫu số SENSITIVITY càng nhỏ -> Chuột di chuyển nhanh hơn)
-        const sensitivityFactor = preferences?.trackingSensitivity || 1;
-        const SENSITIVITY = {
-          X: 0.4 / sensitivityFactor,
-          Y: 0.35 / sensitivityFactor,
-        };
+        // Đọc tốc độ di chuột mới (thay thế trackingSensitivity cũ bằng speed)
+        const speedFactor = preferences?.speed ?? 1;
+        // Khởi tạo hệ số bù trừ khoảng cách mặc định (khi chưa lùi/tiến)
+        let scaleDepth = 1;
+
+        if (bounds?.refWidth && bounds?.refHeight) {
+          // Tính kích thước mặt hiện tại thời gian thực (Runtime) giống y hệt lúc Calibrate
+          const currentW = Math.sqrt(
+            Math.pow(landmarks[234].x - landmarks[454].x, 2) + Math.pow(landmarks[234].y - landmarks[454].y, 2),
+          );
+          const currentH = Math.sqrt(
+            Math.pow(landmarks[10].y - landmarks[152].y, 2) + Math.pow(landmarks[10].y - landmarks[152].y, 2),
+          );
+
+          // Áp dụng công thức tính hệ số chiều sâu trung bình (Bù trừ sai số khi xoay/gật đầu)
+          if (currentW > 0 && currentH > 0) {
+            scaleDepth = (bounds.refWidth / currentW + bounds.refHeight / currentH) / 2;
+          }
+        }
 
         // Đồng bộ ngưỡng há miệng động từ profile user
-        const MOUTH_OPEN_LIMIT = preferences?.mouthDragThreshold || 0.025;
-        const MOUTH_CLOSE_LIMIT = preferences?.mouthDragThreshold
-          ? preferences.mouthDragThreshold * 0.72 // Giữ tỉ lệ khép miệng tối ưu tương ứng
-          : 0.018;
+        let effectiveMouthOpenLimit = preferences?.mouthDragThreshold || 0.03;
+        let effectiveMouthCloseLimit = effectiveMouthOpenLimit * 0.2;
 
         const SCROLL_STEP = 25;
         const VIEWPORT_EDGE_THRESHOLD = 60;
 
         const nose = landmarks[1];
-        smoothedRaw.current.x += (nose.x - smoothedRaw.current.x) * 0.25;
-        smoothedRaw.current.y += (nose.y - smoothedRaw.current.y) * 0.25;
+        const leftCheek = landmarks[234];
+        const rightCheek = landmarks[454];
+        const forehead = landmarks[10];
+        const chin = landmarks[152];
 
-        let rawX: number;
-        let rawY: number;
+        // 1. Tính toán tâm và kích thước khuôn mặt thực tế (Runtime)
+        const faceCenterX = (leftCheek.x + rightCheek.x) / 2;
+        const faceCenterY = (forehead.y + chin.y) / 2;
+        const faceWidth = Math.abs(rightCheek.x - leftCheek.x) || 1;
+        const faceHeight = Math.abs(chin.y - forehead.y) || 1;
 
-        // Kiểm tra xem user đã từng thực hiện cân chỉnh vùng biên (Bounds Calibration) chưa
+        // 2. Trích xuất tọa độ xoay đầu tương đối
+        const currentRotX = (nose.x - faceCenterX) / faceWidth;
+        const currentRotY = (nose.y - faceCenterY) / faceHeight;
+
+        // 3. THUẬT TOÁN ĐIỀU KHIỂN HỆ SỐ MƯỢT ĐỘNG (SPEED-ADAPTIVE LOW-PASS FILTER)
+        const deltaX = currentRotX - smoothedRaw.current.x;
+        const deltaY = currentRotY - smoothedRaw.current.y;
+        const movementDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+        const MIN_ALPHA = 0.001; // Hệ số cực nhỏ khi đứng yên nhằm hấp thụ hoàn toàn rung nhiễu
+        const MAX_ALPHA = 0.2; // Hệ số lớn khi đầu quay nhanh nhằm loại bỏ hoàn toàn độ trễ
+        const SPEED_THRESHOLD = 0.1 * speedFactor;
+
+        // Tính toán alpha biến thiên tuyến tính dựa trên tốc độ di chuyển đầu thực tế
+        let dynamicAlpha = MIN_ALPHA + (MAX_ALPHA - MIN_ALPHA) * Math.min(1, movementDistance / SPEED_THRESHOLD);
+
+        // --- TÍNH SỚM NGƯỠNG HÁ MIỆNG ĐỂ CO GIÃN NGƯỠNG KHI RA BIÊN ---
         if (
           bounds &&
           bounds.leftX !== undefined &&
@@ -169,22 +198,50 @@ const Mouse: React.FC = () => {
           bounds.leftX !== bounds.rightX &&
           bounds.topY !== bounds.bottomY
         ) {
-          // Tính toán tọa độ dựa trên không gian vùng biên thực tế của riêng user
+          const checkPctX = (smoothedRaw.current.x - bounds.leftX) / (bounds.rightX - bounds.leftX);
+          const faceDeviation = Math.max(0, Math.min(0.5, Math.abs(checkPctX - 0.5)));
+          const dynamicMouthFactor = 1 - faceDeviation * 0.6;
+          effectiveMouthOpenLimit = effectiveMouthOpenLimit * dynamicMouthFactor;
+          effectiveMouthCloseLimit = effectiveMouthOpenLimit * 0.2;
+        }
+
+        // --- KHÓA CHỐNG RUNG VÀ GIẢM ĐỘ NHẠY KHI ĐANG THAO TÁC (GIỮ DRAG & DROP ỔN ĐỊNH) ---
+        const mouthGap = Math.abs(landmarks[13].y - landmarks[14].y);
+        if (mouthGap > effectiveMouthOpenLimit) {
+          dynamicAlpha *= 0.2;
+        }
+
+        // Áp dụng bộ lọc thích ứng sau khi đã tính toán trạng thái thao tác
+        smoothedRaw.current.x += deltaX * dynamicAlpha;
+        smoothedRaw.current.y += deltaY * dynamicAlpha;
+
+        let rawX: number;
+        let rawY: number;
+
+        // Tính multiplier kết hợp tốc độ và bù trừ khoảng cách
+        const moveMultiplier = speedFactor * scaleDepth;
+
+        if (
+          bounds &&
+          bounds.leftX !== undefined &&
+          bounds.rightX !== undefined &&
+          bounds.topY !== undefined &&
+          bounds.bottomY !== undefined &&
+          bounds.leftX !== bounds.rightX &&
+          bounds.topY !== bounds.bottomY
+        ) {
+          // Ánh xạ % vị trí dựa trên dữ liệu tương đối đã loại bỏ hoàn toàn giật nhiễu
           const pctX = (smoothedRaw.current.x - bounds.leftX) / (bounds.rightX - bounds.leftX);
           const pctY = (smoothedRaw.current.y - bounds.topY) / (bounds.bottomY - bounds.topY);
 
-          rawX = pctX - 0.5;
-          rawY = pctY - 0.5;
+          // Đưa ra tọa độ chuột chính xác
+          rawX = (pctX - 0.5) * moveMultiplier;
+          rawY = (pctY - 0.5) * moveMultiplier;
         } else {
-          // Fallback sử dụng cấu hình mặc định ban đầu của hệ thống
-          rawX = (1 - smoothedRaw.current.x - 0.5) / SENSITIVITY.X;
-          rawY = (smoothedRaw.current.y - 0.5) / SENSITIVITY.Y;
+          // Fallback mặc định khi chưa cân chỉnh (Đảo ngược trục X để đồng bộ hiệu ứng gương camera)
+          rawX = -smoothedRaw.current.x * moveMultiplier * 3;
+          rawY = smoothedRaw.current.y * moveMultiplier * 3;
         }
-
-        // Áp dụng thuật toán Power Curve ổn định tâm màn hình
-        rawX = Math.sign(rawX) * Math.pow(Math.abs(rawX), 1.2);
-        rawY = Math.sign(rawY) * Math.pow(Math.abs(rawY), 1.2);
-
         const tx = (rawX + 0.5) * window.innerWidth;
         const ty = (rawY + 0.5) * window.innerHeight;
 
@@ -259,9 +316,8 @@ const Mouse: React.FC = () => {
         }
 
         // --- XỬ LÝ HÁ MIỆNG (SỬ DỤNG LIMIT MỚI) ---
-        const mouthGap = Math.abs(landmarks[13].y - landmarks[14].y);
 
-        if (mouthGap > MOUTH_OPEN_LIMIT) {
+        if (mouthGap > effectiveMouthOpenLimit) {
           if (!wasMouthOpenRef.current) {
             wasMouthOpenRef.current = true;
 
@@ -308,7 +364,7 @@ const Mouse: React.FC = () => {
               }
             }
           }
-        } else if (mouthGap < MOUTH_CLOSE_LIMIT) {
+        } else if (mouthGap < effectiveMouthCloseLimit) {
           if (wasMouthOpenRef.current) {
             wasMouthOpenRef.current = false;
 
@@ -337,6 +393,9 @@ const Mouse: React.FC = () => {
               setIsDragging(false);
               updateAction('drop');
               setTimeout(() => updateAction('moving'), 500);
+
+              smoothedRaw.current.x = currentRotX;
+              smoothedRaw.current.y = currentRotY;
             }
           }
         }
@@ -446,7 +505,7 @@ const Mouse: React.FC = () => {
           boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
           border: '2px solid #1e293b',
           pointerEvents: 'auto',
-          display: (calibration?.preferences?.visualFeedback ?? true) ? 'block' : 'none',
+          display: 'block',
         }}
       >
         <video ref={videoRef} style={{ display: 'none' }} playsInline muted />
@@ -456,25 +515,6 @@ const Mouse: React.FC = () => {
           height="180"
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
-
-        <div
-          style={{
-            position: 'absolute',
-            top: '10px',
-            left: '10px',
-            background: 'rgba(15, 23, 42, 0.8)',
-            color: '#10b981',
-            padding: '5px 10px',
-            fontSize: '12px',
-            borderRadius: '6px',
-            fontWeight: 700,
-            fontFamily: 'monospace',
-            borderLeft: '4px solid #10b981',
-            backdropFilter: 'blur(4px)',
-          }}
-        >
-          FPS: {fps}
-        </div>
 
         <div
           style={{

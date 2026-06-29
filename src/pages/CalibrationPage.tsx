@@ -62,9 +62,10 @@ export default function CalibrationPage() {
 
   const latestRawRef = useRef({ x: 0.5, y: 0.5 });
   const mouthGapRawRef = useRef(0);
+  const latestFaceSizeRef = useRef({ width: 0, height: 0 });
 
-  const boundsRef = useRef({ leftX: 0, rightX: 1, topY: 0, bottomY: 1 });
-  const prefRef = useRef({ mouthDragThreshold: 0.05, trackingSensitivity: 1, visualFeedback: true });
+  const boundsRef = useRef({ leftX: 0, rightX: 1, topY: 0, bottomY: 1, refWidth: 0, refHeight: 0 });
+  const prefRef = useRef({ mouthDragThreshold: 0.03, speed: 1 });
 
   const getSafeTranslation = (key: string, fallbackText: string): string => {
     if (!key) return fallbackText;
@@ -184,9 +185,31 @@ export default function CalibrationPage() {
           const topLip = landmarks[13];
           const bottomLip = landmarks[14];
 
-          // Update calibration points from camera into Ref
-          latestRawRef.current = { x: noseTip.x, y: noseTip.y };
+          // Caculate depth
+          const forehead = landmarks[10]; // Đỉnh trán
+          const chin = landmarks[152]; // Điểm dưới cằm
+          const leftCheek = landmarks[234]; // Má trái ngoài cùng
+          const rightCheek = landmarks[454]; // Má phải ngoài cùng
+
+          const currentW = Math.sqrt(Math.pow(leftCheek.x - rightCheek.x, 2) + Math.pow(leftCheek.y - rightCheek.y, 2));
+          const currentH = Math.sqrt(Math.pow(forehead.x - chin.x, 2) + Math.pow(forehead.y - chin.y, 2));
+
+          // --- 1. TÍNH TÂM MẶT THỜI GIAN THỰC ---
+          const faceCenterX = (leftCheek.x + rightCheek.x) / 2;
+          const faceCenterY = (forehead.y + chin.y) / 2;
+
+          // --- 2. TÍNH ĐỘ RỘNG / ĐỘ CAO KHUÔN MẶT ĐỂ CHUẨN HÓA KHOẢNG CÁCH ---
+          const faceWidth = Math.abs(rightCheek.x - leftCheek.x);
+          const faceHeight = Math.abs(chin.y - forehead.y);
+
+          // --- 3. TÍNH GÓC QUAY ĐẦU THUẦN TÚY (RELATIVE ROTATION) ---
+          const rotX = (noseTip.x - faceCenterX) / (faceWidth || 1);
+          const rotY = (noseTip.y - faceCenterY) / (faceHeight || 1);
+
+          // --- 4. GÁN TỌA ĐỘ TƯƠNG ĐỐI VÀO LATEST RAW REF ---
+          latestRawRef.current = { x: rotX, y: rotY };
           mouthGapRawRef.current = Math.sqrt(Math.pow(topLip.x - bottomLip.x, 2) + Math.pow(topLip.y - bottomLip.y, 2));
+          latestFaceSizeRef.current = { width: currentW, height: currentH };
 
           if (stepRef.current === 'calibrating') {
             const pi = pointIndexRef.current;
@@ -203,6 +226,12 @@ export default function CalibrationPage() {
               ctx.arc(noseTip.x * canvas.width, noseTip.y * canvas.height, 8, 0, 2 * Math.PI);
               ctx.fill();
             }
+            ctx.fillStyle = '#06b6d4'; // face boundary landmarks
+            [forehead, chin, leftCheek, rightCheek].forEach(pt => {
+              ctx.beginPath();
+              ctx.arc(pt.x * canvas.width, pt.y * canvas.height, 5, 0, 2 * Math.PI);
+              ctx.fill();
+            });
           }
         }
         ctx.restore();
@@ -291,7 +320,7 @@ export default function CalibrationPage() {
 
     let startTime: number | null = null;
     let animationFrameId: number;
-    const duration = 2000;
+    const duration = 3500;
 
     const animate = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
@@ -309,7 +338,9 @@ export default function CalibrationPage() {
         const currentMouth = mouthGapRawRef.current;
 
         if (pointIndex === 0) {
-          prefRef.current.mouthDragThreshold = currentMouth * 0.8;
+          prefRef.current.mouthDragThreshold = currentMouth;
+          boundsRef.current.refWidth = latestFaceSizeRef.current.width;
+          boundsRef.current.refHeight = latestFaceSizeRef.current.height;
         }
         if (pointIndex === 1) {
           boundsRef.current.topY = currentY;
@@ -570,7 +601,7 @@ export default function CalibrationPage() {
                   <div className="calibration-point-pulse" style={{ backgroundColor: 'rgba(255, 119, 0, 0.3)' }} />
                   <div
                     className="calibration-point-core"
-                    style={{ backgroundColor: '#ff7700', width: '24px', height: '24px' }}
+                    style={{ backgroundColor: '#ff7700', width: '5vmin', height: '5vmin' }}
                   />
                 </div>
               );
