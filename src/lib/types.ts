@@ -94,23 +94,24 @@ export interface UserProgress {
 // ========================================
 
 export interface CalibrationBounds {
-  leftX?: number;
-  rightX?: number;
-  topY?: number;
-  bottomY?: number;
+  leftX: number;
+  rightX: number;
+  topY: number;
+  bottomY: number;
+  refWidth: number;
+  refHeight: number;
 }
 
 export interface CalibrationPreferences {
-  mouthDragThreshold?: number;
-  trackingSensitivity?: number;
-  visualFeedback?: boolean;
+  speed: number;
+  mouthDragThreshold: number;
 }
 
 export interface Calibration {
   _id: ObjectId;
   userId: ObjectId;
-  bounds?: CalibrationBounds;
-  preferences?: CalibrationPreferences;
+  bounds: CalibrationBounds;
+  preferences: CalibrationPreferences;
   createdAt?: string;
   updatedAt?: string;
 }
