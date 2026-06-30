@@ -2153,6 +2153,13 @@
   flex-shrink: 0;
 }
 
+.profile-subsection-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
 .profile-controls-header h2 {
   margin: 0;
   font-family: Unbounded, Montserrat, sans-serif;
@@ -2164,9 +2171,14 @@
 .profile-settings-stack {
   display: flex;
   flex-direction: column;
-  gap: 3rem;
+  gap: 2rem;
 }
 
+.profile-calibration-section--spaced {
+  margin-top: 2rem;
+}
+
+.profile-subsection-title,
 .profile-calibration-section h4,
 .profile-control-card h4,
 .profile-toggle-copy h4 {
@@ -2185,6 +2197,16 @@
   font-size: clamp(1rem, 2vw, 1.35rem);
   font-weight: 500;
   line-height: 1.45;
+}
+
+.profile-section-desc,
+.profile-calibration-section p.profile-section-desc {
+  margin: 0 0 1rem;
+  color: #666;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+  opacity: 1;
 }
 
 .profile-action-btn {

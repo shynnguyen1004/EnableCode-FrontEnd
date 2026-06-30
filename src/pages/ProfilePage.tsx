@@ -6,7 +6,6 @@ import {
   CheckCircle,
   Target,
   Award,
-  Eye,
   Languages,
   Loader2,
   AlertTriangle,
@@ -286,99 +285,89 @@ export default function ProfilePage() {
         <main className="profile-controls">
           <div className="profile-controls-inner">
             <section className="profile-language-section" style={{ marginBottom: '2.5rem' }}>
-              <div
-                className="profile-language-header"
-                style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}
-              >
+              <div className="profile-subsection-header">
                 <div className="profile-heading-icon-wrap profile-heading-icon-wrap--language">
                   <Languages size={28} strokeWidth={2.5} color="#FFF9DC" />
                 </div>
-                <h3 style={{ margin: 0 }}>{t('settings.languageTitle')}</h3>
+                <h4 className="profile-subsection-title" style={{ margin: 0 }}>
+                  {t('settings.languageTitle')}
+                </h4>
               </div>
-              <p style={{ marginBottom: '1rem', color: '#666' }}>{t('settings.languageSubtitle')}</p>
+              <p className="profile-section-desc">{t('settings.languageSubtitle')}</p>
               <LanguageToggle />
             </section>
           </div>
 
           <div className="profile-controls-inner">
-            <div
-              className="profile-controls-header"
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '1.5rem',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div className="profile-heading-icon-wrap">
-                  <Eye size={28} strokeWidth={2.5} color="#FFF9DC" />
-                </div>
-                <h3 style={{ margin: 0 }}>{t('settings.eyeTrackingTitle') || 'Face Control Settings'}</h3>
+            <div className="profile-subsection-header">
+              <div className="profile-heading-icon-wrap">
+                <ScanFace size={28} strokeWidth={2.5} color="#FFF9DC" />
               </div>
+              <h4 className="profile-subsection-title" style={{ margin: 0 }}>
+                {t('settings.eyeTrackingTitle') || 'FACE CONTROL SENSITIVITY'}
+              </h4>
             </div>
+            <p className="profile-section-desc">
+              {t('settings.mouseSpeedDesc') || 'Adjust how fast the cursor moves when you turn your head.'}
+            </p>
 
-            <div className="profile-settings-stack">
-              {/* ---> PHẦN MỚI THÊM: CHỈNH TỐC ĐỘ CHUỘT <--- */}
-              <section className="profile-calibration-section" style={{ marginBottom: '2rem' }}>
-                <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px', textTransform: 'uppercase' }}>
-                  {t('settings.mouseSpeedTitle') || 'TRACKING SENSITIVITY'}
-                </h4>
-                <p>{t('settings.mouseSpeedDesc') || 'Adjust how fast the cursor moves when you turn your head.'}</p>
-
-                <div style={{ display: 'flex', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
-                  {[
-                    { id: 'low', label: t('settings.speedLow') || 'Low' },
-                    { id: 'medium', label: t('settings.speedMedium') || 'Medium' },
-                    { id: 'high', label: t('settings.speedHigh') || 'High' },
-                  ].map(item => {
-                    const isActive = mouseSpeed === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => handleSpeedChange(item.id as 'low' | 'medium' | 'high')}
-                        className={`language-toggle-btn ${isActive ? 'is-active' : ''}`}
-                      >
-                        {item.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-              {/* ---> KẾT THÚC PHẦN CHỈNH TỐC ĐỘ <--- */}
-
-              <section className="profile-calibration-section">
-                <h4>{t('settings.calibrationTitle') || 'SYSTEM CALIBRATION'}</h4>
-                <p>
-                  {t('settings.calibrationBody') ||
-                    "Recalibrate if the cursor isn't following your head movement accurately."}
-                </p>
-                <div className="profile-action-stack">
-                  <Link to="/calibration" className="profile-action-btn group">
-                    <Target size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
-                    {t('settings.startCalibration') || 'Start Calibration'}
-                  </Link>
-                  <Link to="/face-register" className="profile-action-btn profile-action-btn--face-login group">
-                    <ScanFace size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
-                    {t('settings.setupFaceLogin') || 'Setup Face Login'}
-                  </Link>
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              {[
+                { id: 'low', label: t('settings.speedLow') || 'Low' },
+                { id: 'medium', label: t('settings.speedMedium') || 'Medium' },
+                { id: 'high', label: t('settings.speedHigh') || 'High' },
+              ].map(item => {
+                const isActive = mouseSpeed === item.id;
+                return (
                   <button
+                    key={item.id}
                     type="button"
-                    onClick={handleLogout}
-                    disabled={isLoggingOut}
-                    className="profile-action-btn profile-action-btn--logout group"
+                    onClick={() => handleSpeedChange(item.id as 'low' | 'medium' | 'high')}
+                    className={`language-toggle-btn ${isActive ? 'is-active' : ''}`}
                   >
-                    {isLoggingOut ? (
-                      <Loader2 size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon animate-spin" />
-                    ) : (
-                      <LogOut size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
-                    )}
-                    {t('settings.logoutAccount') || 'Log Out Account'}
+                    {item.label}
                   </button>
-                </div>
-              </section>
+                );
+              })}
             </div>
+
+            <section className="profile-calibration-section profile-calibration-section--spaced">
+              <div className="profile-subsection-header">
+                <div className="profile-heading-icon-wrap">
+                  <Target size={28} strokeWidth={2.5} color="#FFF9DC" />
+                </div>
+                <h4 className="profile-subsection-title" style={{ margin: 0 }}>
+                  {t('settings.calibrationTitle') || 'SYSTEM CALIBRATION'}
+                </h4>
+              </div>
+              <p className="profile-section-desc">
+                {t('settings.calibrationBody') ||
+                  "Recalibrate if the cursor isn't following your head movement accurately."}
+              </p>
+              <div className="profile-action-stack">
+                <Link to="/calibration" className="profile-action-btn group">
+                  <Target size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
+                  {t('settings.startCalibration') || 'Start Calibration'}
+                </Link>
+                <Link to="/face-register" className="profile-action-btn profile-action-btn--face-login group">
+                  <ScanFace size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
+                  {t('settings.setupFaceLogin') || 'Setup Face Login'}
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className="profile-action-btn profile-action-btn--logout group"
+                >
+                  {isLoggingOut ? (
+                    <Loader2 size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon animate-spin" />
+                  ) : (
+                    <LogOut size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
+                  )}
+                  {t('settings.logoutAccount') || 'Log Out Account'}
+                </button>
+              </div>
+            </section>
           </div>
         </main>
       </div>

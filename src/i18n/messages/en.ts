@@ -163,7 +163,7 @@ const en = {
     levelPrefix: 'Level',
     explorer: 'Explorer',
     streakDays: 'Days',
-    eyeTrackingTitle: 'Face Control Settings',
+    eyeTrackingTitle: 'FACE CONTROL SENSITIVITY',
     calibrationTitle: 'SYSTEM CALIBRATION',
     calibrationBody: "Recalibrate if the cursor isn't following your head movement accurately.",
     startCalibration: 'Start Calibration',
