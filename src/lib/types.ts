@@ -277,6 +277,12 @@ export interface SubmitLessonResponse {
   testcaseResults: Record<string, unknown>[];
 }
 
+export interface RunLessonResponse {
+  passed: boolean;
+  output: string;
+  testcaseResults: Record<string, unknown>[];
+}
+
 export interface RefreshTokenResponse {
   success: boolean;
   accessToken: string;

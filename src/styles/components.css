@@ -1517,6 +1517,16 @@
   min-height: 72px;
 }
 
+.workspace-panel-btn.submit {
+  background: var(--accent-light-green);
+  color: #fff;
+  min-height: 72px;
+}
+
+.workspace-panel-btn.submit:hover:not(.is-disabled) .btn-icon {
+  transform: scale(1.1);
+}
+
 .workspace-panel-btn.run {
   background: var(--accent-orange);
   color: #fff;
@@ -1920,6 +1930,87 @@
   font-size: clamp(1.25rem, 2.5vw, 1.75rem);
   font-weight: 900;
   color: #272727;
+}
+
+.workspace-submit-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(17, 17, 17, 0.65);
+}
+
+.workspace-submit-modal {
+  position: relative;
+  width: min(100%, 480px);
+  border: 5px solid #111;
+  border-radius: 28px;
+  background: var(--bg-cream);
+  padding: 2rem 2rem 1.75rem;
+  box-shadow: 14px 14px 0 #111;
+  color: #272727;
+  text-align: center;
+}
+
+.workspace-submit-modal-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  border: 5px solid var(--accent-light-green);
+  background: #fff;
+  color: var(--accent-light-green);
+}
+
+.workspace-submit-modal h3 {
+  margin: 0 0 0.75rem;
+  font-family: Unbounded, Montserrat, sans-serif;
+  font-size: clamp(1.2rem, 2.4vw, 1.6rem);
+  font-weight: 900;
+  color: #272727;
+}
+
+.workspace-submit-modal p {
+  margin: 0 0 1.5rem;
+  font-size: clamp(1rem, 1.8vw, 1.2rem);
+  font-weight: 700;
+  color: #444;
+}
+
+.workspace-submit-modal-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.workspace-submit-next-btn {
+  min-width: 200px;
+  min-height: 64px;
+  border: 4px solid #111;
+  border-radius: 20px;
+  background: var(--accent-orange);
+  color: #fff;
+  font-size: clamp(1rem, 1.8vw, 1.25rem);
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 6px 6px 0 #111;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.workspace-submit-next-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 8px 8px 0 #111;
 }
 
 .profile-edit-preview {
