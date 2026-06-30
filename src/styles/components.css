@@ -1871,7 +1871,7 @@
   min-width: 0;
   border-right: 5px solid #111;
   padding: 3rem;
-  overflow-y: auto;
+  overflow-y: hidden;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -2102,6 +2102,64 @@
   font-size: clamp(1rem, 1.8vw, 1.2rem);
   font-weight: 700;
   color: #444;
+}
+
+.workspace-submit-level-card {
+  margin: 0 0 1.5rem;
+  padding: 1rem 1.1rem;
+  border: 4px solid #111;
+  border-radius: 18px;
+  background: #fff;
+  color: #111;
+  box-shadow: 6px 6px 0 #111;
+}
+
+.workspace-submit-level-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.workspace-submit-level-row--sub {
+  margin-top: 0.35rem;
+}
+
+.workspace-submit-level-label {
+  font-family: Unbounded, Montserrat, sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+}
+
+.workspace-submit-level-value {
+  font-family: Unbounded, Montserrat, sans-serif;
+  font-weight: 900;
+  font-size: 1.1rem;
+}
+
+.workspace-submit-level-subtext {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.workspace-submit-level-bar {
+  margin-top: 0.7rem;
+  height: 12px;
+  border: 3px solid #111;
+  border-radius: 999px;
+  background: #efe7c4;
+  overflow: hidden;
+}
+
+.workspace-submit-level-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent-green), var(--accent-light-green));
+  border-right: 2px solid rgba(17, 17, 17, 0.5);
+  transition: width 850ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .workspace-submit-modal-actions {
@@ -2339,7 +2397,7 @@
   background: var(--bg-cream);
   color: #111;
   padding: 3rem;
-  overflow-y: auto;
+  overflow-y: hidden;
 }
 
 .profile-controls-inner {

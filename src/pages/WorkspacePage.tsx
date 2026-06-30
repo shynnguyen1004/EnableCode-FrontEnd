@@ -13,6 +13,7 @@ import { isTopicLocked, isLessonLocked } from '../lib/progress';
 import { lessonApi } from '../api/lessonApi';
 import { topicApi } from '../api/topicApi';
 import { progressApi } from '../api/progressApi';
+import { profileApi } from '../api/profileApi';
 import { extractTopics, extractLessons, extractSingleLesson } from '../utils/lessonMapper';
 import { registerDynamicBlocks } from '../blockly/blocks';
 
@@ -36,6 +37,12 @@ export default function WorkspacePage() {
   const [isSubmittingLesson, setIsSubmittingLesson] = useState(false);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [submittedPoints, setSubmittedPoints] = useState(0);
+  const [submittedLevel, setSubmittedLevel] = useState(0);
+  const [submittedFromLevel, setSubmittedFromLevel] = useState(0);
+  const [submittedFromLevelProgress, setSubmittedFromLevelProgress] = useState(0);
+  const [submittedLevelProgress, setSubmittedLevelProgress] = useState(0);
+  const [animatedLevelProgress, setAnimatedLevelProgress] = useState(0);
+  const levelAnimationTimeoutRef = useRef<number | null>(null);
   const [hintIndex, setHintIndex] = useState(0);
   const hasMoreHints = !!(lesson?.hint && lesson.hint.length > 0 && hintIndex < lesson.hint.length);
   const [outputLines, setOutputLines] = useState<LogLine[]>([]);
@@ -119,6 +126,9 @@ export default function WorkspacePage() {
     setRunPassed(null);
     setIsSubmitModalOpen(false);
     setSubmittedPoints(0);
+    setSubmittedLevel(0);
+    setSubmittedLevelProgress(0);
+    setAnimatedLevelProgress(0);
   };
 
   const handleClearOutput = () => {
@@ -128,7 +138,54 @@ export default function WorkspacePage() {
     setRunPassed(null);
     setIsSubmitModalOpen(false);
     setSubmittedPoints(0);
+    setSubmittedLevel(0);
+    setSubmittedLevelProgress(0);
+    setAnimatedLevelProgress(0);
   };
+
+  useEffect(() => {
+    if (!isSubmitModalOpen) return;
+
+    if (levelAnimationTimeoutRef.current !== null) {
+      window.clearTimeout(levelAnimationTimeoutRef.current);
+      levelAnimationTimeoutRef.current = null;
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      setAnimatedLevelProgress(submittedFromLevelProgress);
+
+      const nextFrame = window.requestAnimationFrame(() => {
+        if (submittedLevel > submittedFromLevel) {
+          // Qua mốc level mới: chạy đến 100%, rồi reset và chạy tiếp đến mức mới.
+          setAnimatedLevelProgress(100);
+          levelAnimationTimeoutRef.current = window.setTimeout(() => {
+            setAnimatedLevelProgress(0);
+            const secondFrame = window.requestAnimationFrame(() => {
+              setAnimatedLevelProgress(submittedLevelProgress);
+            });
+            levelAnimationTimeoutRef.current = window.setTimeout(() => {
+              window.cancelAnimationFrame(secondFrame);
+              levelAnimationTimeoutRef.current = null;
+            }, 0);
+          }, 900);
+        } else {
+          setAnimatedLevelProgress(submittedLevelProgress);
+        }
+      });
+
+      levelAnimationTimeoutRef.current = window.setTimeout(() => {
+        window.cancelAnimationFrame(nextFrame);
+      }, 0);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      if (levelAnimationTimeoutRef.current !== null) {
+        window.clearTimeout(levelAnimationTimeoutRef.current);
+        levelAnimationTimeoutRef.current = null;
+      }
+    };
+  }, [isSubmitModalOpen, submittedFromLevel, submittedFromLevelProgress, submittedLevel, submittedLevelProgress]);
 
   const handleHint = () => {
     if (!lesson?.hint?.length) return;
@@ -259,6 +316,11 @@ export default function WorkspacePage() {
     setIsSubmittingLesson(true);
 
     try {
+      const beforeSubmitStats = await profileApi.getUserStats();
+      const beforeScore = beforeSubmitStats.totalScore ?? 0;
+      const beforeLevel = beforeSubmitStats.level ?? 0;
+      const beforeProgressToNextLevel = ((beforeScore % 100) + 100) % 100;
+
       const { output } = evaluateWorkspaceRun(workspace);
       const workspaceState = Blockly.serialization.workspaces.save(workspace);
 
@@ -270,6 +332,15 @@ export default function WorkspacePage() {
 
       if (response.passed) {
         setSubmittedPoints(response.points ?? 0);
+        const userStats = await profileApi.getUserStats();
+        const totalScore = userStats.totalScore ?? 0;
+        const level = userStats.level ?? 0;
+        const progressToNextLevel = ((totalScore % 100) + 100) % 100;
+
+        setSubmittedFromLevel(beforeLevel);
+        setSubmittedFromLevelProgress(beforeProgressToNextLevel);
+        setSubmittedLevel(level);
+        setSubmittedLevelProgress(progressToNextLevel);
         setIsSubmitModalOpen(true);
 
         const [updatedAllProgress, updatedDetailProgress] = await Promise.all([
@@ -335,6 +406,7 @@ export default function WorkspacePage() {
     submittedPoints > 0
       ? t('workspace.submitSuccessPoints').replace('{points}', String(submittedPoints))
       : t('workspace.submitSuccessNoPoints');
+  const pointsToNextLevel = 100 - submittedLevelProgress;
 
   const savedWorkspaceState = currentLessonProgress?.workspaceState;
   return (
@@ -473,6 +545,25 @@ export default function WorkspacePage() {
             </div>
             <h3 id="workspace-submit-title">{t('workspace.submitSuccessTitle')}</h3>
             <p>{submitSuccessMessage}</p>
+            <div className="workspace-submit-level-card" aria-label="Level progress">
+              <div className="workspace-submit-level-row">
+                <span className="workspace-submit-level-label">Level</span>
+                <span className="workspace-submit-level-value">{submittedLevel}</span>
+              </div>
+              <div className="workspace-submit-level-row workspace-submit-level-row--sub">
+                <span className="workspace-submit-level-subtext">{submittedLevelProgress}/100 points</span>
+                <span className="workspace-submit-level-subtext">{pointsToNextLevel} to next</span>
+              </div>
+              <div
+                className="workspace-submit-level-bar"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={submittedLevelProgress}
+              >
+                <div className="workspace-submit-level-bar-fill" style={{ width: `${animatedLevelProgress}%` }} />
+              </div>
+            </div>
             <div className="workspace-submit-modal-actions">
               <button type="button" className="workspace-submit-next-btn" onClick={handleNextLesson}>
                 {nextLesson ? t('workspace.nextLesson') : t('workspace.backToTopic')}
