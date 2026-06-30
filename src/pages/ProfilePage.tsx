@@ -226,6 +226,12 @@ export default function ProfilePage() {
     }
   }
 
+  const totalScore = profileData.totalScore ?? 0;
+  const currentLevel = profileData.level ?? 0;
+  const levelProgress = ((totalScore % 100) + 100) % 100;
+  const pointsToNextLevel = 100 - levelProgress;
+  const levelProgressPercent = (levelProgress / 100) * 100;
+
   return (
     <PageScale scale={0.8} className="profile-page">
       <header className="profile-topbar">
@@ -238,26 +244,45 @@ export default function ProfilePage() {
 
       <div className="profile-main">
         <aside className="profile-sidebar">
-          <div className="profile-user-info">
-            <div className="profile-avatar-wrap">
-              <img
-                src={profileData.avatar || '/images/profilePicture.jpeg'}
-                alt={t('settings.avatarAlt')}
-                className="profile-avatar-img"
-              />
+          <div className="profile-user-panel">
+            <div className="profile-user-info">
+              <div className="profile-avatar-wrap">
+                <img
+                  src={profileData.avatar || '/images/profilePicture.jpeg'}
+                  alt={t('settings.avatarAlt')}
+                  className="profile-avatar-img"
+                />
+              </div>
+              <div className="profile-details">
+                <h2>{formatDisplayName(profileData.name)}</h2>
+                <p>
+                  {t('settings.memberSincePrefix')} {memberSinceStr}
+                </p>
+                <button type="button" className="profile-edit-btn" onClick={openEditModal}>
+                  <Pencil size={20} strokeWidth={3} />
+                  {t('settings.editProfile')}
+                </button>
+              </div>
             </div>
-            <div className="profile-details">
-              <h2>{formatDisplayName(profileData.name)}</h2>
-              <p>
-                {t('settings.memberSincePrefix')} {memberSinceStr}
-              </p>
-              <p>
-                {t('settings.levelPrefix')} {profileData.level || 1} {t('settings.explorer')}
-              </p>
-              <button type="button" className="profile-edit-btn" onClick={openEditModal}>
-                <Pencil size={20} strokeWidth={3} />
-                {t('settings.editProfile')}
-              </button>
+
+            <div className="profile-level-card" aria-label="Level progress">
+              <div className="profile-level-row">
+                <span className="profile-level-label">Level</span>
+                <span className="profile-level-value">{currentLevel}</span>
+              </div>
+              <div className="profile-level-row profile-level-row--sub">
+                <span className="profile-level-subtext">{levelProgress}/100 points</span>
+                <span className="profile-level-subtext">{pointsToNextLevel} to next</span>
+              </div>
+              <div
+                className="profile-level-bar"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={levelProgress}
+              >
+                <div className="profile-level-bar-fill" style={{ width: `${levelProgressPercent}%` }} />
+              </div>
             </div>
           </div>
 
