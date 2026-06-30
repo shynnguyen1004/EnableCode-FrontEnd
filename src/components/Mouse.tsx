@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useI18n } from '../i18n/I18nProvider';
 import type { FaceMeshResults, CameraType, FaceMeshType } from '../lib/types';
 import { useCalibration } from '../context/CalibrationContext';
+import { useEyeTracking } from '../context/EyeTrackingContext';
 
 type ActionKind =
   | 'moving'
@@ -37,6 +38,7 @@ declare global {
 const Mouse: React.FC = () => {
   const { t } = useI18n();
   const { calibration } = useCalibration();
+  const { isEnabled } = useEyeTracking();
 
   // Giữ ref luôn đồng bộ với dữ liệu calibration mới nhất từ Context mà không trigger re-run useEffect
   const calibrationRef = useRef(calibration);
@@ -77,6 +79,7 @@ const Mouse: React.FC = () => {
   const lastHoveredElement = useRef<Element | null>(null);
 
   useEffect(() => {
+    if (!isEnabled) return;
     const videoElement = videoRef.current;
     const canvasElement = canvasRef.current;
     if (!videoElement || !canvasElement) return;
@@ -560,8 +563,8 @@ const Mouse: React.FC = () => {
       camera.stop();
       void faceMesh.close();
     };
-  }, []);
-
+  }, [isEnabled]);
+  if (!isEnabled) return null;
   return (
     <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9999 }}>
       <style>{`

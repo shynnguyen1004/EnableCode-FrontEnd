@@ -1,7 +1,7 @@
 import type { UserProfileResponse } from '../lib/types';
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogIn, ScanFace } from 'lucide-react';
+import { ArrowLeft, LogIn, ScanFace, Eye, EyeOff } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { authApi } from '../api/authApi';
 import { profileApi } from '../api/profileApi';
@@ -18,6 +18,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -98,15 +99,27 @@ export default function LoginPage() {
             />
 
             <label htmlFor="password">{t('login.password')}</label>
-            <input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              disabled={isLoading}
-              required
-            />
+            <div className="password-input-wrap">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                disabled={isLoading}
+                required
+              />
+              <button
+                type="button"
+                className="password-reveal-btn"
+                onClick={() => setShowPassword(prev => !prev)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
+                disabled={isLoading}
+              >
+                {showPassword ? <EyeOff size={24} strokeWidth={2.5} /> : <Eye size={24} strokeWidth={2.5} />}
+              </button>
+            </div>
 
             <div style={{ textAlign: 'right', marginTop: '0.5rem', marginBottom: '1rem' }}>
               <Link to="/forgot-password" className="register-sign-in-link">

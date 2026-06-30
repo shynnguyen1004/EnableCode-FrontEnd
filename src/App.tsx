@@ -1,7 +1,9 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { EyeTrackingProvider, useEyeTracking } from './context/EyeTrackingContext';
+import CameraPermissionGate from './components/CameraPermissionGate';
 import HomePage from './pages/HomePage';
+import CameraPermissionPage from './pages/CameraPermissionPage';
 import LessonsPage from './pages/LessonsPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -25,6 +27,8 @@ function EyeTrackingLayer() {
 
 function AppRoutes() {
   const isMobile = useIsMobile();
+  const location = useLocation();
+  const showEyeTracking = location.pathname !== '/camera-permission';
 
   if (isMobile) {
     return <MobileUnsupported />;
@@ -33,7 +37,15 @@ function AppRoutes() {
   return (
     <>
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route
+          path="/"
+          element={
+            <CameraPermissionGate>
+              <HomePage />
+            </CameraPermissionGate>
+          }
+        />
+        <Route path="/camera-permission" element={<CameraPermissionPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/face-login" element={<FaceLoginPage />} />
@@ -48,7 +60,7 @@ function AppRoutes() {
         <Route path="/calibration" element={<CalibrationPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      <EyeTrackingLayer />
+      {showEyeTracking && <EyeTrackingLayer />}
     </>
   );
 }

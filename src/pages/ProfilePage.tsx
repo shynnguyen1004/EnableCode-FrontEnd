@@ -6,7 +6,6 @@ import {
   CheckCircle,
   Target,
   Award,
-  Eye,
   Languages,
   Loader2,
   AlertTriangle,
@@ -39,7 +38,7 @@ export default function ProfilePage() {
   const { isLoggedIn, logout, updateUser } = useAuth();
   const navigate = useNavigate();
 
-  // Chỉ giữ lại state quản lý dữ liệu Profile và trạng thái tải trang
+  // State quản lý dữ liệu
   const [profileData, setProfileData] = useState<UserProfileResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
@@ -50,6 +49,10 @@ export default function ProfilePage() {
   const [avatarFileName, setAvatarFileName] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [editError, setEditError] = useState('');
+
+  // -> THÊM STATE QUẢN LÝ TỐC ĐỘ CHUỘT
+  const [mouseSpeed, setMouseSpeed] = useState<'low' | 'medium' | 'high'>('medium');
+
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -59,9 +62,9 @@ export default function ProfilePage() {
       setIsLoading(true);
       setFetchError(false);
       try {
-        // Chỉ gọi API lấy thông tin user
         const profileRes = await profileApi.getProfile();
         setProfileData(profileRes);
+        // Gợi ý: Nếu API profile có trả về trackingSensitivity, bạn có thể setMouseSpeed ở đây
       } catch (error) {
         console.error('Error fetching profile:', error);
         setFetchError(true);
@@ -162,11 +165,19 @@ export default function ProfilePage() {
     }
   };
 
+  // -> THÊM HÀM XỬ LÝ ĐỔI TỐC ĐỘ CHUỘT
+  const handleSpeedChange = async (speed: 'low' | 'medium' | 'high') => {
+    setMouseSpeed(speed);
+
+    // Gợi ý: Bạn có thể gọi API updateCalibration hoặc update Context ở đây để lưu thiết lập
+    // const sensitivityMap = { low: 0.5, medium: 1.0, high: 2.0 };
+    // await profileApi.updateCalibration({ preferences: { trackingSensitivity: sensitivityMap[speed] } });
+  };
+
   if (!isLoggedIn) {
     return <Navigate to="/" replace />;
   }
 
-  // Xử lý hiển thị loading
   if (isLoading) {
     return (
       <div
@@ -181,7 +192,6 @@ export default function ProfilePage() {
     );
   }
 
-  // Xử lý khi server lỗi
   if (fetchError || !profileData) {
     return (
       <div
@@ -216,6 +226,12 @@ export default function ProfilePage() {
     }
   }
 
+  const totalScore = profileData.totalScore ?? 0;
+  const currentLevel = profileData.level ?? 0;
+  const levelProgress = ((totalScore % 100) + 100) % 100;
+  const pointsToNextLevel = 100 - levelProgress;
+  const levelProgressPercent = (levelProgress / 100) * 100;
+
   return (
     <PageScale scale={0.8} className="profile-page">
       <header className="profile-topbar">
@@ -228,26 +244,45 @@ export default function ProfilePage() {
 
       <div className="profile-main">
         <aside className="profile-sidebar">
-          <div className="profile-user-info">
-            <div className="profile-avatar-wrap">
-              <img
-                src={profileData.avatar || '/images/profilePicture.jpeg'}
-                alt={t('settings.avatarAlt')}
-                className="profile-avatar-img"
-              />
+          <div className="profile-user-panel">
+            <div className="profile-user-info">
+              <div className="profile-avatar-wrap">
+                <img
+                  src={profileData.avatar || '/images/profilePicture.jpeg'}
+                  alt={t('settings.avatarAlt')}
+                  className="profile-avatar-img"
+                />
+              </div>
+              <div className="profile-details">
+                <h2>{formatDisplayName(profileData.name)}</h2>
+                <p>
+                  {t('settings.memberSincePrefix')} {memberSinceStr}
+                </p>
+                <button type="button" className="profile-edit-btn" onClick={openEditModal}>
+                  <Pencil size={20} strokeWidth={3} />
+                  {t('settings.editProfile')}
+                </button>
+              </div>
             </div>
-            <div className="profile-details">
-              <h2>{formatDisplayName(profileData.name)}</h2>
-              <p>
-                {t('settings.memberSincePrefix')} {memberSinceStr}
-              </p>
-              <p>
-                {t('settings.levelPrefix')} {profileData.level || 1} {t('settings.explorer')}
-              </p>
-              <button type="button" className="profile-edit-btn" onClick={openEditModal}>
-                <Pencil size={20} strokeWidth={3} />
-                {t('settings.editProfile')}
-              </button>
+
+            <div className="profile-level-card" aria-label="Level progress">
+              <div className="profile-level-row">
+                <span className="profile-level-label">Level</span>
+                <span className="profile-level-value">{currentLevel}</span>
+              </div>
+              <div className="profile-level-row profile-level-row--sub">
+                <span className="profile-level-subtext">{levelProgress}/100 points</span>
+                <span className="profile-level-subtext">{pointsToNextLevel} to next</span>
+              </div>
+              <div
+                className="profile-level-bar"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={levelProgress}
+              >
+                <div className="profile-level-bar-fill" style={{ width: `${levelProgressPercent}%` }} />
+              </div>
             </div>
           </div>
 
@@ -259,7 +294,7 @@ export default function ProfilePage() {
             </article>
             <article className="profile-stat-card" tabIndex={0}>
               <Award size={52} strokeWidth={3} className="icon-orange" />
-              <strong>{/* Giả sử bạn có trường badges */ 0}</strong>
+              <strong>0</strong>
               <span>{t('settings.badges')}</span>
             </article>
             <article className="profile-stat-card wide" tabIndex={0}>
@@ -273,71 +308,91 @@ export default function ProfilePage() {
         </aside>
 
         <main className="profile-controls">
-          {/* Cài đặt Ngôn ngữ */}
           <div className="profile-controls-inner">
             <section className="profile-language-section" style={{ marginBottom: '2.5rem' }}>
-              <div
-                className="profile-language-header"
-                style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}
-              >
+              <div className="profile-subsection-header">
                 <div className="profile-heading-icon-wrap profile-heading-icon-wrap--language">
                   <Languages size={28} strokeWidth={2.5} color="#FFF9DC" />
                 </div>
-                <h3 style={{ margin: 0 }}>{t('settings.languageTitle')}</h3>
+                <h4 className="profile-subsection-title" style={{ margin: 0 }}>
+                  {t('settings.languageTitle')}
+                </h4>
               </div>
-              <p style={{ marginBottom: '1rem', color: '#666' }}>{t('settings.languageSubtitle')}</p>
+              <p className="profile-section-desc">{t('settings.languageSubtitle')}</p>
               <LanguageToggle />
             </section>
           </div>
 
-          {/* Face Control settings */}
           <div className="profile-controls-inner">
-            <div
-              className="profile-controls-header"
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '1.5rem',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div className="profile-heading-icon-wrap">
-                  <Eye size={28} strokeWidth={2.5} color="#FFF9DC" />
-                </div>
-                <h3 style={{ margin: 0 }}>{t('settings.eyeTrackingTitle')}</h3>
+            <div className="profile-subsection-header">
+              <div className="profile-heading-icon-wrap">
+                <ScanFace size={28} strokeWidth={2.5} color="#FFF9DC" />
               </div>
+              <h4 className="profile-subsection-title" style={{ margin: 0 }}>
+                {t('settings.eyeTrackingTitle') || 'FACE CONTROL SENSITIVITY'}
+              </h4>
+            </div>
+            <p className="profile-section-desc">
+              {t('settings.mouseSpeedDesc') || 'Adjust how fast the cursor moves when you turn your head.'}
+            </p>
+
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              {[
+                { id: 'low', label: t('settings.speedLow') || 'Low' },
+                { id: 'medium', label: t('settings.speedMedium') || 'Medium' },
+                { id: 'high', label: t('settings.speedHigh') || 'High' },
+              ].map(item => {
+                const isActive = mouseSpeed === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleSpeedChange(item.id as 'low' | 'medium' | 'high')}
+                    className={`language-toggle-btn ${isActive ? 'is-active' : ''}`}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="profile-settings-stack">
-              <section className="profile-calibration-section">
-                <h4>{t('settings.calibrationTitle')}</h4>
-                <p>{t('settings.calibrationBody')}</p>
-                <div className="profile-action-stack">
-                  <Link to="/calibration" className="profile-action-btn group">
-                    <Target size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
-                    {t('settings.startCalibration')}
-                  </Link>
-                  <Link to="/face-register" className="profile-action-btn profile-action-btn--face-login group">
-                    <ScanFace size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
-                    {t('settings.setupFaceLogin')}
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    disabled={isLoggingOut}
-                    className="profile-action-btn profile-action-btn--logout group"
-                  >
-                    {isLoggingOut ? (
-                      <Loader2 size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon animate-spin" />
-                    ) : (
-                      <LogOut size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
-                    )}
-                    {t('settings.logoutAccount')}
-                  </button>
+            <section className="profile-calibration-section profile-calibration-section--spaced">
+              <div className="profile-subsection-header">
+                <div className="profile-heading-icon-wrap">
+                  <Target size={28} strokeWidth={2.5} color="#FFF9DC" />
                 </div>
-              </section>
-            </div>
+                <h4 className="profile-subsection-title" style={{ margin: 0 }}>
+                  {t('settings.calibrationTitle') || 'SYSTEM CALIBRATION'}
+                </h4>
+              </div>
+              <p className="profile-section-desc">
+                {t('settings.calibrationBody') ||
+                  "Recalibrate if the cursor isn't following your head movement accurately."}
+              </p>
+              <div className="profile-action-stack">
+                <Link to="/calibration" className="profile-action-btn group">
+                  <Target size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
+                  {t('settings.startCalibration') || 'Start Calibration'}
+                </Link>
+                <Link to="/face-register" className="profile-action-btn profile-action-btn--face-login group">
+                  <ScanFace size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
+                  {t('settings.setupFaceLogin') || 'Setup Face Login'}
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className="profile-action-btn profile-action-btn--logout group"
+                >
+                  {isLoggingOut ? (
+                    <Loader2 size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon animate-spin" />
+                  ) : (
+                    <LogOut size={44} strokeWidth={3} color="#FFF9DC" className="profile-action-icon" />
+                  )}
+                  {t('settings.logoutAccount') || 'Log Out Account'}
+                </button>
+              </div>
+            </section>
           </div>
         </main>
       </div>

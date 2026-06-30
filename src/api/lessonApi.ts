@@ -5,6 +5,7 @@ import type {
   SaveProgressResponse,
   SaveProgressRequest,
   SubmitLessonResponse,
+  RunLessonResponse,
   UpdateLessonRequest,
   PaginatedLessonsResponse,
   HintResponse,
@@ -32,6 +33,9 @@ export const lessonApi = {
 
   submitWorkspace: (lessonId: string, data: SubmitLessonRequest) =>
     axiosClient.post<unknown, SubmitLessonResponse>(`/lessons/${lessonId}/submit`, data),
+
+  runWorkspace: (lessonId: string, data: Pick<SubmitLessonRequest, 'pythonCode'>) =>
+    axiosClient.post<unknown, RunLessonResponse>(`/lessons/${lessonId}/run`, data),
 
   getHint: (lessonId: string, index: number = 0) =>
     axiosClient.get<unknown, HintResponse>(`/lessons/${lessonId}/hint`, { params: { index } }),

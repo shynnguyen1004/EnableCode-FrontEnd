@@ -148,6 +148,10 @@ export default function CalibrationPage() {
   }, [stopCamera]);
 
   const startCalibration = async () => {
+    // --- BƯỚC 1: TẮT CHUỘT ẢO ĐỂ TRẢ LẠI QUYỀN CAMERA TRƯỚC KHI BẮT ĐẦU ---
+    setEyeTrackingEnabled(false);
+    await new Promise(resolve => setTimeout(resolve, 300)); // Chờ nhả phần cứng
+
     try {
       const { FaceMesh, Camera } = window;
       if (!FaceMesh || !Camera) {
@@ -267,7 +271,8 @@ export default function CalibrationPage() {
       faceMeshRef.current = faceMesh;
       cameraRef.current = cameraInstance;
 
-      setEyeTrackingEnabled(true);
+      // ĐÃ XÓA LỆNH setEyeTrackingEnabled(true) Ở ĐÂY ĐỂ TRÁNH XUNG ĐỘT
+
       setIntroCountdown(3);
       setStep('countdown');
     } catch (err) {
@@ -286,21 +291,19 @@ export default function CalibrationPage() {
       return;
     }
     try {
-      // 1. Gọi API lưu lên server và lấy kết quả trả về
       const updatedData = await profileApi.updateCalibration(finalData);
-
-      // 2. NẠP DỮ LIỆU VÀO CONTEXT NGAY LẬP TỨC
       setCalibration(updatedData);
-
       console.log('[AI-Tracker-Log] Successfully update to database.');
     } catch (err) {
       console.error('[AI-Tracker-Log] Error connecting to API Server:', err);
     }
-  }, [isLoggedIn, setCalibration]); // ---> Nhớ thêm setCalibration vào mảng dependency
+  }, [isLoggedIn, setCalibration]);
 
   const cancelCalibration = () => {
     stopCamera();
     setStep('intro');
+    // --- BƯỚC 2: BẬT LẠI CHUỘT ẢO NẾU NGƯỜI DÙNG BẤM HỦY ---
+    setEyeTrackingEnabled(true);
   };
 
   // Countdown number before starting calibration
@@ -380,6 +383,10 @@ export default function CalibrationPage() {
             window.setTimeout(() => {
               void saveCalibration();
               stopCamera();
+
+              // --- BƯỚC 3: BẬT LẠI CHUỘT ẢO SAU KHI CALIBRATION THÀNH CÔNG ---
+              setEyeTrackingEnabled(true);
+
               setStep('success');
             }, 1000);
           }
@@ -389,7 +396,7 @@ export default function CalibrationPage() {
 
     animationFrameId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [step, pointIndex, isCapturing, saveCalibration, stopCamera]);
+  }, [step, pointIndex, isCapturing, saveCalibration, stopCamera, setEyeTrackingEnabled]);
 
   const captured = completedPoints.includes(pointIndex);
 
