@@ -203,6 +203,22 @@ const vi = {
     speedMedium: 'Trung bình',
     speedHigh: 'Cao',
   },
+  cameraPermission: {
+    title: 'Cho phép truy cập Camera',
+    subtitle: 'Enable Code cần webcam để điều khiển bằng khuôn mặt. Hãy cấp quyền camera để tiếp tục vào trang chủ.',
+    step1Title: 'Webcam',
+    step1Body: 'Ứng dụng dùng camera để nhận diện cử chỉ đầu và miệng.',
+    step2Title: 'Quyền riêng tư',
+    step2Body: 'Video chỉ xử lý trên thiết bị của bạn, không gửi lên máy chủ.',
+    step3Title: 'Một lần duy nhất',
+    step3Body: 'Sau khi cho phép, bạn sẽ không cần xác nhận lại ở lần truy cập sau.',
+    requestButton: 'Cho phép truy cập Camera',
+    requesting: 'Đang yêu cầu quyền...',
+    retry: 'Thử lại',
+    denied: 'Quyền camera bị từ chối. Vui lòng bật camera trong cài đặt trình duyệt để sử dụng Enable Code.',
+    unsupported: 'Trình duyệt không hỗ trợ truy cập camera. Vui lòng dùng trình duyệt khác.',
+    privacyNote: 'Bạn có thể thu hồi quyền bất cứ lúc nào trong cài đặt trình duyệt.',
+  },
   mobile: {
     title: 'Vui lòng dùng máy tính',
     message:

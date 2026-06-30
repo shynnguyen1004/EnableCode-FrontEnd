@@ -202,6 +202,22 @@ const en = {
     speedMedium: 'Medium',
     speedHigh: 'High',
   },
+  cameraPermission: {
+    title: 'Allow Camera Access',
+    subtitle: 'Enable Code needs your webcam for face control. Grant camera permission to continue to the homepage.',
+    step1Title: 'Webcam',
+    step1Body: 'The app uses your camera to detect head and mouth gestures.',
+    step2Title: 'Privacy',
+    step2Body: 'Video is processed on your device only — nothing is sent to our servers.',
+    step3Title: 'One-time setup',
+    step3Body: 'Once allowed, you will not be asked again on future visits.',
+    requestButton: 'Allow Camera Access',
+    requesting: 'Requesting permission...',
+    retry: 'Try Again',
+    denied: 'Camera access was denied. Please enable camera in your browser settings to use Enable Code.',
+    unsupported: 'Your browser does not support camera access. Please try a different browser.',
+    privacyNote: 'You can revoke camera access anytime in your browser settings.',
+  },
   mobile: {
     title: 'Please use a desktop',
     message:
