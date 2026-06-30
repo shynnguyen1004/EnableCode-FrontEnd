@@ -60,11 +60,20 @@ export default function CalibrationPage() {
     pointIndexRef.current = pointIndex;
   }, [pointIndex]);
 
+  const latestFaceCenterRef = useRef({ x: 0.5, y: 0.5 });
   const latestRawRef = useRef({ x: 0.5, y: 0.5 });
   const mouthGapRawRef = useRef(0);
-  const latestFaceSizeRef = useRef({ width: 0, height: 0 });
+  const latestFaceSizeRef = useRef({ width: 0 });
 
-  const boundsRef = useRef({ leftX: 0, rightX: 1, topY: 0, bottomY: 1, refWidth: 0, refHeight: 0 });
+  const boundsRef = useRef({
+    center: { x: 0, y: 0 },
+    top: { x: 0, y: 0 },
+    right: { x: 0, y: 0 },
+    bottom: { x: 0, y: 0 },
+    left: { x: 0, y: 0 },
+    refWidth: 0,
+    refFacePos: { x: 0, y: 0 },
+  });
   const prefRef = useRef({ mouthDragThreshold: 0.03, speed: 1 });
 
   const getSafeTranslation = (key: string, fallbackText: string): string => {
@@ -158,8 +167,8 @@ export default function CalibrationPage() {
       faceMesh.setOptions({
         maxNumFaces: 1,
         refineLandmarks: true,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5,
+        minDetectionConfidence: 0.8,
+        minTrackingConfidence: 0.8,
       });
 
       faceMesh.onResults((results: FaceMeshResults) => {
@@ -181,7 +190,7 @@ export default function CalibrationPage() {
 
         if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
           const landmarks = results.multiFaceLandmarks[0];
-          const noseTip = landmarks[1];
+          const noseTip = landmarks[4];
           const topLip = landmarks[13];
           const bottomLip = landmarks[14];
 
@@ -192,11 +201,11 @@ export default function CalibrationPage() {
           const rightCheek = landmarks[454]; // Má phải ngoài cùng
 
           const currentW = Math.sqrt(Math.pow(leftCheek.x - rightCheek.x, 2) + Math.pow(leftCheek.y - rightCheek.y, 2));
-          const currentH = Math.sqrt(Math.pow(forehead.x - chin.x, 2) + Math.pow(forehead.y - chin.y, 2));
 
           // --- 1. TÍNH TÂM MẶT THỜI GIAN THỰC ---
           const faceCenterX = (leftCheek.x + rightCheek.x) / 2;
           const faceCenterY = (forehead.y + chin.y) / 2;
+          latestFaceCenterRef.current = { x: faceCenterX, y: faceCenterY };
 
           // --- 2. TÍNH ĐỘ RỘNG / ĐỘ CAO KHUÔN MẶT ĐỂ CHUẨN HÓA KHOẢNG CÁCH ---
           const faceWidth = Math.abs(rightCheek.x - leftCheek.x);
@@ -209,7 +218,7 @@ export default function CalibrationPage() {
           // --- 4. GÁN TỌA ĐỘ TƯƠNG ĐỐI VÀO LATEST RAW REF ---
           latestRawRef.current = { x: rotX, y: rotY };
           mouthGapRawRef.current = Math.sqrt(Math.pow(topLip.x - bottomLip.x, 2) + Math.pow(topLip.y - bottomLip.y, 2));
-          latestFaceSizeRef.current = { width: currentW, height: currentH };
+          latestFaceSizeRef.current = { width: currentW };
 
           if (stepRef.current === 'calibrating') {
             const pi = pointIndexRef.current;
@@ -320,7 +329,7 @@ export default function CalibrationPage() {
 
     let startTime: number | null = null;
     let animationFrameId: number;
-    const duration = 3500;
+    const duration = 3000;
 
     const animate = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
@@ -339,20 +348,21 @@ export default function CalibrationPage() {
 
         if (pointIndex === 0) {
           prefRef.current.mouthDragThreshold = currentMouth;
+          boundsRef.current.center = { x: currentX, y: currentY };
           boundsRef.current.refWidth = latestFaceSizeRef.current.width;
-          boundsRef.current.refHeight = latestFaceSizeRef.current.height;
+          boundsRef.current.refFacePos = { x: latestFaceCenterRef.current.x, y: latestFaceCenterRef.current.y };
         }
         if (pointIndex === 1) {
-          boundsRef.current.topY = currentY;
+          boundsRef.current.top = { x: currentX, y: currentY };
         }
         if (pointIndex === 2) {
-          boundsRef.current.rightX = currentX;
+          boundsRef.current.right = { x: currentX, y: currentY };
         }
         if (pointIndex === 3) {
-          boundsRef.current.bottomY = currentY;
+          boundsRef.current.bottom = { x: currentX, y: currentY };
         }
         if (pointIndex === 4) {
-          boundsRef.current.leftX = currentX;
+          boundsRef.current.left = { x: currentX, y: currentY };
         }
 
         window.setTimeout(() => {
