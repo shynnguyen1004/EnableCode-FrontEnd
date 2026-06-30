@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, UserPlus, ScanFace } from 'lucide-react';
+import { ArrowLeft, UserPlus, ScanFace, Eye, EyeOff } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { authApi } from '../api/authApi';
 import PageScale from '../components/PageScale';
@@ -14,6 +14,8 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -100,27 +102,51 @@ export default function RegisterPage() {
             <div className="register-password-row">
               <div className="register-password-field">
                 <label htmlFor="password">{t('register.password')}</label>
-                <input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  disabled={isLoading}
-                  required
-                />
+                <div className="password-input-wrap">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    disabled={isLoading}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="password-reveal-btn"
+                    onClick={() => setShowPassword(prev => !prev)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-pressed={showPassword}
+                    disabled={isLoading}
+                  >
+                    {showPassword ? <EyeOff size={24} strokeWidth={2.5} /> : <Eye size={24} strokeWidth={2.5} />}
+                  </button>
+                </div>
               </div>
               <div className="register-password-field">
                 <label htmlFor="confirm">{t('register.confirm')}</label>
-                <input
-                  id="confirm"
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  disabled={isLoading}
-                  required
-                />
+                <div className="password-input-wrap">
+                  <input
+                    id="confirm"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    disabled={isLoading}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="password-reveal-btn"
+                    onClick={() => setShowConfirmPassword(prev => !prev)}
+                    aria-label={showConfirmPassword ? 'Hide password confirmation' : 'Show password confirmation'}
+                    aria-pressed={showConfirmPassword}
+                    disabled={isLoading}
+                  >
+                    {showConfirmPassword ? <EyeOff size={24} strokeWidth={2.5} /> : <Eye size={24} strokeWidth={2.5} />}
+                  </button>
+                </div>
               </div>
             </div>
 

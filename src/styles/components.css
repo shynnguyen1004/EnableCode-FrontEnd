@@ -331,6 +331,7 @@
 
 .login-card {
   width: min(740px, 100%);
+  min-width: 0;
   background: rgba(255, 249, 220, 0.04);
   border: 4px solid rgba(255, 249, 220, 0.16);
   border-radius: 44px;
@@ -358,7 +359,10 @@
 
 .login-form {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
 }
 
 .login-form label {
@@ -368,6 +372,9 @@
 }
 
 .login-form input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 72px;
   border: 4px solid rgba(255, 249, 220, 0.24);
   border-radius: 22px;
@@ -383,6 +390,9 @@
 }
 
 .login-btn {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   margin-top: 0.5rem;
   min-height: 80px;
   border-radius: 26px;
@@ -443,6 +453,7 @@
 
 .register-card {
   width: min(820px, 100%);
+  min-width: 0;
 }
 
 .register-error {
@@ -454,13 +465,58 @@
 
 .register-password-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 0.75rem;
+  min-width: 0;
 }
 
 .register-password-field {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
+  min-width: 0;
+}
+
+.password-input-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.password-input-wrap input {
+  padding-right: 3.3rem;
+}
+
+.password-reveal-btn {
+  position: absolute;
+  top: 50%;
+  right: 0.85rem;
+  transform: translateY(-50%);
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 249, 220, 0.72);
+  cursor: pointer;
+}
+
+.password-reveal-btn:hover {
+  color: var(--text-light);
+  background: rgba(255, 249, 220, 0.08);
+}
+
+.password-reveal-btn:focus-visible {
+  outline: 3px solid rgba(255, 119, 0, 0.45);
+  outline-offset: 2px;
+}
+
+.password-reveal-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .register-opt-in {
