@@ -307,7 +307,7 @@ const Mouse: React.FC = () => {
         const rawPixelX = Math.max(0, Math.min(window.innerWidth, speedCurvedX * window.innerWidth));
         const rawPixelY = Math.max(0, Math.min(window.innerHeight, speedCurvedY * window.innerHeight));
 
-        const PIXEL_SMOOTHING = 0.05; // càng nhỏ càng mượt nhưng càng trễ, tune trong khoảng 0.15-0.4
+        const PIXEL_SMOOTHING = 0.1; // càng nhỏ càng mượt nhưng càng trễ, tune trong khoảng 0.15-0.4
         smoothedPixelRef.current.x += PIXEL_SMOOTHING * (rawPixelX - smoothedPixelRef.current.x);
         smoothedPixelRef.current.y += PIXEL_SMOOTHING * (rawPixelY - smoothedPixelRef.current.y);
 
