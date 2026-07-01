@@ -75,6 +75,7 @@ export default function CalibrationPage() {
     refFacePos: { x: 0, y: 0 },
   });
   const prefRef = useRef({ mouthDragThreshold: 0.03, speed: 1 });
+  const mouthSamplesRef = useRef<number[]>([]); // lưu threshold đo được ở từng điểm calib  const prefRef = useRef({ mouthDragThreshold: 0.03, speed: 1 });
 
   const getSafeTranslation = (key: string, fallbackText: string): string => {
     if (!key) return fallbackText;
@@ -201,8 +202,8 @@ export default function CalibrationPage() {
           // Caculate depth
           const forehead = landmarks[10]; // Đỉnh trán
           const chin = landmarks[152]; // Điểm dưới cằm
-          const leftCheek = landmarks[234]; // Má trái ngoài cùng
-          const rightCheek = landmarks[454]; // Má phải ngoài cùng
+          const leftCheek = landmarks[116]; // Má trái ngoài cùng
+          const rightCheek = landmarks[345]; // Má phải ngoài cùng
 
           const currentW = Math.sqrt(Math.pow(leftCheek.x - rightCheek.x, 2) + Math.pow(leftCheek.y - rightCheek.y, 2));
 
@@ -226,14 +227,13 @@ export default function CalibrationPage() {
 
           if (stepRef.current === 'calibrating') {
             const pi = pointIndexRef.current;
-            if (pi === 0) {
-              ctx.fillStyle = '#2dd4bf'; // lip landmarks
-              [topLip, bottomLip].forEach(pt => {
-                ctx.beginPath();
-                ctx.arc(pt.x * canvas.width, pt.y * canvas.height, 6, 0, 2 * Math.PI);
-                ctx.fill();
-              });
-            } else {
+            ctx.fillStyle = '#2dd4bf'; // lip landmarks
+            [topLip, bottomLip].forEach(pt => {
+              ctx.beginPath();
+              ctx.arc(pt.x * canvas.width, pt.y * canvas.height, 6, 0, 2 * Math.PI);
+              ctx.fill();
+            });
+            if (pi !== 0) {
               ctx.fillStyle = '#ff7700'; // nose landmark
               ctx.beginPath();
               ctx.arc(noseTip.x * canvas.width, noseTip.y * canvas.height, 8, 0, 2 * Math.PI);
@@ -349,8 +349,8 @@ export default function CalibrationPage() {
         const currentY = latestRawRef.current.y;
         const currentMouth = mouthGapRawRef.current;
 
+        mouthSamplesRef.current.push(currentMouth);
         if (pointIndex === 0) {
-          prefRef.current.mouthDragThreshold = currentMouth;
           boundsRef.current.center = { x: currentX, y: currentY };
           boundsRef.current.refWidth = latestFaceSizeRef.current.width;
           boundsRef.current.refFacePos = { x: latestFaceCenterRef.current.x, y: latestFaceCenterRef.current.y };
@@ -366,6 +366,10 @@ export default function CalibrationPage() {
         }
         if (pointIndex === 4) {
           boundsRef.current.left = { x: currentX, y: currentY };
+        }
+
+        if (mouthSamplesRef.current.length > 0) {
+          prefRef.current.mouthDragThreshold = Math.min(...mouthSamplesRef.current);
         }
 
         window.setTimeout(() => {
