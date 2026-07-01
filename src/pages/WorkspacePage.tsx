@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Play, Lightbulb, ChevronRight, Settings, RefreshCw, Loader2 } from 'lucide-react';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Play, Lightbulb, ChevronRight, Settings, RefreshCw, Loader2, CheckCircle2 } from 'lucide-react';
 import { isAxiosError } from 'axios';
 import * as Blockly from 'blockly';
 import ReactMarkdown from 'react-markdown';
@@ -13,6 +13,7 @@ import { isTopicLocked, isLessonLocked } from '../lib/progress';
 import { lessonApi } from '../api/lessonApi';
 import { topicApi } from '../api/topicApi';
 import { progressApi } from '../api/progressApi';
+import { profileApi } from '../api/profileApi';
 import { extractTopics, extractLessons, extractSingleLesson } from '../utils/lessonMapper';
 import { registerDynamicBlocks } from '../blockly/blocks';
 
@@ -20,6 +21,7 @@ import type { Topic, Lesson, UserProgress } from '../lib/types';
 
 export default function WorkspacePage() {
   const { lessonId } = useParams<{ lessonId: string }>();
+  const navigate = useNavigate();
   const { t, localizeLesson, localizeTopic } = useI18n();
   const editorRef = useRef<BlocklyEditorHandle>(null);
 
@@ -31,7 +33,16 @@ export default function WorkspacePage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isNotFound, setIsNotFound] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [isSubmittingLesson, setIsSubmittingLesson] = useState(false);
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const [submittedPoints, setSubmittedPoints] = useState(0);
+  const [submittedLevel, setSubmittedLevel] = useState(0);
+  const [submittedFromLevel, setSubmittedFromLevel] = useState(0);
+  const [submittedFromLevelProgress, setSubmittedFromLevelProgress] = useState(0);
+  const [submittedLevelProgress, setSubmittedLevelProgress] = useState(0);
+  const [animatedLevelProgress, setAnimatedLevelProgress] = useState(0);
+  const levelAnimationTimeoutRef = useRef<number | null>(null);
   const [hintIndex, setHintIndex] = useState(0);
   const hasMoreHints = !!(lesson?.hint && lesson.hint.length > 0 && hintIndex < lesson.hint.length);
   const [outputLines, setOutputLines] = useState<LogLine[]>([]);
@@ -94,6 +105,8 @@ export default function WorkspacePage() {
         setOutputOpen(false);
         setHasRun(false);
         setRunPassed(null);
+        setIsSubmitModalOpen(false);
+        setSubmittedPoints(0);
       } catch (error) {
         console.error('Failed to fetch workspace data:', error);
         setIsNotFound(true);
@@ -111,6 +124,11 @@ export default function WorkspacePage() {
     setOutputOpen(false);
     setHasRun(false);
     setRunPassed(null);
+    setIsSubmitModalOpen(false);
+    setSubmittedPoints(0);
+    setSubmittedLevel(0);
+    setSubmittedLevelProgress(0);
+    setAnimatedLevelProgress(0);
   };
 
   const handleClearOutput = () => {
@@ -118,105 +136,156 @@ export default function WorkspacePage() {
     setOutputOpen(false);
     setHasRun(false);
     setRunPassed(null);
+    setIsSubmitModalOpen(false);
+    setSubmittedPoints(0);
+    setSubmittedLevel(0);
+    setSubmittedLevelProgress(0);
+    setAnimatedLevelProgress(0);
   };
+
+  useEffect(() => {
+    if (!isSubmitModalOpen) return;
+
+    if (levelAnimationTimeoutRef.current !== null) {
+      window.clearTimeout(levelAnimationTimeoutRef.current);
+      levelAnimationTimeoutRef.current = null;
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      setAnimatedLevelProgress(submittedFromLevelProgress);
+
+      const nextFrame = window.requestAnimationFrame(() => {
+        if (submittedLevel > submittedFromLevel) {
+          // Qua mốc level mới: chạy đến 100%, rồi reset và chạy tiếp đến mức mới.
+          setAnimatedLevelProgress(100);
+          levelAnimationTimeoutRef.current = window.setTimeout(() => {
+            setAnimatedLevelProgress(0);
+            const secondFrame = window.requestAnimationFrame(() => {
+              setAnimatedLevelProgress(submittedLevelProgress);
+            });
+            levelAnimationTimeoutRef.current = window.setTimeout(() => {
+              window.cancelAnimationFrame(secondFrame);
+              levelAnimationTimeoutRef.current = null;
+            }, 0);
+          }, 900);
+        } else {
+          setAnimatedLevelProgress(submittedLevelProgress);
+        }
+      });
+
+      levelAnimationTimeoutRef.current = window.setTimeout(() => {
+        window.cancelAnimationFrame(nextFrame);
+      }, 0);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      if (levelAnimationTimeoutRef.current !== null) {
+        window.clearTimeout(levelAnimationTimeoutRef.current);
+        levelAnimationTimeoutRef.current = null;
+      }
+    };
+  }, [isSubmitModalOpen, submittedFromLevel, submittedFromLevelProgress, submittedLevel, submittedLevelProgress]);
 
   const handleHint = () => {
     if (!lesson?.hint?.length) return;
     setHintIndex(index => Math.min(index + 1, lesson.hint.length));
   };
 
+  const appendTestcaseLogs = (
+    resultLogs: LogLine[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    testcaseResults: any[] | undefined,
+  ) => {
+    if (!testcaseResults || !Array.isArray(testcaseResults)) return;
+
+    resultLogs.push({
+      id: 'testcase-header',
+      text: '--- Testcases ---',
+      type: 'dim',
+    });
+
+    testcaseResults.forEach((tc, index) => {
+      const isPass = tc.passed;
+      const icon = isPass ? '✓' : '✗';
+
+      resultLogs.push({
+        id: `tc-${index}-status`,
+        text: `${icon} Testcase ${index + 1}: ${tc.description}`,
+        type: isPass ? 'success' : 'error',
+      });
+      if (!isPass) {
+        resultLogs.push({
+          id: `tc-${index}-expected`,
+          text: `    Expected: ${tc.expectedOutput}`,
+          type: 'dim',
+        });
+        resultLogs.push({
+          id: `tc-${index}-actual`,
+          text: `    Actual:   ${tc.actualOutput}`,
+          type: 'dim',
+        });
+      }
+    });
+
+    resultLogs.push({
+      id: 'testcase-footer',
+      text: '-----------------',
+      type: 'dim',
+    });
+  };
+
   const handleRunCode = async () => {
-    if (!lessonId || !lesson || isSubmitting) return;
+    if (!lessonId || !lesson || isRunning) return;
 
     const workspace = editorRef.current?.getWorkspace();
     if (!workspace) return;
 
-    setIsSubmitting(true);
+    setIsRunning(true);
     setOutputLines([]);
     setRunPassed(null);
     setHasRun(true);
     setOutputOpen(true);
+    setIsSubmitModalOpen(false);
+    setSubmittedPoints(0);
 
     try {
       const { output, logs } = evaluateWorkspaceRun(workspace);
-      const workspaceState = Blockly.serialization.workspaces.save(workspace);
       const isSandbox = lesson.toolboxConfig?.sandbox === true;
-
-      const response = await lessonApi.submitWorkspace(lessonId, {
-        workspaceState,
-        pythonCode: output,
-        time: 0,
-      });
       const resultLogs: LogLine[] = [...logs];
-      if (response.output) {
-        resultLogs.push({
-          id: 'program-output',
-          text: `▶ Output:\n${response.output}\n`,
-          type: 'info',
-        });
-      }
-      const passed = isSandbox
-        ? true
-        : (response.passed ?? output.trim() === String(lesson.publicTestcases[0]?.expectedOutput ?? '').trim());
-      if (!isSandbox && response.testcaseResults && Array.isArray(response.testcaseResults)) {
-        resultLogs.push({
-          id: 'testcase-header',
-          text: '--- Testcases ---',
-          type: 'dim',
-        });
+      let passed = false;
+      let programOutput = '';
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        response.testcaseResults.forEach((tc: any, index: number) => {
-          const isPass = tc.passed;
-          const icon = isPass ? '✓' : '✗';
+      if (isSandbox) {
+        passed = true;
+      } else {
+        const response = await lessonApi.runWorkspace(lessonId, { pythonCode: output });
+        programOutput = response.output ?? '';
+        passed = response.passed ?? output.trim() === String(lesson.publicTestcases[0]?.expectedOutput ?? '').trim();
 
+        if (programOutput) {
           resultLogs.push({
-            id: `tc-${index}-status`,
-            text: `${icon} Testcase ${index + 1}: ${tc.description}`,
-            type: isPass ? 'success' : 'error',
+            id: 'program-output',
+            text: `▶ Output:\n${programOutput}\n`,
+            type: 'info',
           });
-          if (!isPass) {
-            resultLogs.push({
-              id: `tc-${index}-expected`,
-              text: `    Expected: ${tc.expectedOutput}`,
-              type: 'dim',
-            });
-            resultLogs.push({
-              id: `tc-${index}-actual`,
-              text: `    Actual:   ${tc.actualOutput}`,
-              type: 'dim',
-            });
-          }
-        });
+        }
 
-        resultLogs.push({
-          id: 'testcase-footer',
-          text: '-----------------',
-          type: 'dim',
-        });
+        appendTestcaseLogs(resultLogs, response.testcaseResults);
       }
+
       if (passed) {
         resultLogs.push({
           id: 'result-pass',
-          text: isSandbox
-            ? t('workspace.outputSandboxDone')
-            : `${t('workspace.outputPassedLine')}${response.points ? ` (+${response.points} pts)` : ''}`,
+          text: isSandbox ? t('workspace.outputSandboxDone') : t('workspace.outputPassedLine'),
           type: 'success',
         });
         setRunPassed(true);
-
-        const [updatedAllProgress, updatedDetailProgress] = await Promise.all([
-          progressApi.getAllUserProgress(),
-          progressApi.getUserLessonProgress(lessonId),
-        ]);
-
-        setUserProgressList(updatedAllProgress);
-        setCurrentLessonProgress(updatedDetailProgress);
       } else {
         resultLogs.push({
           id: 'result-fail',
-          text: response.output
-            ? `${t('workspace.outputFailedLine')}\n${response.output}`
+          text: programOutput
+            ? `${t('workspace.outputFailedLine')}\n${programOutput}`
             : t('workspace.outputFailedLine'),
           type: 'error',
         });
@@ -225,7 +294,7 @@ export default function WorkspacePage() {
 
       setOutputLines(resultLogs);
     } catch (error) {
-      console.error('Submit error:', error);
+      console.error('Run error:', error);
       setRunPassed(false);
 
       const message = isAxiosError(error)
@@ -234,7 +303,65 @@ export default function WorkspacePage() {
 
       setOutputLines([{ id: 'run-error', text: message, type: 'error' }]);
     } finally {
-      setIsSubmitting(false);
+      setIsRunning(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!lessonId || !lesson || isSubmittingLesson || runPassed !== true) return;
+
+    const workspace = editorRef.current?.getWorkspace();
+    if (!workspace) return;
+
+    setIsSubmittingLesson(true);
+
+    try {
+      const beforeSubmitStats = await profileApi.getUserStats();
+      const beforeScore = beforeSubmitStats.totalScore ?? 0;
+      const beforeLevel = beforeSubmitStats.level ?? 0;
+      const beforeProgressToNextLevel = ((beforeScore % 100) + 100) % 100;
+
+      const { output } = evaluateWorkspaceRun(workspace);
+      const workspaceState = Blockly.serialization.workspaces.save(workspace);
+
+      const response = await lessonApi.submitWorkspace(lessonId, {
+        workspaceState,
+        pythonCode: output,
+        time: 0,
+      });
+
+      if (response.passed) {
+        setSubmittedPoints(response.points ?? 0);
+        const userStats = await profileApi.getUserStats();
+        const totalScore = userStats.totalScore ?? 0;
+        const level = userStats.level ?? 0;
+        const progressToNextLevel = ((totalScore % 100) + 100) % 100;
+
+        setSubmittedFromLevel(beforeLevel);
+        setSubmittedFromLevelProgress(beforeProgressToNextLevel);
+        setSubmittedLevel(level);
+        setSubmittedLevelProgress(progressToNextLevel);
+        setIsSubmitModalOpen(true);
+
+        const [updatedAllProgress, updatedDetailProgress] = await Promise.all([
+          progressApi.getAllUserProgress(),
+          progressApi.getUserLessonProgress(lessonId),
+        ]);
+
+        setUserProgressList(updatedAllProgress);
+        setCurrentLessonProgress(updatedDetailProgress);
+      }
+    } catch (error) {
+      console.error('Submit error:', error);
+
+      const message = isAxiosError(error)
+        ? String(error.response?.data?.error?.message ?? t('workspace.runError'))
+        : t('workspace.runError');
+
+      setOutputLines([{ id: 'submit-error', text: message, type: 'error' }]);
+      setOutputOpen(true);
+    } finally {
+      setIsSubmittingLesson(false);
     }
   };
 
@@ -257,6 +384,29 @@ export default function WorkspacePage() {
   const localizedLesson = localizeLesson(lesson) || lesson;
   const localizedTopic = localizeTopic(topic) || topic;
   const activeHint = lesson.hint[Math.min(hintIndex, lesson.hint.length) - 1];
+  const showSubmitButton = runPassed === true;
+
+  const nextLesson = (() => {
+    const sortedLessons = [...lessonsInTopic].sort((left, right) => left.order - right.order);
+    const currentIndex = sortedLessons.findIndex(item => item._id === lesson._id);
+    if (currentIndex < 0 || currentIndex >= sortedLessons.length - 1) return null;
+    return sortedLessons[currentIndex + 1];
+  })();
+
+  const handleNextLesson = () => {
+    setIsSubmitModalOpen(false);
+    if (nextLesson) {
+      navigate(`/workspace/${nextLesson._id}`);
+      return;
+    }
+    navigate(topicPath);
+  };
+
+  const submitSuccessMessage =
+    submittedPoints > 0
+      ? t('workspace.submitSuccessPoints').replace('{points}', String(submittedPoints))
+      : t('workspace.submitSuccessNoPoints');
+  const pointsToNextLevel = 100 - submittedLevelProgress;
 
   const savedWorkspaceState = currentLessonProgress?.workspaceState;
   return (
@@ -304,34 +454,50 @@ export default function WorkspacePage() {
           </div>
 
           <div className="workspace-panel-actions">
-            <div style={{ cursor: hasMoreHints ? 'pointer' : 'not-allowed' }}>
+            {showSubmitButton ? (
               <button
                 type="button"
-                className="workspace-panel-btn hint group"
-                onClick={handleHint}
-                disabled={!hasMoreHints}
-                style={{
-                  opacity: hasMoreHints ? 1 : 0.5,
-                  pointerEvents: hasMoreHints ? 'auto' : 'none',
-                  width: '100%',
-                }}
+                className={`workspace-panel-btn submit group${isSubmittingLesson ? ' is-disabled' : ''}`}
+                onClick={handleSubmit}
+                disabled={isSubmittingLesson}
               >
-                <Lightbulb size={36} strokeWidth={3} className="btn-icon text-orange" />
-                {t('workspace.needHint')}
+                {isSubmittingLesson ? (
+                  <Loader2 size={36} strokeWidth={3} className="btn-icon workspace-spinner" />
+                ) : (
+                  <CheckCircle2 size={36} strokeWidth={3} className="btn-icon" />
+                )}
+                {isSubmittingLesson ? t('workspace.submitting') : t('workspace.submit')}
               </button>
-            </div>
+            ) : (
+              <div style={{ cursor: hasMoreHints ? 'pointer' : 'not-allowed' }}>
+                <button
+                  type="button"
+                  className="workspace-panel-btn hint group"
+                  onClick={handleHint}
+                  disabled={!hasMoreHints}
+                  style={{
+                    opacity: hasMoreHints ? 1 : 0.5,
+                    pointerEvents: hasMoreHints ? 'auto' : 'none',
+                    width: '100%',
+                  }}
+                >
+                  <Lightbulb size={36} strokeWidth={3} className="btn-icon text-orange" />
+                  {t('workspace.needHint')}
+                </button>
+              </div>
+            )}
             <button
               type="button"
-              className={`workspace-panel-btn run group${isSubmitting ? ' is-disabled' : ''}`}
+              className={`workspace-panel-btn run group${isRunning ? ' is-disabled' : ''}`}
               onClick={handleRunCode}
-              disabled={isSubmitting}
+              disabled={isRunning}
             >
-              {isSubmitting ? (
+              {isRunning ? (
                 <Loader2 size={44} strokeWidth={3} className="btn-icon workspace-spinner" />
               ) : (
                 <Play size={44} strokeWidth={3} className="btn-icon fill-current" />
               )}
-              {isSubmitting ? t('workspace.running') : t('workspace.runCode')}
+              {isRunning ? t('workspace.running') : t('workspace.runCode')}
             </button>
           </div>
         </aside>
@@ -351,7 +517,7 @@ export default function WorkspacePage() {
           <WorkspaceOutputPanel
             lines={outputLines}
             isOpen={outputOpen}
-            isRunning={isSubmitting}
+            isRunning={isRunning}
             hasRun={hasRun}
             passed={runPassed}
             title={t('workspace.outputTitle')}
@@ -365,6 +531,48 @@ export default function WorkspacePage() {
           />
         </main>
       </div>
+
+      {isSubmitModalOpen && (
+        <div className="workspace-submit-overlay" role="presentation">
+          <div
+            className="workspace-submit-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="workspace-submit-title"
+          >
+            <div className="workspace-submit-modal-icon" aria-hidden="true">
+              <CheckCircle2 size={40} strokeWidth={3} />
+            </div>
+            <h3 id="workspace-submit-title">{t('workspace.submitSuccessTitle')}</h3>
+            <p>{submitSuccessMessage}</p>
+            <div className="workspace-submit-level-card" aria-label="Level progress">
+              <div className="workspace-submit-level-row">
+                <span className="workspace-submit-level-label">Level</span>
+                <span className="workspace-submit-level-value">{submittedLevel}</span>
+              </div>
+              <div className="workspace-submit-level-row workspace-submit-level-row--sub">
+                <span className="workspace-submit-level-subtext">{submittedLevelProgress}/100 points</span>
+                <span className="workspace-submit-level-subtext">{pointsToNextLevel} to next</span>
+              </div>
+              <div
+                className="workspace-submit-level-bar"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={submittedLevelProgress}
+              >
+                <div className="workspace-submit-level-bar-fill" style={{ width: `${animatedLevelProgress}%` }} />
+              </div>
+            </div>
+            <div className="workspace-submit-modal-actions">
+              <button type="button" className="workspace-submit-next-btn" onClick={handleNextLesson}>
+                {nextLesson ? t('workspace.nextLesson') : t('workspace.backToTopic')}
+                <ChevronRight size={28} strokeWidth={3} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

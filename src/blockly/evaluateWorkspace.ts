@@ -126,21 +126,12 @@ function createContext(): RuntimeContext {
 function generateCodeFromStartBlock(workspace: Workspace): string {
   const topBlocks = workspace.getTopBlocks(true);
   const startBlock = topBlocks.find(block => block.type === 'controls_start');
-
   if (!startBlock) return '';
+  const firstBlock = startBlock.getNextBlock();
 
-  const codeLines: string[] = [];
-  let current = startBlock.getNextBlock();
-
-  while (current) {
-    const line = pythonGenerator.blockToCode(current);
-    if (typeof line === 'string') {
-      codeLines.push(line);
-    }
-    current = current.getNextBlock();
-  }
-
-  return codeLines.join('');
+  if (!firstBlock) return '';
+  const generatedCode = pythonGenerator.blockToCode(firstBlock);
+  return typeof generatedCode === 'string' ? generatedCode : '';
 }
 
 export type WorkspaceRunResult = {
