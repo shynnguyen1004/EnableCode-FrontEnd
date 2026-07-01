@@ -309,16 +309,6 @@ const Mouse: React.FC = () => {
 
         const elementAtCursorPoint = document.elementFromPoint(finalPixelPositionX, finalPixelPositionY);
 
-        setInterval(() => {
-          console.log({
-            depthRatio,
-            cheekDistance,
-            mouthGap: Math.sqrt(mouthDeltaX * mouthDeltaX + mouthDeltaY * mouthDeltaY),
-            currentMouthGapDistance,
-            threshold: personalComfortThreshold,
-          });
-        }, 10000);
-
         if (currentMouthGapDistance >= schmittTriggerDragThreshold) {
           if (!wasMouthOpenRef.current) {
             wasMouthOpenRef.current = true;
