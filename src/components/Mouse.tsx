@@ -295,7 +295,9 @@ const Mouse: React.FC = () => {
           return 0.5 + sign * curved * 0.5;
         };
 
-        const dragSpeedMultiplier = isDraggingRef.current ? 0.5 : 1.0;
+        const isNearEdge = filteredX < 0.08 || filteredX > 0.92 || filteredY < 0.08 || filteredY > 0.92;
+        const dragSpeedMultiplier = isDraggingRef.current && !isNearEdge ? 0.5 : 1.0;
+
         const gainedX = applyGainCurve(filteredX, userSpeed * dragSpeedMultiplier);
         const gainedY = applyGainCurve(filteredY, userSpeed * dragSpeedMultiplier);
 
@@ -327,6 +329,8 @@ const Mouse: React.FC = () => {
                 draggedElementRef.current = targetDraggableElement;
                 isDraggingRef.current = true;
                 setIsDragging(true);
+                oneEuroStateX.current.derivative = 0;
+                oneEuroStateY.current.derivative = 0;
                 updateAction('drag');
 
                 // Kích hoạt giả lập luồng sự kiện nhấn Drag hệ thống chuột trái giữ
@@ -479,7 +483,7 @@ const Mouse: React.FC = () => {
           lastDomScanTimeRef.current = currentTimeMs;
 
           const activeScrollableParent = getScrollableParent(elementAtCursorPoint);
-          const VIEWPORT_EDGE_BUFFER_ZONE = 180; // Vùng đệm biên cấu hình cố định 80px
+          const VIEWPORT_EDGE_BUFFER_ZONE = 130; // Vùng đệm biên cấu hình cố định 80px
           const SCROLL_STEP_INTENSITY = 30;
 
           if (activeScrollableParent && activeScrollableParent !== document.documentElement) {

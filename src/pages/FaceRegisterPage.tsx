@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera, RefreshCw, CheckCircle, ScanFace, Loader2 } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
+import { useEyeTracking } from '../context/EyeTrackingContext';
 import PageScale from '../components/PageScale';
 import { authApi } from '../api/authApi';
 import type { FaceMeshResults, FaceMeshType, CameraType } from '../lib/types';
@@ -20,6 +21,7 @@ declare global {
 export default function FaceRegisterPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const { setEnabled: setEyeTrackingEnabled } = useEyeTracking();
 
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -48,6 +50,10 @@ export default function FaceRegisterPage() {
 
     const initFaceMeshAndCamera = async () => {
       try {
+        // --- TẮT CHUỘT ẢO ĐỂ TRẢ LẠI QUYỀN CAMERA TRƯỚC KHI MỞ CAMERA CỦA TRANG NÀY ---
+        setEyeTrackingEnabled(false);
+        await new Promise(resolve => setTimeout(resolve, 300)); // Chờ nhả phần cứng
+
         const { FaceMesh, Camera } = window;
         if (!FaceMesh || !Camera) {
           console.warn('MediaPipe FaceMesh hoặc Camera chưa sẵn sàng trên đối tượng window.');
@@ -205,8 +211,10 @@ export default function FaceRegisterPage() {
         }
         faceMeshRef.current = null;
       }
+      // --- BẬT LẠI CHUỘT ẢO KHI RỜI TRANG ---
+      setEyeTrackingEnabled(true);
     };
-  }, []);
+  }, [setEyeTrackingEnabled]);
 
   const handleCapture = () => {
     const canvas = canvasRef.current;

@@ -33,7 +33,7 @@ export default function CalibrationPage() {
   const { t } = useI18n();
   const { isLoggedIn } = useAuth();
   const { setEnabled: setEyeTrackingEnabled } = useEyeTracking();
-  const { setCalibration } = useCalibration();
+  const { calibration, setCalibration } = useCalibration();
 
   const navigate = useNavigate();
 
@@ -149,6 +149,22 @@ export default function CalibrationPage() {
   }, [stopCamera]);
 
   const startCalibration = async () => {
+    // Đồng bộ speed hiện có từ DB, tránh ghi đè về mặc định khi lưu lại
+    prefRef.current = {
+      mouthDragThreshold: 0.03,
+      speed: calibration?.preferences.speed ?? 1,
+    };
+    mouthSamplesRef.current = []; // reset mẫu đo threshold cho lần calibrate mới
+    boundsRef.current = {
+      center: { x: 0, y: 0 },
+      top: { x: 0, y: 0 },
+      right: { x: 0, y: 0 },
+      bottom: { x: 0, y: 0 },
+      left: { x: 0, y: 0 },
+      refWidth: 0,
+      refFacePos: { x: 0, y: 0 },
+    };
+
     // --- BƯỚC 1: TẮT CHUỘT ẢO ĐỂ TRẢ LẠI QUYỀN CAMERA TRƯỚC KHI BẮT ĐẦU ---
     setEyeTrackingEnabled(false);
     await new Promise(resolve => setTimeout(resolve, 300)); // Chờ nhả phần cứng
@@ -369,7 +385,9 @@ export default function CalibrationPage() {
         }
 
         if (mouthSamplesRef.current.length > 0) {
-          prefRef.current.mouthDragThreshold = Math.min(...mouthSamplesRef.current);
+          const sorted = [...mouthSamplesRef.current].sort((a, b) => a - b);
+          const trimmed = sorted.length > 2 ? sorted.slice(1) : sorted; // bỏ min nếu có đủ >= 3 mẫu
+          prefRef.current.mouthDragThreshold = Math.min(...trimmed);
         }
 
         window.setTimeout(() => {
@@ -390,7 +408,6 @@ export default function CalibrationPage() {
 
               // --- BƯỚC 3: BẬT LẠI CHUỘT ẢO SAU KHI CALIBRATION THÀNH CÔNG ---
               setEyeTrackingEnabled(true);
-
               setStep('success');
             }, 1000);
           }

@@ -18,6 +18,7 @@ import LanguageToggle from '../components/LanguageToggle';
 import PageScale from '../components/PageScale';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
+import { useCalibration } from '../context/CalibrationContext';
 import { profileApi } from '../api/profileApi';
 import { authApi } from '../api/authApi';
 import { AvatarImageError, processAvatarFile } from '../lib/avatarImage';
@@ -33,9 +34,30 @@ function formatDisplayName(name?: string): string {
   return [...initials, lastName].join(' ');
 }
 
+type SpeedLevel = 'low' | 'medium' | 'high';
+
+// Nguồn duy nhất cho mapping label <-> giá trị số, tránh lệch giữa nơi gửi API và nơi hiển thị
+const SPEED_MAP: Record<SpeedLevel, number> = { low: 0.7, medium: 1.0, high: 1.3 };
+
+function speedValueToLevel(value: number | undefined): SpeedLevel {
+  if (value === undefined) return 'medium';
+  // Tìm mức có giá trị gần nhất, phòng trường hợp DB có giá trị không khớp chính xác 3 mức
+  let closest: SpeedLevel = 'medium';
+  let minDiff = Infinity;
+  (Object.keys(SPEED_MAP) as SpeedLevel[]).forEach(level => {
+    const diff = Math.abs(SPEED_MAP[level] - value);
+    if (diff < minDiff) {
+      minDiff = diff;
+      closest = level;
+    }
+  });
+  return closest;
+}
+
 export default function ProfilePage() {
   const { t, locale } = useI18n();
   const { isLoggedIn, logout, updateUser } = useAuth();
+  const { calibration, setCalibration } = useCalibration();
   const navigate = useNavigate();
 
   // State quản lý dữ liệu
@@ -49,10 +71,6 @@ export default function ProfilePage() {
   const [avatarFileName, setAvatarFileName] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [editError, setEditError] = useState('');
-
-  // -> THÊM STATE QUẢN LÝ TỐC ĐỘ CHUỘT
-  const [mouseSpeed, setMouseSpeed] = useState<'low' | 'medium' | 'high'>('medium');
-
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -64,7 +82,6 @@ export default function ProfilePage() {
       try {
         const profileRes = await profileApi.getProfile();
         setProfileData(profileRes);
-        // Gợi ý: Nếu API profile có trả về trackingSensitivity, bạn có thể setMouseSpeed ở đây
       } catch (error) {
         console.error('Error fetching profile:', error);
         setFetchError(true);
@@ -166,12 +183,21 @@ export default function ProfilePage() {
   };
 
   // -> THÊM HÀM XỬ LÝ ĐỔI TỐC ĐỘ CHUỘT
-  const handleSpeedChange = async (speed: 'low' | 'medium' | 'high') => {
-    setMouseSpeed(speed);
+  const handleSpeedUpdate = async (speed: SpeedLevel) => {
+    if (!calibration) return;
 
-    // Gợi ý: Bạn có thể gọi API updateCalibration hoặc update Context ở đây để lưu thiết lập
-    // const sensitivityMap = { low: 0.5, medium: 1.0, high: 2.0 };
-    // await profileApi.updateCalibration({ preferences: { trackingSensitivity: sensitivityMap[speed] } });
+    try {
+      const updated = await profileApi.updateCalibration({
+        bounds: calibration.bounds,
+        preferences: {
+          ...calibration.preferences,
+          speed: SPEED_MAP[speed],
+        },
+      });
+      setCalibration(updated); // mouseSpeed sẽ tự cập nhật vì nó derived từ calibration
+    } catch (error) {
+      console.error('Failed to update speed:', error);
+    }
   };
 
   if (!isLoggedIn) {
@@ -231,6 +257,9 @@ export default function ProfilePage() {
   const levelProgress = ((totalScore % 100) + 100) % 100;
   const pointsToNextLevel = 100 - levelProgress;
   const levelProgressPercent = (levelProgress / 100) * 100;
+
+  // Derived trực tiếp từ calibration hiện tại, không cần state/effect riêng -> tránh cascading render
+  const mouseSpeed: SpeedLevel = speedValueToLevel(calibration?.preferences.speed);
 
   return (
     <PageScale scale={0.8} className="profile-page">
@@ -336,7 +365,21 @@ export default function ProfilePage() {
               {t('settings.mouseSpeedDesc') || 'Adjust how fast the cursor moves when you turn your head.'}
             </p>
 
-            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+            {!calibration && (
+              <p className="icon-orange" style={{ fontWeight: 600, marginBottom: '12px' }}>
+                {t('settings.needCalibrationForSpeed') || 'Cần calibrate để chỉnh speed chuột ảo'}
+              </p>
+            )}
+
+            <div
+              style={{
+                display: 'flex',
+                gap: '16px',
+                flexWrap: 'wrap',
+                opacity: calibration ? 1 : 0.4,
+                pointerEvents: calibration ? 'auto' : 'none',
+              }}
+            >
               {[
                 { id: 'low', label: t('settings.speedLow') || 'Low' },
                 { id: 'medium', label: t('settings.speedMedium') || 'Medium' },
@@ -347,7 +390,8 @@ export default function ProfilePage() {
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => handleSpeedChange(item.id as 'low' | 'medium' | 'high')}
+                    disabled={!calibration}
+                    onClick={() => handleSpeedUpdate(item.id as 'low' | 'medium' | 'high')}
                     className={`language-toggle-btn ${isActive ? 'is-active' : ''}`}
                   >
                     {item.label}

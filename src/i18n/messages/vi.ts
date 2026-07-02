@@ -178,7 +178,7 @@ const vi = {
     startCalibration: 'Bắt đầu hiệu chuẩn',
     setupFaceLogin: 'Thiết lập khuôn mặt',
     logoutAccount: 'Đăng xuất tài khoản',
-    editProfile: 'Chỉnh sửa hồ sơ',
+    editProfile: 'Sửa hồ sơ',
     editProfileTitle: 'Chỉnh sửa hồ sơ',
     editProfileName: 'Họ và tên',
     editProfileNamePlaceholder: 'Nhập họ và tên của bạn',
@@ -210,6 +210,7 @@ const vi = {
     speedLow: 'Thấp',
     speedMedium: 'Trung bình',
     speedHigh: 'Cao',
+    needCalibrationForSpeed: 'Bạn cần hiệu chuẩn hệ thống trước khi điều chỉnh độ nhạy con trỏ.',
   },
   cameraPermission: {
     title: 'Cho phép truy cập Camera',
