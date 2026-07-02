@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Camera, RefreshCw, CheckCircle, ScanFace, Loader2 } from 'lucide-react';
+import { ArrowLeft, Camera, RefreshCw, CheckCircle, ScanFace, Loader2, CheckCircle2, X } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
 import { useEyeTracking } from '../context/EyeTrackingContext';
 import PageScale from '../components/PageScale';
@@ -27,6 +27,16 @@ export default function FaceRegisterPage() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  useEffect(() => {
+    if (isSuccessModalOpen) {
+      const timer = setTimeout(() => {
+        setIsSuccessModalOpen(false);
+        navigate('/settings');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isSuccessModalOpen, navigate]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -253,7 +263,8 @@ export default function FaceRegisterPage() {
     setIsSaving(true);
     try {
       await authApi.saveFaceEmbedding(capturedImage);
-      navigate('/settings');
+      // Xóa dòng navigate('/settings'); cũ đi và thay bằng:
+      setIsSuccessModalOpen(true);
     } catch (error) {
       console.error('Lỗi khi lưu khuôn mặt:', error);
     } finally {
@@ -404,6 +415,63 @@ export default function FaceRegisterPage() {
           </div>
         </section>
       </main>
+      {isSuccessModalOpen && (
+        <div className="workspace-submit-overlay" role="presentation">
+          <div
+            className="workspace-submit-modal"
+            role="dialog"
+            aria-modal="true"
+            style={{
+              position: 'relative',
+              padding: '56px 40px 48px',
+              width: '560px',
+              maxWidth: '90vw',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setIsSuccessModalOpen(false);
+                navigate('/settings');
+              }}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#111',
+                padding: '8px',
+              }}
+              aria-label="Đóng"
+            >
+              <X size={36} strokeWidth={3} />
+            </button>
+
+            <div className="workspace-submit-modal-icon" aria-hidden="true" style={{ margin: '0 auto 24px' }}>
+              <CheckCircle2 size={64} strokeWidth={3} />
+            </div>
+
+            <h2 style={{ textAlign: 'center', margin: '0 0 16px 0', fontSize: '2.8rem', fontWeight: 900 }}>
+              {getSafeTranslation('faceRegister.successTitle', 'Thiết lập thành công!')}
+            </h2>
+
+            <h3
+              style={{
+                textAlign: 'center',
+                margin: 0,
+                fontSize: '1.4rem',
+                fontWeight: 600,
+                color: '#444',
+                lineHeight: 1.5,
+              }}
+            >
+              {getSafeTranslation('faceRegister.successDesc', 'Dữ liệu khuôn mặt của bạn đã được lưu an toàn.')}
+            </h3>
+          </div>
+        </div>
+      )}
     </PageScale>
   );
 }

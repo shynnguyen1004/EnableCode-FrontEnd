@@ -261,6 +261,8 @@ const vi = {
     capture: 'Chụp thủ công',
     retake: 'Chụp lại',
     save: 'Xác nhận',
+    successTitle: 'Thiết lập thành công!',
+    successDesc: 'Giờ đây bạn có thể đăng nhập không cần mật khẩu.',
   },
 } as const;
 

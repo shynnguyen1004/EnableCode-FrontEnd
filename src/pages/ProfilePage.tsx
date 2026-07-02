@@ -264,7 +264,7 @@ export default function ProfilePage() {
   return (
     <PageScale scale={0.8} className="profile-page">
       <header className="profile-topbar">
-        <button onClick={() => navigate(-1)} className="profile-back-btn" aria-label="Go back">
+        <button onClick={() => navigate('/home')} className="profile-back-btn" aria-label="Go back">
           <ArrowLeft size={32} strokeWidth={3} />
         </button>
         <h1>{t('settings.title')}</h1>

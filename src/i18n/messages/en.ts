@@ -261,6 +261,8 @@ const en = {
     capture: 'Capture',
     retake: 'Retake',
     save: 'Submit',
+    successTitle: 'Setup Successful!',
+    successDesc: 'You can now log in without a password.',
   },
 } as const;
 
