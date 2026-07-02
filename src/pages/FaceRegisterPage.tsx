@@ -282,7 +282,7 @@ export default function FaceRegisterPage() {
             <p>
               {getSafeTranslation(
                 'faceRegister.subtitle',
-                'Hãy há miệng to và giữ nguyên trong 1 giây để hệ thống tự động chụp ảnh khuôn mặt.',
+                'Chụp thủ công hoặc há miệng nhẹ để hệ thống chụp ảnh khuôn mặt.',
               )}
             </p>
           </div>

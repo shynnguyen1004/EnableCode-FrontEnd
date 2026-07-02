@@ -309,7 +309,7 @@ export default function FaceLoginPage() {
             <p>
               {getSafeTranslation(
                 'faceLogin.subtitle',
-                'Hãy há miệng to và giữ nguyên trong 1 giây để hệ thống tự động xác thực đăng nhập.',
+                'Chụp thủ công hoặc há miệng nhẹ để hệ thống xác thực đăng nhập.',
               )}
             </p>
           </div>
