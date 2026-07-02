@@ -246,6 +246,19 @@ const en = {
     scrollUpPanel: 'Scroll up (panel)',
     scrollDownPanel: 'Scroll down (panel)',
   },
+  faceLogin: {
+    title: 'Set up Face Login',
+    subtitle:
+      'Open your mouth wide and hold it for 3 seconds so the system can automatically capture an image of your face.',
+  },
+  faceRegister: {
+    title: 'Set up Face Register',
+    subtitle:
+      'Open your mouth wide and hold it for 3 seconds so the system can automatically capture an image of your face.',
+    capture: 'Capture',
+    retake: 'Retake',
+    save: 'Submit',
+  },
 } as const;
 
 export default en;

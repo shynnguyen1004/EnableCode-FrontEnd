@@ -247,6 +247,17 @@ const vi = {
     scrollUpPanel: 'Cuộn lên (panel)',
     scrollDownPanel: 'Cuộn xuống (panel)',
   },
+  faceLogin: {
+    title: 'Thiết lập đăng nhập bằng khuôn mặt',
+    subtitle: 'Hãy há miệng to và giữ nguyên trong 3 giây để hệ thống tự động chụp ảnh khuôn mặt.',
+  },
+  faceRegister: {
+    title: 'Thiết lập đăng ký bằng khuôn mặt',
+    subtitle: 'Hãy há miệng to và giữ nguyên trong 3 giây để hệ thống tự động chụp ảnh khuôn mặt.',
+    capture: 'Chụp thủ công',
+    retake: 'Chụp lại',
+    save: 'Xác nhận',
+  },
 } as const;
 
 export default vi;
