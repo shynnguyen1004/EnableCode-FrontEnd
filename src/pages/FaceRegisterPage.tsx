@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera, RefreshCw, CheckCircle, ScanFace, Loader2 } from 'lucide-react';
 import { useI18n } from '../i18n/I18nProvider';
+import { useEyeTracking } from '../context/EyeTrackingContext';
 import PageScale from '../components/PageScale';
 import { authApi } from '../api/authApi';
 import type { FaceMeshResults, FaceMeshType, CameraType } from '../lib/types';
@@ -20,6 +21,7 @@ declare global {
 export default function FaceRegisterPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const { setEnabled: setEyeTrackingEnabled } = useEyeTracking();
 
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -48,6 +50,10 @@ export default function FaceRegisterPage() {
 
     const initFaceMeshAndCamera = async () => {
       try {
+        // --- TẮT CHUỘT ẢO ĐỂ TRẢ LẠI QUYỀN CAMERA TRƯỚC KHI MỞ CAMERA CỦA TRANG NÀY ---
+        setEyeTrackingEnabled(false);
+        await new Promise(resolve => setTimeout(resolve, 300)); // Chờ nhả phần cứng
+
         const { FaceMesh, Camera } = window;
         if (!FaceMesh || !Camera) {
           console.warn('MediaPipe FaceMesh hoặc Camera chưa sẵn sàng trên đối tượng window.');
@@ -87,7 +93,6 @@ export default function FaceRegisterPage() {
           ctx.translate(canvas.width, 0);
           ctx.scale(-1, 1);
 
-          // FIX ESLINT: Lấy kích thước chuẩn tuyệt đối từ luồng Video gốc thay vì results.image
           const vw = video.videoWidth;
           const vh = video.videoHeight;
 
@@ -206,8 +211,10 @@ export default function FaceRegisterPage() {
         }
         faceMeshRef.current = null;
       }
+      // --- BẬT LẠI CHUỘT ẢO KHI RỜI TRANG ---
+      setEyeTrackingEnabled(true);
     };
-  }, []);
+  }, [setEyeTrackingEnabled]);
 
   const handleCapture = () => {
     const canvas = canvasRef.current;
@@ -283,7 +290,7 @@ export default function FaceRegisterPage() {
             <p>
               {getSafeTranslation(
                 'faceRegister.subtitle',
-                'Hãy há miệng to và giữ nguyên trong 3 giây để hệ thống tự động chụp ảnh khuôn mặt.',
+                'Chụp thủ công hoặc há miệng nhẹ để hệ thống chụp ảnh khuôn mặt.',
               )}
             </p>
           </div>

@@ -49,7 +49,13 @@ export const authApi = {
   },
 
   saveFaceEmbedding: async (image: string): Promise<{ success: boolean; message: string }> => {
-    const response = await axiosClient.put('/auth/embedding', { image });
+    const response = await axiosClient.put(
+      '/auth/embedding',
+      { image },
+      {
+        timeout: 50000,
+      },
+    );
     return response.data;
   },
 

@@ -56,13 +56,16 @@ const Mouse: React.FC = () => {
   const actionKindRef = useRef<ActionKind>('moving');
   const isDraggingRef = useRef(false);
   const draggedElementRef = useRef<HTMLElement | SVGElement | null>(null);
-  const previousScaleDepthFactor = useRef<number>(1);
+  const depthRatioRef = useRef<number>(1); // EMA tỉ lệ khoảng cách camera — chỉ dùng cho ngưỡng há miệng
+  const faceNotDetectedTimerRef = useRef<number | null>(null);
+  const [showFaceWarning, setShowFaceWarning] = useState(false);
 
-  // Bộ lưu trữ trạng thái động của cấu trúc One Euro Filter để chống nhiễu Jitter thích ứng
+  // Trạng thái One Euro Filter — đảm nhiệm cả lọc small jitter (đứng yên) lẫn large jitter (di chuyển)
   const oneEuroStateX = useRef({ value: 0.5, derivative: 0 });
   const oneEuroStateY = useRef({ value: 0.5, derivative: 0 });
-  const smoothedGainRef = useRef(1.0);
-  const smoothedPixelRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+
+  // EMA riêng cho vị trí khuôn mặt trong khung hình — dùng để bù trôi khi ngồi lệch tâm so với lúc calib
+  const faceCenterFilterRef = useRef({ x: 0.5, y: 0.5 });
 
   // Lưu trữ vị trí dispatch sự kiện DOM gần nhất nhằm phục vụ cơ chế Throttle di chuyển (Delta d > 5px)
   const lastDispatchedPosition = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
@@ -111,8 +114,8 @@ const Mouse: React.FC = () => {
     faceMesh.setOptions({
       maxNumFaces: 1,
       refineLandmarks: false,
-      minDetectionConfidence: 0.6,
-      minTrackingConfidence: 0.6,
+      minDetectionConfidence: 0.8,
+      minTrackingConfidence: 0.8,
     });
 
     faceMesh.onResults((results: FaceMeshResults) => {
@@ -129,22 +132,27 @@ const Mouse: React.FC = () => {
 
       if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
         const landmarks = results.multiFaceLandmarks[0];
+        if (faceNotDetectedTimerRef.current) {
+          clearTimeout(faceNotDetectedTimerRef.current);
+          faceNotDetectedTimerRef.current = null;
+        }
+        setShowFaceWarning(false);
 
-        // --- BƯỚC 1: THU THẬP VÀ TRÍCH XUẤT LANDMARK CỐT LÕI ---
-        const noseTipLandmark = landmarks[4]; // Đầu mũi làm tâm định vị laser-pointer 1:1 chính xác
-        const leftCheekboneLandmark = landmarks[234]; // Điểm neo cố định hộp sọ vùng má trái
-        const rightCheekboneLandmark = landmarks[454]; // Điểm neo cố định hộp sọ vùng má phải
-        const foreheadCenterLandmark = landmarks[10]; // Vùng trán cố định ổn định hình học
-        const topLipCenterLandmark = landmarks[13]; // Điểm tính biên độ há miệng môi trên
-        const bottomLipCenterLandmark = landmarks[14]; // Điểm tính biên độ há miệng môi dưới
+        // --- BƯỚC 1: TRÍCH XUẤT LANDMARK CỐT LÕI ---
+        const nose = landmarks[4]; // Đầu mũi — tâm định vị laser-pointer
+        const cheekL = landmarks[116]; // Má trái — điểm neo hộp sọ
+        const cheekR = landmarks[345]; // Má phải — điểm neo hộp sọ
+        const forehead = landmarks[10]; // Trán — điểm neo ổn định hình học
+        const lipTop = landmarks[13]; // Môi trên — tính biên độ há miệng
+        const lipBottom = landmarks[14]; // Môi dưới — tính biên độ há miệng
 
-        if (!noseTipLandmark || !leftCheekboneLandmark || !rightCheekboneLandmark) {
+        if (!nose || !cheekL || !cheekR) {
           canvasCtx.restore();
           return;
         }
 
         // Vẽ phản hồi các điểm neo cốt lõi trực quan lên Canvas preview
-        const essentialIndices = [4, 13, 14, 10, 234, 454];
+        const essentialIndices = [4, 13, 14, 10, 116, 345];
         essentialIndices.forEach(index => {
           const point = landmarks[index];
           if (point) {
@@ -156,66 +164,37 @@ const Mouse: React.FC = () => {
         });
         canvasCtx.restore();
 
-        // Đọc nạp cấu hình dữ liệu cân chỉnh từ Context tầng trên
+        // Đọc nạp cấu hình calibration từ Context tầng trên
         const currentCalibration = calibrationRef.current;
         const userPreferences = currentCalibration?.preferences;
         const calibrationBounds = currentCalibration?.bounds;
+        const userSpeed = userPreferences?.speed ?? 1.0;
 
-        const baseMouseSpeedFactor = userPreferences?.speed ?? 1.0;
+        // --- BƯỚC 2: TÍN HIỆU GÓC XOAY ĐẦU (tự chuẩn hóa theo khoảng cách camera) ---
+        const faceCenterX = (cheekL.x + cheekR.x) / 2;
+        const upperFaceHeight = Math.abs((cheekL.y + cheekR.y) / 2 - forehead.y) || 1;
+        const faceWidth = Math.abs(cheekR.x - cheekL.x) || 1;
+        const faceHeight = upperFaceHeight * 2.5;
+        const faceCenterY = forehead.y + upperFaceHeight * 1.25;
 
-        // --- BƯỚC 2: TÍNH TOÁN TÍNH BẤT BIẾN KHOẢNG CÁCH (DISTANCE INVARIANCE) ---
-        let scaleDepthFactor = 1.0;
-        const currentCheekWidth = Math.sqrt(
-          Math.pow(leftCheekboneLandmark.x - rightCheekboneLandmark.x, 2) +
-            Math.pow(leftCheekboneLandmark.y - rightCheekboneLandmark.y, 2),
-        );
+        // rotX/rotY: tỉ lệ lệch mũi so với tâm mặt — cùng co giãn theo khoảng cách nên không cần bù thêm
+        const rotX = (nose.x - faceCenterX) / faceWidth;
+        const rotY = (nose.y - faceCenterY) / faceHeight;
 
-        if (calibrationBounds?.refWidth && currentCheekWidth > 0) {
-          scaleDepthFactor = calibrationBounds.refWidth / currentCheekWidth;
-        }
-        const rawDepthRatio =
-          calibrationBounds?.refWidth && currentCheekWidth > 0 ? calibrationBounds.refWidth / currentCheekWidth : 1.0;
-
-        // Clamping chặn biên giới hạn hệ số co giãn tránh nhiễu nhảy vọt phần cứng camera ngoài ý muốn
-        scaleDepthFactor = Math.min(2.5, Math.max(0.6, scaleDepthFactor));
-        scaleDepthFactor =
-          previousScaleDepthFactor.current + 0.2 * (scaleDepthFactor - previousScaleDepthFactor.current);
-        previousScaleDepthFactor.current = scaleDepthFactor;
-
-        // --- BƯỚC 3: NỘI SUY VÀ ÁNH XẠ TỌA ĐỘ SANG MÀN HÌNH (COORDINATE MAPPING VIA SMOOTHSTEP) ---
-        const faceCenterX = (leftCheekboneLandmark.x + rightCheekboneLandmark.x) / 2;
-        const stableUpperHeight =
-          Math.abs((leftCheekboneLandmark.y + rightCheekboneLandmark.y) / 2 - foreheadCenterLandmark.y) || 1;
-        const faceHeightBounding = stableUpperHeight * 2.5;
-        const faceWidthBounding = Math.abs(rightCheekboneLandmark.x - leftCheekboneLandmark.x) || 1;
-        const faceCenterY = foreheadCenterLandmark.y + stableUpperHeight * 1.25;
+        // --- BƯỚC 3: EMA RIÊNG CHO VỊ TRÍ KHUÔN MẶT — bù trôi khi ngồi lệch tâm so với lúc calib ---
+        const FACE_CENTER_SMOOTHING = 0.15; // càng nhỏ càng ổn định nhưng càng chậm nhận ra dịch chuyển thật
+        faceCenterFilterRef.current.x += FACE_CENTER_SMOOTHING * (faceCenterX - faceCenterFilterRef.current.x);
+        faceCenterFilterRef.current.y += FACE_CENTER_SMOOTHING * (faceCenterY - faceCenterFilterRef.current.y);
 
         const refFacePos = calibrationBounds?.refFacePos;
-        const relativeRotationX = (noseTipLandmark.x - faceCenterX) / faceWidthBounding;
-        const relativeRotationY = (noseTipLandmark.y - faceCenterY) / faceHeightBounding;
+        const DRIFT_COMPENSATION = 0.4; // 0 = tắt bù, 1 = bù toàn phần
+        const driftAwareRotX = refFacePos
+          ? rotX - (faceCenterFilterRef.current.x - refFacePos.x) * DRIFT_COMPENSATION
+          : rotX;
 
-        const DRIFT_COMPENSATION = 0.4; // 0 = tắt bù, 1 = bù toàn phần — tune trong 0.4–0.8
-        const compensatedRotationX = refFacePos
-          ? relativeRotationX - (faceCenterX - refFacePos.x) * DRIFT_COMPENSATION
-          : relativeRotationX;
-
-        // Định nghĩa hàm nội suy mượt Smoothstep bảo toàn liên tục C1 đạo hàm, triệt tiêu sượng tại tâm
-        const applySmoothstep = (value: number) => {
-          const clampedValue = Math.max(0, Math.min(1, value));
-          return clampedValue * clampedValue * (3 - 2 * clampedValue);
-        };
-        const applySpeedCurve = (value: number, speed: number) => {
-          const centered = value - 0.5;
-          const sign = Math.sign(centered);
-          const magnitude = Math.abs(centered) * 2; // 0..1
-          const safeSpeed = Math.max(0.3, Math.min(2, speed)); // chặn cả 2 đầu, tránh cực trị
-          const k = 1 / safeSpeed;
-          const curved = magnitude / (magnitude + k * (1 - magnitude)); // đạo hàm tại 0 = safeSpeed (hữu hạn), tại 1 = 1/safeSpeed
-          return 0.5 + sign * curved * 0.5;
-        };
-
-        let normalizedPercentX = 0.5;
-        let normalizedPercentY = 0.5;
+        // --- BƯỚC 4: ÁNH XẠ rotX/rotY SANG % MÀN HÌNH QUA CALIB BOUNDS (mapping tuyến tính độc lập từng trục) ---
+        let percentX = 0.5;
+        let percentY = 0.5;
 
         if (
           calibrationBounds?.left &&
@@ -224,98 +203,106 @@ const Mouse: React.FC = () => {
           calibrationBounds?.bottom &&
           calibrationBounds?.center
         ) {
-          const centerBound = calibrationBounds.center;
-          const leftBound = calibrationBounds.left;
-          const rightBound = calibrationBounds.right;
-          const topBound = calibrationBounds.top;
-          const bottomBound = calibrationBounds.bottom;
+          const center = calibrationBounds.center;
+          const left = calibrationBounds.left;
+          const right = calibrationBounds.right;
+          const top = calibrationBounds.top;
+          const bottom = calibrationBounds.bottom;
 
-          // X: chỉ phụ thuộc relativeRotationX, không còn lệ thuộc Y
-          if (compensatedRotationX > centerBound.x) {
-            const denom = leftBound.x - centerBound.x;
-            const factor = denom !== 0 ? (relativeRotationX - centerBound.x) / denom : 0;
-            normalizedPercentX = 0.5 - 0.5 * Math.max(0, Math.min(1, factor));
+          // X: chọn nhánh bằng driftAwareRotX (đã bù lệch tâm), nhưng nội suy bằng rotX thật
+          if (driftAwareRotX > center.x) {
+            const denom = left.x - center.x;
+            const factor = denom !== 0 ? (rotX - center.x) / denom : 0;
+            percentX = 0.5 - 0.5 * Math.max(0, Math.min(1, factor));
           } else {
-            const denom = rightBound.x - centerBound.x;
-            const factor = denom !== 0 ? (relativeRotationX - centerBound.x) / denom : 0;
-            normalizedPercentX = 0.5 + 0.5 * Math.max(0, Math.min(1, factor));
+            const denom = right.x - center.x;
+            const factor = denom !== 0 ? (rotX - center.x) / denom : 0;
+            percentX = 0.5 + 0.5 * Math.max(0, Math.min(1, factor));
           }
 
-          // Y: chỉ phụ thuộc relativeRotationY, không còn lệ thuộc X
-          if (relativeRotationY < centerBound.y) {
-            const denom = topBound.y - centerBound.y;
-            const factor = denom !== 0 ? (relativeRotationY - centerBound.y) / denom : 0;
-            normalizedPercentY = 0.5 - 0.5 * Math.max(0, Math.min(1, factor));
+          // Y: mapping độc lập, không phụ thuộc trục X
+          if (rotY < center.y) {
+            const denom = top.y - center.y;
+            const factor = denom !== 0 ? (rotY - center.y) / denom : 0;
+            percentY = 0.5 - 0.5 * Math.max(0, Math.min(1, factor));
           } else {
-            const denom = bottomBound.y - centerBound.y;
-            const factor = denom !== 0 ? (relativeRotationY - centerBound.y) / denom : 0;
-            normalizedPercentY = 0.5 + 0.5 * Math.max(0, Math.min(1, factor));
+            const denom = bottom.y - center.y;
+            const factor = denom !== 0 ? (rotY - center.y) / denom : 0;
+            percentY = 0.5 + 0.5 * Math.max(0, Math.min(1, factor));
           }
         }
 
-        // --- BƯỚC 4: BỘ LỌC LÀM MƯỢT VÀ CHỐNG JITTER (ONE EURO FILTER THÍCH ỨNG) ---
+        // --- BƯỚC 5: ONE EURO FILTER — lọc duy nhất, chịu trách nhiệm cả small jitter lẫn large jitter ---
         const deltaTimeSeconds = (currentTimeMs - lastFrameTimeRef.current) / 1000;
         lastFrameTimeRef.current = currentTimeMs;
 
-        // Cấu hình tham số chuẩn hóa cho kiến trúc One Euro Filter thích ứng tần số cắt
-        const minCutoffFrequency = 0.05 / scaleDepthFactor; // Tần số cắt tối thiểu (Hz) khi đầu đứng yên để lọc 100% micro-jitter
-        const velocityBetaFactor = 0.008 / scaleDepthFactor; // Hệ số bám đuổi tốc độ cao nhằm triệt tiêu độ trễ cao su khi quay đầu nhanh
-        const derivativeCutoffFrequency = 0.5; // Tần số lọc mượt cho đạo hàm vận tốc thô
+        const MIN_CUTOFF = 0.00005; // Hz — tần số cắt khi đứng yên: càng nhỏ càng lọc mạnh small jitter, càng "nặng tay" lúc bắt đầu di chuyển
+        const VELOCITY_BETA = 0.03; // hệ số mở cutoff theo vận tốc: càng nhỏ càng lọc mạnh large jitter, càng trễ khi quay đầu nhanh
+        const MAX_CUTOFF = 1.5; // trần cutoff — chặn filter "lọc gần như tắt" khi vận tốc cao, giữ lại 1 mức lọc tối thiểu lúc di chuyển
+        const DERIVATIVE_CUTOFF = 0.5; // Hz — tần số lọc riêng cho đạo hàm vận tốc thô
 
-        const calculateOneEuroFilter = (
-          currentRawValue: number,
-          filterState: { value: number; derivative: number },
-        ) => {
-          if (deltaTimeSeconds <= 0) return filterState.value;
+        // --- BƯỚC 7 (KHÔNG THUỘC PIPELINE LỌC): NGƯỠNG HÁ MIỆNG — scaleDepthFactor tách riêng, chỉ phục vụ click/drag ---
+        let depthRatio = 1.0;
+        const cheekDistance = Math.sqrt(Math.pow(cheekL.x - cheekR.x, 2) + Math.pow(cheekL.y - cheekR.y, 2));
+        if (calibrationBounds?.refWidth && cheekDistance > 0) {
+          depthRatio = calibrationBounds.refWidth / cheekDistance;
+        }
+        depthRatio = Math.min(4.0, Math.max(0.4, depthRatio)); // range rộng hơn cursor filter — bù đủ cho khoảng cách xa
+        depthRatio = depthRatioRef.current + 0.2 * (depthRatio - depthRatioRef.current);
+        depthRatioRef.current = depthRatio;
 
-          // Đo đạc vận tốc dịch chuyển tức thời để phân tích đặc trưng chuyển động đầu
-          const rawDerivative = (currentRawValue - filterState.value) / deltaTimeSeconds;
-          const alphaDerivative = 1.0 / (1.0 + 1.0 / (2.0 * Math.PI * derivativeCutoffFrequency * deltaTimeSeconds));
-          const filteredDerivative = alphaDerivative * rawDerivative + (1.0 - alphaDerivative) * filterState.derivative;
+        const mouthDeltaX = lipTop.x - lipBottom.x;
+        const mouthDeltaY = lipTop.y - lipBottom.y;
+        const mouthDepthCompensation = Math.pow(depthRatio, 2.2);
+        const currentMouthGapDistance =
+          Math.sqrt(mouthDeltaX * mouthDeltaX + mouthDeltaY * mouthDeltaY) * mouthDepthCompensation;
 
-          // Điều tiết động tần số cắt dựa trên tốc độ chuyển động thực tế tế cơ sinh học
-          const adaptiveCutoff = Math.min(
-            1.6, // dù di chuyển nhanh cỡ nào cũng không lọc ít hơn mức này
-            minCutoffFrequency + velocityBetaFactor * Math.abs(filteredDerivative),
-          );
+        // Đồng bộ hóa biên độ hiệu chuẩn "Mở thoải mái" cá nhân hóa để chống mỏi hàm sinh học
+        const personalComfortThreshold = userPreferences?.mouthDragThreshold ?? 0.03;
+        const schmittTriggerDragThreshold = personalComfortThreshold; // 100% Mốc mỏ neo mở thoải mái
+        const schmittTriggerDropThreshold = personalComfortThreshold * 0.5; // 50% Mốc mỏ neo mở thoải mái
+        const mouthDetectThreshold = personalComfortThreshold * 0.35; // phát hiện bắt đầu há — thấp hơn drag threshold, tune 0.25–0.45
+        const isMouthOpening = currentMouthGapDistance > mouthDetectThreshold;
+        const adaptiveMinCutoff = isMouthOpening ? MIN_CUTOFF * 4.0 : MIN_CUTOFF; // lọc cực mạnh khi phát hiện há miệng — tune 3.0–6.0
+
+        const applyOneEuroFilter = (rawValue: number, state: { value: number; derivative: number }) => {
+          if (deltaTimeSeconds <= 0) return state.value;
+
+          const rawDerivative = (rawValue - state.value) / deltaTimeSeconds;
+          const alphaDerivative = 1.0 / (1.0 + 1.0 / (2.0 * Math.PI * DERIVATIVE_CUTOFF * deltaTimeSeconds));
+          const filteredDerivative = alphaDerivative * rawDerivative + (1.0 - alphaDerivative) * state.derivative;
+
+          const adaptiveCutoff = Math.min(MAX_CUTOFF, adaptiveMinCutoff + VELOCITY_BETA * Math.abs(filteredDerivative));
           const alphaValue = 1.0 / (1.0 + 1.0 / (2.0 * Math.PI * adaptiveCutoff * deltaTimeSeconds));
-          const filteredValue = alphaValue * currentRawValue + (1.0 - alphaValue) * filterState.value;
+          const filteredValue = alphaValue * rawValue + (1.0 - alphaValue) * state.value;
 
-          filterState.value = filteredValue;
-          filterState.derivative = filteredDerivative;
+          state.value = filteredValue;
+          state.derivative = filteredDerivative;
           return filteredValue;
         };
 
-        const filteredTargetX = calculateOneEuroFilter(normalizedPercentX, oneEuroStateX.current);
-        const filteredTargetY = calculateOneEuroFilter(normalizedPercentY, oneEuroStateY.current);
+        const filteredX = applyOneEuroFilter(percentX, oneEuroStateX.current);
+        const filteredY = applyOneEuroFilter(percentY, oneEuroStateY.current);
 
-        const finalSteppedX = applySmoothstep(filteredTargetX);
-        const finalSteppedY = applySmoothstep(filteredTargetY);
+        // --- BƯỚC 6: GAIN CURVE DUY NHẤT — quyết định cả tốc độ tổng thể lẫn độ chính xác gần tâm, luôn chạm viền ---
+        const applyGainCurve = (value: number, speed: number) => {
+          const centered = value - 0.5;
+          const sign = Math.sign(centered);
+          const magnitude = Math.abs(centered) * 2; // 0..1
+          const safeSpeed = Math.max(0.3, Math.min(2, speed)); // chặn 2 đầu, tránh gain tại tâm vọt quá cao gây jitter
+          const k = 1 / safeSpeed;
+          const curved = magnitude / (magnitude + k * (1 - magnitude)); // đạo hàm tại tâm = safeSpeed (hữu hạn), tại viền luôn = 1
+          return 0.5 + sign * curved * 0.5;
+        };
 
-        // --- BƯỚC 5: HIỆU CHỈNH TỐC ĐỘ CHUỘT VÀ TỈ LỆ 1:1 ---
-        const velocityMagnitude = Math.sqrt(
-          oneEuroStateX.current.derivative ** 2 + oneEuroStateY.current.derivative ** 2,
-        );
-        const PRECISION_GAIN_MIN = 0.25; // gain khi gần như đứng yên — chỉnh nhỏ hơn để canh dễ hơn
-        const PRECISION_GAIN_MAX = 1.0; // gain khi di chuyển nhanh — giữ tốc độ cũ
-        const VELOCITY_GAIN_THRESHOLD = 3.5; // vận tốc (đơn vị/giây) để đạt full gain, tune 1.0-2.5
-        const targetGain =
-          PRECISION_GAIN_MIN +
-          (PRECISION_GAIN_MAX - PRECISION_GAIN_MIN) * Math.min(1, velocityMagnitude / VELOCITY_GAIN_THRESHOLD);
-        smoothedGainRef.current += 0.15 * (targetGain - smoothedGainRef.current); // 0.15 = tốc độ lọc gain
+        const isNearEdge = filteredX < 0.08 || filteredX > 0.92 || filteredY < 0.08 || filteredY > 0.92;
+        const dragSpeedMultiplier = isDraggingRef.current && !isNearEdge ? 0.5 : 1.0;
 
-        const speedCurvedX = applySpeedCurve(finalSteppedX, baseMouseSpeedFactor * smoothedGainRef.current);
-        const speedCurvedY = applySpeedCurve(finalSteppedY, baseMouseSpeedFactor * smoothedGainRef.current);
+        const gainedX = applyGainCurve(filteredX, userSpeed * dragSpeedMultiplier);
+        const gainedY = applyGainCurve(filteredY, userSpeed * dragSpeedMultiplier);
 
-        const rawPixelX = Math.max(0, Math.min(window.innerWidth, speedCurvedX * window.innerWidth));
-        const rawPixelY = Math.max(0, Math.min(window.innerHeight, speedCurvedY * window.innerHeight));
-
-        const PIXEL_SMOOTHING = 0.1; // càng nhỏ càng mượt nhưng càng trễ, tune trong khoảng 0.15-0.4
-        smoothedPixelRef.current.x += PIXEL_SMOOTHING * (rawPixelX - smoothedPixelRef.current.x);
-        smoothedPixelRef.current.y += PIXEL_SMOOTHING * (rawPixelY - smoothedPixelRef.current.y);
-
-        const finalPixelPositionX = smoothedPixelRef.current.x;
-        const finalPixelPositionY = smoothedPixelRef.current.y;
+        const finalPixelPositionX = Math.max(0, Math.min(window.innerWidth, gainedX * window.innerWidth));
+        const finalPixelPositionY = Math.max(0, Math.min(window.innerHeight, gainedY * window.innerHeight));
 
         // Phản hồi phần cứng UI trực tiếp qua biến đổi translate3d tăng tốc GPU mượt mà 60 FPS
         if (cursorRef.current) {
@@ -323,18 +310,6 @@ const Mouse: React.FC = () => {
         }
 
         const elementAtCursorPoint = document.elementFromPoint(finalPixelPositionX, finalPixelPositionY);
-
-        // --- BƯỚC 6: XỬ LÝ KÉO & THẢ QUA BIỂU CẢM HÁ MIỆNG (SCHMITT TRIGGER / HYSTERESIS) ---
-        const mouthDeltaX = topLipCenterLandmark.x - bottomLipCenterLandmark.x;
-        const mouthDeltaY = topLipCenterLandmark.y - bottomLipCenterLandmark.y;
-        const mouthScaleFactor = Math.min(4.0, Math.max(0.4, rawDepthRatio));
-        const currentMouthGapDistance =
-          Math.sqrt(mouthDeltaX * mouthDeltaX + mouthDeltaY * mouthDeltaY) * mouthScaleFactor;
-
-        // Đồng bộ hóa biên độ hiệu chuẩn "Mở thoải mái" cá nhân hóa để chống mỏi hàm sinh học
-        const personalComfortThreshold = (userPreferences?.mouthDragThreshold ?? 0.03) * scaleDepthFactor;
-        const schmittTriggerDragThreshold = personalComfortThreshold; // 100% Mốc mỏ neo mở thoải mái
-        const schmittTriggerDropThreshold = personalComfortThreshold * 0.3; // 50% Mốc mỏ neo mở thoải mái
 
         if (currentMouthGapDistance >= schmittTriggerDragThreshold) {
           if (!wasMouthOpenRef.current) {
@@ -354,6 +329,8 @@ const Mouse: React.FC = () => {
                 draggedElementRef.current = targetDraggableElement;
                 isDraggingRef.current = true;
                 setIsDragging(true);
+                oneEuroStateX.current.derivative = 0;
+                oneEuroStateY.current.derivative = 0;
                 updateAction('drag');
 
                 // Kích hoạt giả lập luồng sự kiện nhấn Drag hệ thống chuột trái giữ
@@ -392,6 +369,8 @@ const Mouse: React.FC = () => {
         } else if (currentMouthGapDistance <= schmittTriggerDropThreshold) {
           if (wasMouthOpenRef.current) {
             wasMouthOpenRef.current = false;
+            oneEuroStateX.current.derivative = 0;
+            oneEuroStateY.current.derivative = 0;
 
             if (isDraggingRef.current) {
               // Giải phóng và nhả liên kết Kéo thả an toàn qua phân tách hai ngưỡng Schmitt Trigger
@@ -504,7 +483,7 @@ const Mouse: React.FC = () => {
           lastDomScanTimeRef.current = currentTimeMs;
 
           const activeScrollableParent = getScrollableParent(elementAtCursorPoint);
-          const VIEWPORT_EDGE_BUFFER_ZONE = 80; // Vùng đệm biên cấu hình cố định 80px
+          const VIEWPORT_EDGE_BUFFER_ZONE = 130; // Vùng đệm biên cấu hình cố định 80px
           const SCROLL_STEP_INTENSITY = 30;
 
           if (activeScrollableParent && activeScrollableParent !== document.documentElement) {
@@ -545,6 +524,11 @@ const Mouse: React.FC = () => {
         }
       } else {
         canvasCtx.restore();
+        if (!faceNotDetectedTimerRef.current) {
+          faceNotDetectedTimerRef.current = window.setTimeout(() => {
+            setShowFaceWarning(true);
+          }, 600);
+        }
       }
     });
 
@@ -562,6 +546,9 @@ const Mouse: React.FC = () => {
       isActive = false;
       camera.stop();
       void faceMesh.close();
+      if (faceNotDetectedTimerRef.current) {
+        window.clearTimeout(faceNotDetectedTimerRef.current);
+      }
     };
   }, [isEnabled]);
   if (!isEnabled) return null;
@@ -572,7 +559,7 @@ const Mouse: React.FC = () => {
           cursor: pointer !important;
         }
         button.virtual-hover, a.virtual-hover, [role="button"].virtual-hover, [draggable="true"].virtual-hover {
-          outline: 2.5px dashed #000000 !important;
+          outline: 2.5px dashed #ff7700 !important;
           outline-offset: -1px !important;
           box-shadow: 0 0 8px rgba(0,0,0,0.3) !important;
         }
@@ -599,6 +586,32 @@ const Mouse: React.FC = () => {
       >
         <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#2dd4bf' }} />
       </div>
+
+      {showFaceWarning && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: 'rgba(0,0,0,0.85)',
+            color: '#fff',
+            padding: '32px 48px',
+            borderRadius: '16px',
+            zIndex: 99999,
+            textAlign: 'center',
+            fontSize: '1.1rem',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            pointerEvents: 'none',
+            width: '420px',
+            maxWidth: '90vw',
+          }}
+        >
+          <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>📷</div>
+          <div style={{ fontWeight: 700, marginBottom: '8px', color: '#ff7700' }}>Không nhận diện được khuôn mặt</div>
+          <div style={{ opacity: 0.8, fontSize: '0.95rem' }}>Hãy ngồi gần camera hơn</div>
+        </div>
+      )}
 
       {/* Hộp xem trước Camera thu nhỏ phản hồi trạng thái thời gian thực */}
       <div
@@ -636,7 +649,6 @@ const Mouse: React.FC = () => {
             fontSize: '12px',
             borderRadius: '6px',
             fontWeight: 700,
-            borderRight: `4px solid ${actionKind === 'click' ? '#f43f5e' : '#38bdf8'}`,
             backdropFilter: 'blur(4px)',
           }}
         >
