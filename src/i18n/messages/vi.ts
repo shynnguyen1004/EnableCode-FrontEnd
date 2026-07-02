@@ -248,6 +248,8 @@ const vi = {
     scrollDown: 'Cuộn xuống',
     scrollUpPanel: 'Cuộn lên (panel)',
     scrollDownPanel: 'Cuộn xuống (panel)',
+    noFaceDetectedTitle: 'Không nhận diện được khuôn mặt',
+    noFaceDetectedDesc: 'Hãy ngồi gần camera hơn',
   },
   faceLogin: {
     title: 'Thiết lập đăng nhập bằng khuôn mặt',

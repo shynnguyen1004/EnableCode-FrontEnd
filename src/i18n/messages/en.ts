@@ -246,6 +246,8 @@ const en = {
     scrollDown: 'Scroll down',
     scrollUpPanel: 'Scroll up (panel)',
     scrollDownPanel: 'Scroll down (panel)',
+    noFaceDetectedTitle: 'Face not detected',
+    noFaceDetectedDesc: 'Please move closer to the camera',
   },
   faceLogin: {
     title: 'Set up Face Login',
