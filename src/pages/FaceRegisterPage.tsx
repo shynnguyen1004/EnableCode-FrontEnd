@@ -87,7 +87,6 @@ export default function FaceRegisterPage() {
           ctx.translate(canvas.width, 0);
           ctx.scale(-1, 1);
 
-          // FIX ESLINT: Lấy kích thước chuẩn tuyệt đối từ luồng Video gốc thay vì results.image
           const vw = video.videoWidth;
           const vh = video.videoHeight;
 
@@ -283,7 +282,7 @@ export default function FaceRegisterPage() {
             <p>
               {getSafeTranslation(
                 'faceRegister.subtitle',
-                'Hãy há miệng to và giữ nguyên trong 3 giây để hệ thống tự động chụp ảnh khuôn mặt.',
+                'Hãy há miệng to và giữ nguyên trong 1 giây để hệ thống tự động chụp ảnh khuôn mặt.',
               )}
             </p>
           </div>
