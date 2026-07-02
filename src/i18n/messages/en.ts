@@ -208,6 +208,7 @@ const en = {
     speedLow: 'Low',
     speedMedium: 'Medium',
     speedHigh: 'High',
+    needCalibrationForSpeed: 'You need to calibrate the system before adjusting the cursor sensitivity.',
   },
   cameraPermission: {
     title: 'Allow Camera Access',
