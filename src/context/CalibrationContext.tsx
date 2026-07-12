@@ -13,13 +13,31 @@ interface CalibrationContextType {
 
 const CalibrationContext = createContext<CalibrationContextType | undefined>(undefined);
 
+const DEFAULT_CALIBRATION: Calibration = {
+  _id: 'default',
+  userId: 'guest',
+  bounds: {
+    center: { x: -0.05, y: 0 },
+    left: { x: 0.1, y: 0.02 },
+    right: { x: -0.15, y: -0.05 },
+    top: { x: -0.03, y: -0.06 },
+    bottom: { x: -0.08, y: 0.04 },
+    refFacePos: { x: 0.5, y: 0.59 },
+    refWidth: 0.19,
+  },
+  preferences: {
+    speed: 1,
+    mouthDragThreshold: 0.03,
+  },
+};
+
 interface CalibrationProviderProps {
   children: ReactNode;
 }
 
 export function CalibrationProvider({ children }: CalibrationProviderProps) {
   const { isLoggedIn, accessToken } = useAuth();
-  const [calibration, setCalibration] = useState<Calibration | null>(null);
+  const [calibration, setCalibration] = useState<Calibration | null>(DEFAULT_CALIBRATION);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Đưa logic fetch dữ liệu ra ngoài useEffect và bọc bằng useCallback để giữ vững tham chiếu hàm
@@ -32,22 +50,20 @@ export function CalibrationProvider({ children }: CalibrationProviderProps) {
       setCalibration(response);
     } catch (error) {
       console.error('Lỗi khi tải dữ liệu cấu hình khuôn mặt:', error);
+      setCalibration(DEFAULT_CALIBRATION);
     } finally {
       setIsLoading(false);
     }
   }, [isLoggedIn, accessToken]);
 
   useEffect(() => {
-    // Nếu chưa đăng nhập hoặc không có token, xóa dữ liệu cũ một cách an toàn
     if (!isLoggedIn || !accessToken) {
       const timer = setTimeout(() => {
-        setCalibration(null);
+        setCalibration(DEFAULT_CALIBRATION);
       }, 0);
       return () => clearTimeout(timer);
     }
 
-    // Tự động chạy khi user đăng nhập thành công
-    // Tránh gọi setState đồng bộ trực tiếp trong Effect bằng setTimeout
     const timer = setTimeout(() => {
       refreshCalibration();
     }, 0);
