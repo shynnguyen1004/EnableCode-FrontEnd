@@ -235,7 +235,7 @@ const vi = {
   },
   faceControl: {
     title: 'Điều khiển khuôn mặt',
-    devMode: '(DevMode)',
+    devMode: '',
     press: 'Nhấn',
     toToggle: 'để bật/tắt',
     enableAria: 'Bật điều khiển khuôn mặt',

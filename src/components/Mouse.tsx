@@ -25,12 +25,7 @@ const ACTION_LABEL_KEYS: Record<ActionKind, string> = {
   scrollDownPanel: 'faceControl.scrollDownPanel',
 };
 
-// ===== ONE EURO FILTER (Casiez, Roussel, Vogel — 2012) =====
-// Low-pass filter với cutoff frequency thích ứng theo tốc độ thay đổi của tín hiệu:
-// đứng yên (tốc độ thấp) -> cutoff thấp -> lọc mạnh, triệt jitter gần như hoàn toàn.
-// di chuyển nhanh -> cutoff tăng theo beta*|dx| -> lọc yếu đi -> giảm lag, bám sát chuyển động thật.
-// Đây là lý do KHÔNG cần thêm state machine "isMovingIntentionally" hay deadzone thủ công nữa:
-// bản thân filter đã tự chuyển đổi mượt giữa 2 chế độ dựa trên đạo hàm tín hiệu.
+// ONE EURO FILTER
 type OneEuroState = { value: number; derivative: number; lastTimeSec: number; initialized: boolean };
 
 const oneEuroSmoothingFactor = (samplingRateHz: number, cutoffHz: number): number => {
@@ -42,7 +37,7 @@ const oneEuroExponentialSmoothing = (alpha: number, x: number, xPrev: number): n
   alpha * x + (1 - alpha) * xPrev;
 
 /**
- * Áp dụng One Euro Filter cho 1 mẫu tín hiệu mới.
+ * One Euro Filter
  * @param state       state nội bộ của filter (mutate tại chỗ, giữ nguyên giữa các lần gọi)
  * @param x           giá trị thô (nhiễu) của frame hiện tại
  * @param timeSec     timestamp hiện tại tính bằng GIÂY (bắt buộc đơn vị giây để cutoff tính đúng theo Hz)
@@ -59,8 +54,6 @@ const oneEuroFilter = (
   derivativeCutoffHz = 1.0,
 ): number => {
   if (!state.initialized) {
-    // Frame đầu tiên: chưa có t_prev hợp lệ để tính dt -> khởi tạo trực tiếp bằng giá trị thô,
-    // đạo hàm = 0 (đứng yên tuyệt đối tại điểm khởi tạo).
     state.value = x;
     state.derivative = 0;
     state.lastTimeSec = timeSec;
@@ -112,13 +105,10 @@ const Mouse: React.FC = () => {
   const faceNotDetectedTimerRef = useRef<number | null>(null);
   const [showFaceWarning, setShowFaceWarning] = useState(false);
 
-  // State chuẩn cho One Euro Filter (Casiez et al.) — mỗi trục X/Y một state độc lập.
-  // value = x_prev (giá trị đã lọc của frame trước), derivative = dx_prev (đạo hàm đã lọc của frame trước),
-  // initialized = false ở frame đầu tiên vì chưa có dx_prev/t_prev hợp lệ để tính đạo hàm.
   const oneEuroStateX = useRef({ value: 0.5, derivative: 0, lastTimeSec: 0, initialized: false });
   const oneEuroStateY = useRef({ value: 0.5, derivative: 0, lastTimeSec: 0, initialized: false });
 
-  // Buffer 3 giá trị gần nhất cho median-of-3 spike rejection — chỉ dùng cho mouth gap (cursor dùng One Euro Filter)
+  // Median-of-3 spike rejection — dùng cho mouth gap
   const mouthGapMedianBufferRef = useRef({ a: 0, b: 0, c: 0 });
 
   // EMA riêng cho vị trí khuôn mặt trong khung hình — dùng để bù trôi khi ngồi lệch tâm so với lúc calib
@@ -166,24 +156,22 @@ const Mouse: React.FC = () => {
       return getScrollableParent(element.parentElement);
     };
 
-    // processFrame chứa toàn bộ logic xử lý 1 kết quả detect — giữ nguyên logic gốc,
-    // chỉ đổi nguồn landmarks từ FaceMesh (Solutions API cũ) sang FaceLandmarker (Tasks API mới).
     const processFrame = (landmarks: NormalizedLandmark[], currentTimeMs: number) => {
       {
-        // --- BƯỚC 1: TRÍCH XUẤT LANDMARK CỐT LÕI ---
-        const nose = landmarks[4]; // Đầu mũi — tâm định vị laser-pointer
-        const cheekL = landmarks[116]; // Má trái — điểm neo hộp sọ
-        const cheekR = landmarks[345]; // Má phải — điểm neo hộp sọ
-        const forehead = landmarks[10]; // Trán — điểm neo ổn định hình học
-        const lipTop = landmarks[13]; // Môi trên — tính biên độ há miệng
-        const lipBottom = landmarks[14]; // Môi dưới — tính biên độ há miệng
+        // BƯỚC 1: TRÍCH XUẤT LANDMARK CỐT LÕI
+        const nose = landmarks[4];
+        const cheekL = landmarks[116];
+        const cheekR = landmarks[345];
+        const forehead = landmarks[10];
+        const lipTop = landmarks[13];
+        const lipBottom = landmarks[14];
 
         if (!nose || !cheekL || !cheekR) {
           canvasCtx.restore();
           return;
         }
 
-        // Vẽ phản hồi các điểm neo cốt lõi trực quan lên Canvas preview
+        // Vẽ các điểm tracking lên Canvas
         const essentialIndices = [4, 13, 14, 10, 116, 345];
         essentialIndices.forEach(index => {
           const point = landmarks[index];
@@ -202,7 +190,7 @@ const Mouse: React.FC = () => {
         const calibrationBounds = currentCalibration?.bounds;
         const userSpeed = userPreferences?.speed ?? 1.0;
 
-        // --- BƯỚC 2: TÍN HIỆU GÓC XOAY ĐẦU (tự chuẩn hóa theo khoảng cách camera) ---
+        // BƯỚC 2: TÍN HIỆU GÓC XOAY ĐẦU (tự chuẩn hóa theo khoảng cách camera)
         const faceCenterX = (cheekL.x + cheekR.x) / 2;
         const upperFaceHeight = Math.abs((cheekL.y + cheekR.y) / 2 - forehead.y) || 1;
         const faceWidth = Math.abs(cheekR.x - cheekL.x) || 1;
@@ -213,7 +201,7 @@ const Mouse: React.FC = () => {
         const rotX = (nose.x - faceCenterX) / faceWidth;
         const rotY = (nose.y - faceCenterY) / faceHeight;
 
-        // --- BƯỚC 3: EMA RIÊNG CHO VỊ TRÍ KHUÔN MẶT — bù trôi khi ngồi lệch tâm so với lúc calib ---
+        // BƯỚC 3: EMA RIÊNG CHO VỊ TRÍ KHUÔN MẶT — bù trôi khi ngồi lệch tâm so với lúc calib
         const FACE_CENTER_SMOOTHING = 0.15; // càng nhỏ càng ổn định nhưng càng chậm nhận ra dịch chuyển thật
         faceCenterFilterRef.current.x += FACE_CENTER_SMOOTHING * (faceCenterX - faceCenterFilterRef.current.x);
         faceCenterFilterRef.current.y += FACE_CENTER_SMOOTHING * (faceCenterY - faceCenterFilterRef.current.y);
@@ -224,7 +212,7 @@ const Mouse: React.FC = () => {
           ? rotX - (faceCenterFilterRef.current.x - refFacePos.x) * DRIFT_COMPENSATION
           : rotX;
 
-        // --- BƯỚC 4: ÁNH XẠ rotX/rotY SANG % MÀN HÌNH QUA CALIB BOUNDS (mapping tuyến tính độc lập từng trục) ---
+        // BƯỚC 4: ÁNH XẠ rotX/rotY SANG % MÀN HÌNH QUA CALIB BOUNDS (mapping tuyến tính độc lập từng trục)
         let percentX = 0.5;
         let percentY = 0.5;
 
@@ -266,26 +254,14 @@ const Mouse: React.FC = () => {
           }
         }
 
-        // --- BƯỚC 4B: LÀM MƯỢT CURSOR — One Euro Filter chuẩn (Casiez et al.), áp dụng độc lập cho X và Y.
-        // Thay thế toàn bộ cụm cũ (velocity clamp + EMA + state machine "isMovingIntentionally" + deadzone
-        // snap thủ công): filter này TỰ thích ứng cutoff theo tốc độ tín hiệu, nên không cần dựng thêm state
-        // machine hay ngưỡng deadzone riêng để phân biệt "đứng yên" vs "đang di chuyển" — bản chất toán học
-        // của filter đã làm việc đó liên tục, mượt (không có bước nhảy rời rạc do snap).
-        //
-        // CURSOR_MIN_CUTOFF_HZ: cutoff khi đứng yên (đạo hàm ~0). Giảm giá trị này để triệt jitter mạnh hơn
-        // lúc đứng yên, đổi lại lag nhích lên chút khi bắt đầu di chuyển chậm. 0.5Hz là điểm khởi đầu hợp lý
-        // cho tín hiệu vị trí cursor (tương tự khuyến nghị gốc của paper cho chuyển động tay/con trỏ).
-        // CURSOR_BETA: hệ số phản ứng theo tốc độ. Tăng để giảm lag khi di chuyển nhanh (đổi lại nhạy nhiễu
-        // hơn ở tốc độ cao — nhưng nhiễu tốc độ cao thường không đáng chú ý bằng jitter lúc đứng yên).
+        // BƯỚC 4B: LÀM MƯỢT CURSOR — One Euro Filter chuẩn - áp dụng độc lập cho X và Y.
         const CURSOR_MIN_CUTOFF_HZ = 0.01;
         const CURSOR_BETA = 0.5;
         const timeSec = currentTimeMs / 1000;
         const smoothedX = oneEuroFilter(oneEuroStateX.current, percentX, timeSec, CURSOR_MIN_CUTOFF_HZ, CURSOR_BETA);
         const smoothedY = oneEuroFilter(oneEuroStateY.current, percentY, timeSec, CURSOR_MIN_CUTOFF_HZ, CURSOR_BETA);
 
-        // --- BƯỚC 4C: NGƯỠNG HÁ MIỆNG — normalize theo faceWidth (đã tự bù khoảng cách camera, cùng cơ chế
-        // như rotX/rotY ở BƯỚC 2). Dùng median-of-3 ở đây vì mouth-gap không cần bám sát tức thời như cursor,
-        // độ trễ nhỏ 1-2 frame chấp nhận được để đổi lấy chống spike tốt hơn cho việc phát hiện há miệng.
+        // BƯỚC 4C: NGƯỠNG HÁ MIỆNG — normalize theo faceWidth (đã tự bù khoảng cách camera)
         const medianOf3 = (buffer: { a: number; b: number; c: number }, next: number) => {
           const { a, b, c } = buffer;
           buffer.a = b;
@@ -307,19 +283,7 @@ const Mouse: React.FC = () => {
         const schmittTriggerDragThreshold = personalComfortThreshold; // 100% Mốc mỏ neo mở thoải mái
         const schmittTriggerDropThreshold = personalComfortThreshold * 0.5; // 50% Mốc mỏ neo mở thoải mái
 
-        // --- BƯỚC 5: MAPPING TỐC ĐỘ — nhân tuyến tính đơn giản quanh tâm, KHÔNG dùng gain curve phi tuyến.
-        // Lý do bỏ gain curve hyperbol kiểu cũ: nó áp dụng RIÊNG trên từng trục X/Y, nên khi mũi di chuyển theo
-        // đường chéo, tỉ lệ khuếch đại X và Y khác nhau tại từng thời điểm → méo hướng di chuyển thành hyperbol.
-        // Power curve dưới đây áp dụng lên MAGNITUDE (khoảng cách từ tâm), rồi chia đều lại cho X và Y theo cùng
-        // 1 hệ số — nghĩa là HƯỚNG vector từ tâm không đổi, chỉ ĐỘ DÀI thay đổi. Path do đó luôn thẳng, không méo.
-        // power=1 (speed=1): tuyến tính hoàn toàn. power<1 (speed>1): nhạy hơn ở gần tâm. power>1 (speed<1): kém
-        // nhạy hơn ở gần tâm — nhưng LUÔN đạt đúng 0/1 khi input đạt đúng biên calib, ở MỌI mức speed.
-        // BUG ĐÃ SỬA: dùng magnitude Euclid (hình tròn, chuẩn hóa theo bán kính 0.5) để chuẩn hóa, nhưng vùng
-        // khả dụng thật của percentX/Y là HÌNH VUÔNG [0,1]x[0,1] — ở góc màn hình, magnitude Euclid = 0.5*sqrt(2)
-        // (~0.707) luôn bị clamp về 1 khi chia cho 0.5, khiến curvedMagnitude luôn = 0.5 bất kể speed → chuột
-        // dừng cứng ở ~85% màn hình, tạo thành 1 hình chữ nhật bo góc, không bao giờ chạm 4 góc thật.
-        // Fix: dùng Chebyshev norm (max(|dx|,|dy|)) — khớp đúng hình vuông, nên tại góc màn hình (dx=dy=0.5),
-        // magnitude = 0.5 = đúng max khả dĩ, không bị clamp sai, curvedMagnitude đạt đúng 0.5 => chạm góc thật.
+        // BƯỚC 5: MAPPING TỐC ĐỘ — nhân tuyến tính đơn giản quanh tâm, KHÔNG dùng gain curve phi tuyến.
         const applySpeedGain = (x: number, y: number, speed: number) => {
           const dx = x - 0.5;
           const dy = y - 0.5;
@@ -417,7 +381,6 @@ const Mouse: React.FC = () => {
             oneEuroStateY.current.derivative = 0;
 
             if (isDraggingRef.current) {
-              // Giải phóng và nhả liên kết Kéo thả an toàn qua phân tách hai ngưỡng Schmitt Trigger
               document.dispatchEvent(
                 new MouseEvent('mouseup', {
                   bubbles: true,
@@ -471,7 +434,7 @@ const Mouse: React.FC = () => {
           );
         }
 
-        // --- BƯỚC 7: GIẢ LẬP SỰ KIỆN HỆ THỐNG DOM VÀ CƠ CHẾ THROTTLE PERFORMANCE ---
+        // BƯỚC 7: GIẢ LẬP SỰ KIỆN HỆ THỐNG DOM VÀ CƠ CHẾ THROTTLE PERFORMANCE
         const moveDeltaDistanceX = finalPixelPositionX - lastDispatchedPosition.current.x;
         const moveDeltaDistanceY = finalPixelPositionY - lastDispatchedPosition.current.y;
         const calculatedMovementDelta = Math.sqrt(

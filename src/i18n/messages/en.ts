@@ -233,7 +233,7 @@ const en = {
   },
   faceControl: {
     title: 'Face Control',
-    devMode: '(DevMode)',
+    devMode: '',
     press: 'Press',
     toToggle: 'to toggle',
     enableAria: 'Enable face control',
