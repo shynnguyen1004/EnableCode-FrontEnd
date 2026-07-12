@@ -687,8 +687,10 @@ const Mouse: React.FC = () => {
           }}
         >
           <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>📷</div>
-          <div style={{ fontWeight: 700, marginBottom: '8px', color: '#ff7700' }}>Không nhận diện được khuôn mặt</div>
-          <div style={{ opacity: 0.8, fontSize: '0.95rem' }}>Hãy ngồi gần camera hơn</div>
+          <div style={{ fontWeight: 700, marginBottom: '8px', color: '#ff7700' }}>
+            {t('faceControl.noFaceDetectedTitle')}
+          </div>
+          <div style={{ opacity: 0.8, fontSize: '0.95rem' }}>{t('faceControl.noFaceDetectedDesc')}</div>
         </div>
       )}
 

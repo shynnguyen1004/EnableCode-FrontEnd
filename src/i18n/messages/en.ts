@@ -246,6 +246,23 @@ const en = {
     scrollDown: 'Scroll down',
     scrollUpPanel: 'Scroll up (panel)',
     scrollDownPanel: 'Scroll down (panel)',
+    noFaceDetectedTitle: 'Face not detected',
+    noFaceDetectedDesc: 'Please move closer to the camera',
+  },
+  faceLogin: {
+    title: 'Set up Face Login',
+    subtitle:
+      'Open your mouth wide and hold it for 3 seconds so the system can automatically capture an image of your face.',
+  },
+  faceRegister: {
+    title: 'Set up Face Register',
+    subtitle:
+      'Open your mouth wide and hold it for 3 seconds so the system can automatically capture an image of your face.',
+    capture: 'Capture',
+    retake: 'Retake',
+    save: 'Submit',
+    successTitle: 'Setup Successful!',
+    successDesc: 'You can now log in without a password.',
   },
 } as const;
 

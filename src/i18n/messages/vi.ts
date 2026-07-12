@@ -248,6 +248,21 @@ const vi = {
     scrollDown: 'Cuộn xuống',
     scrollUpPanel: 'Cuộn lên (panel)',
     scrollDownPanel: 'Cuộn xuống (panel)',
+    noFaceDetectedTitle: 'Không nhận diện được khuôn mặt',
+    noFaceDetectedDesc: 'Hãy ngồi gần camera hơn',
+  },
+  faceLogin: {
+    title: 'Thiết lập đăng nhập bằng khuôn mặt',
+    subtitle: 'Hãy há miệng to và giữ nguyên trong 3 giây để hệ thống tự động chụp ảnh khuôn mặt.',
+  },
+  faceRegister: {
+    title: 'Thiết lập đăng ký bằng khuôn mặt',
+    subtitle: 'Hãy há miệng to và giữ nguyên trong 3 giây để hệ thống tự động chụp ảnh khuôn mặt.',
+    capture: 'Chụp thủ công',
+    retake: 'Chụp lại',
+    save: 'Xác nhận',
+    successTitle: 'Thiết lập thành công!',
+    successDesc: 'Giờ đây bạn có thể đăng nhập không cần mật khẩu.',
   },
 } as const;
 
