@@ -360,7 +360,7 @@ const Mouse: React.FC = () => {
         const rawMouthGap = Math.sqrt(mouthDeltaX * mouthDeltaX + mouthDeltaY * mouthDeltaY) / faceWidth;
         const medianMouthGap = medianOf3(mouthGapMedianBufferRef.current, rawMouthGap);
 
-        const MOUTH_GAP_SMOOTHING = 0.5; // tune: nhỏ hơn = chống nhiễu mạnh hơn nhưng phản ứng há miệng chậm hơn
+        const MOUTH_GAP_SMOOTHING = 0.7; // tune: nhỏ hơn = chống nhiễu mạnh hơn nhưng phản ứng há miệng chậm hơn
         depthRatioRef.current += MOUTH_GAP_SMOOTHING * (medianMouthGap - depthRatioRef.current); // tái dùng ref làm EMA mouth gap
         const currentMouthGapDistance = depthRatioRef.current;
 
@@ -388,7 +388,8 @@ const Mouse: React.FC = () => {
           const magnitude = Math.max(Math.abs(dx), Math.abs(dy)); // Chebyshev norm, khớp vùng vuông [0,1]x[0,1]
           if (magnitude === 0) return { x: 0.5, y: 0.5 };
 
-          const power = 1 / speed;
+          const safeSpeed = Math.max(0.3, Math.min(2, speed));
+          const power = 1 / safeSpeed; // speed=1 -> power=1 (tuyến tính); speed=2 -> power=0.5 (nhạy hơn ở tâm); speed=0.5 -> power=2 (kém nhạy hơn ở tâm)
           const normalizedMagnitude = Math.min(1, magnitude / 0.5); // magnitude=0.5 luôn tương ứng đúng biên (cạnh hoặc góc) của hình vuông
           const curvedMagnitude = Math.pow(normalizedMagnitude, power) * 0.5;
           const scale = curvedMagnitude / magnitude;
@@ -598,6 +599,8 @@ const Mouse: React.FC = () => {
           const scrollPanelBy = (target: ScrollTarget, deltaY: number) => {
             if (target.kind === 'dom') {
               target.element.scrollBy({ top: deltaY, behavior: 'auto' });
+            } else {
+              target.workspace.scroll(target.workspace.scrollX, target.workspace.scrollY - deltaY);
             }
           };
 
