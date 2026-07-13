@@ -95,17 +95,16 @@ export interface UserProgress {
 
 export interface CalibrationBounds {
   center: { x: number; y: number };
-  left: { x: number; y: number };
   right: { x: number; y: number };
   top: { x: number; y: number };
   bottom: { x: number; y: number };
-  refFacePos: { x: number; y: number };
-  refWidth: number;
+  left: { x: number; y: number };
 }
 
 export interface CalibrationPreferences {
   speed: number;
   mouthDragThreshold: number;
+  mouthCompensationRatio: number;
 }
 
 export interface Calibration {

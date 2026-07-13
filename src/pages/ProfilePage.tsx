@@ -37,7 +37,7 @@ function formatDisplayName(name?: string): string {
 type SpeedLevel = 'low' | 'medium' | 'high';
 
 // Nguồn duy nhất cho mapping label <-> giá trị số, tránh lệch giữa nơi gửi API và nơi hiển thị
-const SPEED_MAP: Record<SpeedLevel, number> = { low: 0.7, medium: 1.0, high: 1.3 };
+const SPEED_MAP: Record<SpeedLevel, number> = { low: 0.7, medium: 0.85, high: 1 };
 
 function speedValueToLevel(value: number | undefined): SpeedLevel {
   if (value === undefined) return 'medium';

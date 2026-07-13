@@ -1,23 +1,13 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, ArrowLeft, CheckCircle, Target, RefreshCw, Crosshair, ArrowRight, CircleX } from 'lucide-react';
+import { FaceLandmarker, FilesetResolver, type NormalizedLandmark } from '@mediapipe/tasks-vision';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
 import { useEyeTracking } from '../context/EyeTrackingContext';
 import { useCalibration } from '../context/CalibrationContext';
 import { profileApi } from '../api/profileApi';
 import PageScale from '../components/PageScale';
-import type { FaceMeshResults, FaceMeshType, CameraType } from '../lib/types';
-
-declare global {
-  interface Window {
-    FaceMesh: new (config: { locateFile: (file: string) => string }) => FaceMeshType;
-    Camera: new (
-      video: HTMLVideoElement,
-      options: { onFrame: () => Promise<void>; width: number; height: number },
-    ) => CameraType;
-  }
-}
 
 const CAL_POINTS = [
   { x: 50, y: 50, isMouth: true },
@@ -47,8 +37,10 @@ export default function CalibrationPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const faceMeshRef = useRef<FaceMeshType | null>(null);
-  const cameraRef = useRef<CameraType | null>(null);
+  const faceLandmarkerRef = useRef<FaceLandmarker | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const rafIdRef = useRef<number | null>(null);
+  const lastVideoTimeRef = useRef(-1);
 
   const stepRef = useRef(step);
   useEffect(() => {
@@ -60,10 +52,14 @@ export default function CalibrationPage() {
     pointIndexRef.current = pointIndex;
   }, [pointIndex]);
 
-  const latestFaceCenterRef = useRef({ x: 0.5, y: 0.5 });
   const latestRawRef = useRef({ x: 0.5, y: 0.5 });
   const mouthGapRawRef = useRef(0);
-  const latestFaceSizeRef = useRef({ width: 0 });
+  // Khoảng cách trán-cằm ĐO LIÊN TỤC mỗi frame, nhưng CHỈ cập nhật khi miệng đang gần như ngậm
+  // (mouthGap dưới ngưỡng nhỏ) -> giữ giá trị "trạng thái nghỉ" gần nhất trước khi user há miệng ở
+  // điểm calib pointIndex 0. Dùng để so sánh với lúc há miệng, suy ra hệ số bù cá nhân hóa.
+  const chinForeheadHeightBaselineRef = useRef(0);
+  const chinForeheadHeightRawRef = useRef(0);
+  const faceWidthAtCaptureRef = useRef(1); // faceWidth thô mỗi frame, dùng quy đổi đơn vị khi tính hệ số bù
 
   const boundsRef = useRef({
     center: { x: 0, y: 0 },
@@ -71,11 +67,9 @@ export default function CalibrationPage() {
     right: { x: 0, y: 0 },
     bottom: { x: 0, y: 0 },
     left: { x: 0, y: 0 },
-    refWidth: 0,
-    refFacePos: { x: 0, y: 0 },
   });
-  const prefRef = useRef({ mouthDragThreshold: 0.03, speed: 1 });
-  const mouthSamplesRef = useRef<number[]>([]); // lưu threshold đo được ở từng điểm calib  const prefRef = useRef({ mouthDragThreshold: 0.03, speed: 1 });
+  const prefRef = useRef({ mouthDragThreshold: 0.03, speed: 1, mouthCompensationRatio: 0.3 });
+  const mouthSamplesRef = useRef<number[]>([]); // lưu threshold đo được ở từng điểm calib
 
   const getSafeTranslation = (key: string, fallbackText: string): string => {
     if (!key) return fallbackText;
@@ -125,21 +119,21 @@ export default function CalibrationPage() {
   }, []);
 
   const stopCamera = useCallback(() => {
-    if (cameraRef.current) {
-      try {
-        cameraRef.current.stop();
-      } catch (e) {
-        console.error('[AI-Tracker-Log] Error closing camera instance:', e);
-      }
-      cameraRef.current = null;
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
     }
-    if (faceMeshRef.current) {
-      const instance = faceMeshRef.current;
-      faceMeshRef.current = null;
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (faceLandmarkerRef.current) {
+      const instance = faceLandmarkerRef.current;
+      faceLandmarkerRef.current = null;
       try {
-        instance.close();
+        void instance.close();
       } catch {
-        console.error('[AI-Tracker-Log] Error closing FaceMesh instance');
+        console.error('[AI-Tracker-Log] Error closing FaceLandmarker instance');
       }
     }
   }, []);
@@ -149,20 +143,21 @@ export default function CalibrationPage() {
   }, [stopCamera]);
 
   const startCalibration = async () => {
-    // Đồng bộ speed hiện có từ DB, tránh ghi đè về mặc định khi lưu lại
+    // Đồng bộ speed + mouthCompensationRatio hiện có từ DB, tránh ghi đè về mặc định khi lưu lại
     prefRef.current = {
       mouthDragThreshold: 0.03,
-      speed: calibration?.preferences.speed ?? 1,
+      speed: calibration?.preferences.speed ?? 0.7,
+      mouthCompensationRatio: calibration?.preferences.mouthCompensationRatio ?? 0.3,
     };
     mouthSamplesRef.current = []; // reset mẫu đo threshold cho lần calibrate mới
+    chinForeheadHeightBaselineRef.current = 0;
+    chinForeheadHeightRawRef.current = 0;
     boundsRef.current = {
       center: { x: 0, y: 0 },
       top: { x: 0, y: 0 },
       right: { x: 0, y: 0 },
       bottom: { x: 0, y: 0 },
       left: { x: 0, y: 0 },
-      refWidth: 0,
-      refFacePos: { x: 0, y: 0 },
     };
 
     // --- BƯỚC 1: TẮT CHUỘT ẢO ĐỂ TRẢ LẠI QUYỀN CAMERA TRƯỚC KHI BẮT ĐẦU ---
@@ -170,29 +165,43 @@ export default function CalibrationPage() {
     await new Promise(resolve => setTimeout(resolve, 300)); // Chờ nhả phần cứng
 
     try {
-      const { FaceMesh, Camera } = window;
-      if (!FaceMesh || !Camera) {
-        alert('Chưa tải xong thư viện AI. Vui lòng đợi vài giây và thử lại.');
-        return;
-      }
-
       const videoElement = videoRef.current;
       if (!videoElement) {
         console.error('[AI-Tracker-Log] Error: Video element not found.');
         return;
       }
 
-      const faceMesh = new FaceMesh({
-        locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
-      });
-      faceMesh.setOptions({
-        maxNumFaces: 1,
-        refineLandmarks: true,
-        minDetectionConfidence: 0.8,
-        minTrackingConfidence: 0.8,
+      // Cấu hình FaceLandmarker giống hệt Mouse.tsx để hành vi đồng nhất
+      const filesetResolver = await FilesetResolver.forVisionTasks(
+        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm',
+      );
+      const faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: {
+          modelAssetPath:
+            'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+          delegate: 'GPU',
+        },
+        runningMode: 'VIDEO',
+        numFaces: 1,
+        minFaceDetectionConfidence: 0.85,
+        minFacePresenceConfidence: 0.85,
+        minTrackingConfidence: 0.85,
+        outputFaceBlendshapes: false,
+        outputFacialTransformationMatrixes: false,
       });
 
-      faceMesh.onResults((results: FaceMeshResults) => {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 640 } },
+        audio: false,
+      });
+
+      videoElement.srcObject = stream;
+      await videoElement.play();
+
+      faceLandmarkerRef.current = faceLandmarker;
+      streamRef.current = stream;
+
+      const processResult = (landmarks: NormalizedLandmark[]) => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
@@ -200,95 +209,78 @@ export default function CalibrationPage() {
 
         canvas.width = 640;
         canvas.height = 480;
-
         ctx.save();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Flip the image from camera horizontally for a mirror effect
-        ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
-        ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(videoElement, -canvas.width, 0, canvas.width, canvas.height);
 
-        if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-          const landmarks = results.multiFaceLandmarks[0];
-          const noseTip = landmarks[4];
-          const topLip = landmarks[13];
-          const bottomLip = landmarks[14];
+        const noseTip = landmarks[4];
+        const topLip = landmarks[13];
+        const bottomLip = landmarks[14];
+        const forehead = landmarks[10]; // Trán — điểm neo ổn định hình học
+        const chin = landmarks[152]; // Cằm — dùng để đo hệ số bù mouth-compensation cá nhân hóa
+        const leftCheek = landmarks[116]; // Má trái
+        const rightCheek = landmarks[345]; // Má phải
 
-          // Caculate depth
-          const forehead = landmarks[10]; // Đỉnh trán
-          const chin = landmarks[152]; // Điểm dưới cằm
-          const leftCheek = landmarks[116]; // Má trái ngoài cùng
-          const rightCheek = landmarks[345]; // Má phải ngoài cùng
+        // Góc quay đầu tương đối, chuẩn hóa theo faceWidth/faceHeight — công thức khớp Mouse.tsx
+        const faceCenterX = (leftCheek.x + rightCheek.x) / 2;
+        const upperFaceHeight = Math.abs((leftCheek.y + rightCheek.y) / 2 - forehead.y) || 1;
+        const faceWidth = Math.abs(rightCheek.x - leftCheek.x) || 1;
+        const faceHeight = upperFaceHeight * 2.5;
+        const faceCenterY = forehead.y + upperFaceHeight * 1.25;
 
-          const currentW = Math.sqrt(Math.pow(leftCheek.x - rightCheek.x, 2) + Math.pow(leftCheek.y - rightCheek.y, 2));
+        const rotX = (noseTip.x - faceCenterX) / faceWidth;
+        const rotY = (noseTip.y - faceCenterY) / faceHeight;
+        latestRawRef.current = { x: rotX, y: rotY };
 
-          // --- 1. TÍNH TÂM MẶT THỜI GIAN THỰC ---
-          const faceCenterX = (leftCheek.x + rightCheek.x) / 2;
-          const faceCenterY = (forehead.y + chin.y) / 2;
-          latestFaceCenterRef.current = { x: faceCenterX, y: faceCenterY };
+        // Chuẩn hóa theo faceWidth để khớp đơn vị với rawMouthGap lúc chạy thật ở Mouse.tsx
+        mouthGapRawRef.current =
+          Math.sqrt(Math.pow(topLip.x - bottomLip.x, 2) + Math.pow(topLip.y - bottomLip.y, 2)) / faceWidth;
 
-          // --- 2. TÍNH ĐỘ RỘNG / ĐỘ CAO KHUÔN MẶT ĐỂ CHUẨN HÓA KHOẢNG CÁCH ---
-          const faceWidth = Math.abs(rightCheek.x - leftCheek.x);
-          const faceHeight = Math.abs(chin.y - forehead.y);
+        // Đo khoảng trán-cằm THÔ (đơn vị landmark, chưa chia faceWidth — khớp đơn vị rawChinForeheadHeight
+        // trong Mouse.tsx) mỗi frame. Chỉ cập nhật baseline khi miệng đang gần ngậm (< 30% mouthDragThreshold
+        // mặc định) để baseline luôn phản ánh đúng "trạng thái nghỉ", không bị lẫn lúc miệng đang há dở.
+        chinForeheadHeightRawRef.current = Math.abs(chin.y - forehead.y) || 1;
+        faceWidthAtCaptureRef.current = faceWidth;
+        const MOUTH_NEAR_CLOSED_THRESHOLD = 0.01; // ngưỡng nhỏ, thấp hơn nhiều so với mouthDragThreshold mặc định 0.03
+        if (mouthGapRawRef.current < MOUTH_NEAR_CLOSED_THRESHOLD) {
+          chinForeheadHeightBaselineRef.current = chinForeheadHeightRawRef.current;
+        }
 
-          // --- 3. TÍNH GÓC QUAY ĐẦU THUẦN TÚY (RELATIVE ROTATION) ---
-          const rotX = (noseTip.x - faceCenterX) / (faceWidth || 1);
-          const rotY = (noseTip.y - faceCenterY) / (faceHeight || 1);
-
-          // --- 4. GÁN TỌA ĐỘ TƯƠNG ĐỐI VÀO LATEST RAW REF ---
-          latestRawRef.current = { x: rotX, y: rotY };
-          mouthGapRawRef.current = Math.sqrt(Math.pow(topLip.x - bottomLip.x, 2) + Math.pow(topLip.y - bottomLip.y, 2));
-          latestFaceSizeRef.current = { width: currentW };
-
-          if (stepRef.current === 'calibrating') {
-            const pi = pointIndexRef.current;
-            ctx.fillStyle = '#2dd4bf'; // lip landmarks
-            [topLip, bottomLip].forEach(pt => {
-              ctx.beginPath();
-              ctx.arc(pt.x * canvas.width, pt.y * canvas.height, 6, 0, 2 * Math.PI);
-              ctx.fill();
-            });
-            if (pi !== 0) {
-              ctx.fillStyle = '#ff7700'; // nose landmark
-              ctx.beginPath();
-              ctx.arc(noseTip.x * canvas.width, noseTip.y * canvas.height, 8, 0, 2 * Math.PI);
-              ctx.fill();
-            }
-            ctx.fillStyle = '#06b6d4'; // face boundary landmarks
-            [forehead, chin, leftCheek, rightCheek].forEach(pt => {
-              ctx.beginPath();
-              ctx.arc(pt.x * canvas.width, pt.y * canvas.height, 5, 0, 2 * Math.PI);
-              ctx.fill();
-            });
-          }
+        if (stepRef.current === 'calibrating') {
+          const pi = pointIndexRef.current;
+          const drawPoint = (pt: NormalizedLandmark, color: string, radius: number) => {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc((1 - pt.x) * -canvas.width, pt.y * canvas.height, radius, 0, 2 * Math.PI);
+            ctx.fill();
+          };
+          // Màu landmark đồng bộ với Mouse.tsx: vàng=mũi, xanh dương=môi, xanh lá=má/trán
+          [topLip, bottomLip].forEach(pt => drawPoint(pt, '#00aeff', 6));
+          if (pi !== 0) drawPoint(noseTip, '#f2ff00', 8);
+          [forehead, chin].forEach(pt => drawPoint(pt, '#ff00ea', 5));
+          [leftCheek, rightCheek].forEach(pt => drawPoint(pt, '#66ff00', 5));
         }
         ctx.restore();
-      });
+      };
 
-      const cameraInstance = new Camera(videoElement, {
-        onFrame: async () => {
-          if (videoElement.readyState >= 2 && faceMeshRef.current === faceMesh) {
-            try {
-              await faceMesh.send({ image: videoElement });
-            } catch {
-              console.warn(
-                '[AI-Tracker-Log] Warning: FaceMesh send() failed. Possibly due to camera not ready or frame skipped.',
-              );
-            }
-          }
-        },
-        width: 640,
-        height: 480,
-      });
+      const renderLoop = () => {
+        if (!faceLandmarkerRef.current) return;
+        rafIdRef.current = requestAnimationFrame(renderLoop);
+        if (videoElement.readyState < 2 || videoElement.currentTime === lastVideoTimeRef.current) return;
+        lastVideoTimeRef.current = videoElement.currentTime;
 
-      await cameraInstance.start();
-
-      faceMeshRef.current = faceMesh;
-      cameraRef.current = cameraInstance;
+        const results = faceLandmarkerRef.current.detectForVideo(videoElement, performance.now());
+        if (results.faceLandmarks && results.faceLandmarks.length > 0) {
+          processResult(results.faceLandmarks[0]);
+        }
+      };
+      rafIdRef.current = requestAnimationFrame(renderLoop);
 
       // ĐÃ XÓA LỆNH setEyeTrackingEnabled(true) Ở ĐÂY ĐỂ TRÁNH XUNG ĐỘT
 
+      // Chỉ vào countdown SAU KHI camera + model đã thật sự sẵn sàng — tránh trường hợp countdown
+      // chạy xong trước khi camera kịp bật (hoặc camera bật xong mà countdown đã kết thúc từ trước).
       setIntroCountdown(3);
       setStep('countdown');
     } catch (err) {
@@ -365,11 +357,33 @@ export default function CalibrationPage() {
         const currentY = latestRawRef.current.y;
         const currentMouth = mouthGapRawRef.current;
 
-        mouthSamplesRef.current.push(currentMouth);
+        // CHỈ lấy mouth-gap sample ở điểm calib có isMouth=true (pointIndex 0 — nơi người dùng THỰC SỰ há
+        // miệng). Trước đây push ở MỌI điểm, kể cả 4 điểm quay đầu (isMouth=false, miệng vẫn đóng bình
+        // thường) — do lấy Math.min() ở dưới, ngưỡng cuối cùng gần như luôn rơi vào giá trị đo lúc ĐÓNG
+        // miệng ở 1 trong 4 điểm đó, nhỏ hơn nhiều so với lúc há miệng thật. Hệ quả: dễ trigger drag (chỉ
+        // cần há hờ) nhưng cực khó trigger drop (ngưỡng drop = 50% ngưỡng này, còn nhỏ hơn nữa).
+        if (CAL_POINTS[pointIndex]?.isMouth) {
+          mouthSamplesRef.current.push(currentMouth);
+
+          // Đo hệ số bù mouth-compensation CÁ NHÂN HÓA — thay cho hằng số hard-code, vì tỷ lệ dịch chuyển
+          // cằm (xương) so với môi dưới (mô mềm) khác nhau giữa từng người. Công thức: phần trán-cằm đã
+          // phình ra do há miệng (so với baseline lúc ngậm) chia cho chính mouth gap gây ra phần phình đó
+          // -> ra đúng tỷ lệ 1 đơn vị mouth gap tương ứng bao nhiêu đơn vị phình trán-cằm của riêng user này.
+          const chinForeheadHeightWhileOpen = chinForeheadHeightRawRef.current;
+          const chinForeheadHeightAtRest = chinForeheadHeightBaselineRef.current;
+          const heightIncreaseFromMouthOpen = chinForeheadHeightWhileOpen - chinForeheadHeightAtRest;
+          // currentMouth đã normalize theo faceWidth -> quy đổi ngược về đơn vị landmark thô để khớp
+          // đơn vị với heightIncreaseFromMouthOpen (đang tính trên chin.y/forehead.y thô).
+          const currentMouthGapRawUnits = currentMouth * faceWidthAtCaptureRef.current;
+
+          if (chinForeheadHeightAtRest > 0 && currentMouthGapRawUnits > 0.001) {
+            const measuredRatio = heightIncreaseFromMouthOpen / currentMouthGapRawUnits;
+            // Clamp về khoảng vật lý hợp lý [0, 1] — cằm không thể phình nhiều hơn hoặc ngược hướng mouth gap.
+            prefRef.current.mouthCompensationRatio = Math.max(0, Math.min(1, measuredRatio));
+          }
+        }
         if (pointIndex === 0) {
           boundsRef.current.center = { x: currentX, y: currentY };
-          boundsRef.current.refWidth = latestFaceSizeRef.current.width;
-          boundsRef.current.refFacePos = { x: latestFaceCenterRef.current.x, y: latestFaceCenterRef.current.y };
         }
         if (pointIndex === 1) {
           boundsRef.current.top = { x: currentX, y: currentY };

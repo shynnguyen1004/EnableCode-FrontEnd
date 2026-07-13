@@ -22,12 +22,11 @@ const DEFAULT_CALIBRATION: Calibration = {
     right: { x: -0.15, y: -0.05 },
     top: { x: -0.03, y: -0.06 },
     bottom: { x: -0.08, y: 0.04 },
-    refFacePos: { x: 0.5, y: 0.59 },
-    refWidth: 0.19,
   },
   preferences: {
-    speed: 1,
+    speed: 0.85,
     mouthDragThreshold: 0.03,
+    mouthCompensationRatio: 0.5,
   },
 };
 
