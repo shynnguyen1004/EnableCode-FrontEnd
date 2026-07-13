@@ -49,6 +49,7 @@ export default function WorkspacePage() {
   const [outputOpen, setOutputOpen] = useState(false);
   const [hasRun, setHasRun] = useState(false);
   const [runPassed, setRunPassed] = useState<boolean | null>(null);
+
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;

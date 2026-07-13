@@ -4,6 +4,28 @@ import { useI18n } from '../i18n/I18nProvider';
 import { useCalibration } from '../context/CalibrationContext';
 import { useEyeTracking } from '../context/EyeTrackingContext';
 
+// Blockly bị Vite code-split thành nhiều chunk, mỗi chunk có class Workspace riêng nên
+// Blockly.Workspace.getAll() không thấy được instance của chunk khác. Thay vào đó, đọc registry
+// thật do BlocklyEditor.tsx quản lý ở window.__activeBlocklyWorkspaces. Chỉ khai báo tối thiểu
+// phần API cần dùng, tránh phải import cả package `blockly` chỉ để lấy type.
+interface BlocklyFlyoutLike {
+  getWorkspace?: () => BlocklyWorkspaceLike | undefined;
+}
+
+interface BlocklyWorkspaceLike {
+  scrollX: number;
+  scrollY: number;
+  scroll: (x: number, y: number) => void;
+  getInjectionDiv?: () => HTMLElement | undefined;
+  getFlyout?: () => BlocklyFlyoutLike | null | undefined;
+}
+
+declare global {
+  interface Window {
+    __activeBlocklyWorkspaces?: Set<BlocklyWorkspaceLike>;
+  }
+}
+
 type ActionKind =
   | 'moving'
   | 'click'
@@ -25,7 +47,12 @@ const ACTION_LABEL_KEYS: Record<ActionKind, string> = {
   scrollDownPanel: 'faceControl.scrollDownPanel',
 };
 
-// ONE EURO FILTER
+// ===== ONE EURO FILTER (Casiez, Roussel, Vogel — 2012) =====
+// Low-pass filter với cutoff frequency thích ứng theo tốc độ thay đổi của tín hiệu:
+// đứng yên (tốc độ thấp) -> cutoff thấp -> lọc mạnh, triệt jitter gần như hoàn toàn.
+// di chuyển nhanh -> cutoff tăng theo beta*|dx| -> lọc yếu đi -> giảm lag, bám sát chuyển động thật.
+// Đây là lý do KHÔNG cần thêm state machine "isMovingIntentionally" hay deadzone thủ công nữa:
+// bản thân filter đã tự chuyển đổi mượt giữa 2 chế độ dựa trên đạo hàm tín hiệu.
 type OneEuroState = { value: number; derivative: number; lastTimeSec: number; initialized: boolean };
 
 const oneEuroSmoothingFactor = (samplingRateHz: number, cutoffHz: number): number => {
@@ -37,7 +64,7 @@ const oneEuroExponentialSmoothing = (alpha: number, x: number, xPrev: number): n
   alpha * x + (1 - alpha) * xPrev;
 
 /**
- * One Euro Filter
+ * Áp dụng One Euro Filter cho 1 mẫu tín hiệu mới.
  * @param state       state nội bộ của filter (mutate tại chỗ, giữ nguyên giữa các lần gọi)
  * @param x           giá trị thô (nhiễu) của frame hiện tại
  * @param timeSec     timestamp hiện tại tính bằng GIÂY (bắt buộc đơn vị giây để cutoff tính đúng theo Hz)
@@ -54,6 +81,8 @@ const oneEuroFilter = (
   derivativeCutoffHz = 1.0,
 ): number => {
   if (!state.initialized) {
+    // Frame đầu tiên: chưa có t_prev hợp lệ để tính dt -> khởi tạo trực tiếp bằng giá trị thô,
+    // đạo hàm = 0 (đứng yên tuyệt đối tại điểm khởi tạo).
     state.value = x;
     state.derivative = 0;
     state.lastTimeSec = timeSec;
@@ -105,10 +134,13 @@ const Mouse: React.FC = () => {
   const faceNotDetectedTimerRef = useRef<number | null>(null);
   const [showFaceWarning, setShowFaceWarning] = useState(false);
 
+  // State chuẩn cho One Euro Filter (Casiez et al.) — mỗi trục X/Y một state độc lập.
+  // value = x_prev (giá trị đã lọc của frame trước), derivative = dx_prev (đạo hàm đã lọc của frame trước),
+  // initialized = false ở frame đầu tiên vì chưa có dx_prev/t_prev hợp lệ để tính đạo hàm.
   const oneEuroStateX = useRef({ value: 0.5, derivative: 0, lastTimeSec: 0, initialized: false });
   const oneEuroStateY = useRef({ value: 0.5, derivative: 0, lastTimeSec: 0, initialized: false });
 
-  // Median-of-3 spike rejection — dùng cho mouth gap
+  // Buffer 3 giá trị gần nhất cho median-of-3 spike rejection — chỉ dùng cho mouth gap (cursor dùng One Euro Filter)
   const mouthGapMedianBufferRef = useRef({ a: 0, b: 0, c: 0 });
 
   // EMA riêng cho vị trí khuôn mặt trong khung hình — dùng để bù trôi khi ngồi lệch tâm so với lúc calib
@@ -143,35 +175,77 @@ const Mouse: React.FC = () => {
     let rafId: number | null = null;
     let lastVideoTime = -1;
 
-    const getScrollableParent = (element: Element | null): Element | null => {
+    // Blockly là <svg>, không có scrollHeight/scrollTop thật nên getScrollableParent kiểu DOM
+    // chuẩn không nhận diện được nó là scrollable. Blockly tự quản lý cuộn qua
+    // workspace.scrollX/scrollY + workspace.scroll(x, y) (API riêng, không phải scrollBy DOM).
+    // ScrollTarget gộp 2 loại lại để phần gọi scroll phía dưới không cần biết đang xử lý loại nào.
+    type ScrollTarget =
+      | { kind: 'dom'; element: Element }
+      | { kind: 'blockly'; element: Element; workspace: BlocklyWorkspaceLike };
+
+    // Tìm flyout Blockly (panel danh sách block để kéo) chứa `element`. Chỉ xử lý flyout vì đó là
+    // panel duy nhất cần cuộn hiện tại — workspace chính không scroll theo yêu cầu ban đầu.
+    // Với nhiều workspace/flyout cùng lúc, so khớp đúng bằng getInjectionDiv() của TỪNG flyout
+    // workspace (không phải workspace cha) để xác nhận nó thực sự chứa `element`.
+    const findBlocklyTargetForElement = (
+      element: Element,
+    ): { workspace: BlocklyWorkspaceLike; svgRoot: Element } | null => {
+      const activeWorkspaces = window.__activeBlocklyWorkspaces;
+      if (!activeWorkspaces || activeWorkspaces.size === 0) return null;
+
+      const flyoutDescendant = element.closest('[class*="blocklyFlyout"]');
+      if (!flyoutDescendant) return null;
+
+      const svgRoot = element.closest('svg');
+      if (!svgRoot) return null;
+
+      for (const ws of activeWorkspaces) {
+        const flyoutWorkspace = ws.getFlyout?.()?.getWorkspace?.();
+        const flyoutInjectionDiv = flyoutWorkspace?.getInjectionDiv?.();
+        if (flyoutWorkspace && flyoutInjectionDiv?.contains(flyoutDescendant)) {
+          return { workspace: flyoutWorkspace, svgRoot };
+        }
+      }
+      return null;
+    };
+
+    const getScrollableParent = (element: Element | null): ScrollTarget | null => {
       if (!element) return null;
+
+      const blocklyTarget = findBlocklyTargetForElement(element);
+      if (blocklyTarget) {
+        return { kind: 'blockly', element: blocklyTarget.svgRoot, workspace: blocklyTarget.workspace };
+      }
+
       const style = window.getComputedStyle(element);
       const overflowY = style.overflowY;
       const isScrollable = overflowY === 'auto' || overflowY === 'scroll';
       const canScroll = element.scrollHeight > element.clientHeight;
 
-      if (isScrollable && canScroll) {
-        return element;
+      if (isScrollable && canScroll && element !== document.documentElement) {
+        return { kind: 'dom', element };
       }
       return getScrollableParent(element.parentElement);
     };
 
+    // processFrame chứa toàn bộ logic xử lý 1 kết quả detect — giữ nguyên logic gốc,
+    // chỉ đổi nguồn landmarks từ FaceMesh (Solutions API cũ) sang FaceLandmarker (Tasks API mới).
     const processFrame = (landmarks: NormalizedLandmark[], currentTimeMs: number) => {
       {
-        // BƯỚC 1: TRÍCH XUẤT LANDMARK CỐT LÕI
-        const nose = landmarks[4];
-        const cheekL = landmarks[116];
-        const cheekR = landmarks[345];
-        const forehead = landmarks[10];
-        const lipTop = landmarks[13];
-        const lipBottom = landmarks[14];
+        // --- BƯỚC 1: TRÍCH XUẤT LANDMARK CỐT LÕI ---
+        const nose = landmarks[4]; // Đầu mũi — tâm định vị laser-pointer
+        const cheekL = landmarks[116]; // Má trái — điểm neo hộp sọ
+        const cheekR = landmarks[345]; // Má phải — điểm neo hộp sọ
+        const forehead = landmarks[10]; // Trán — điểm neo ổn định hình học
+        const lipTop = landmarks[13]; // Môi trên — tính biên độ há miệng
+        const lipBottom = landmarks[14]; // Môi dưới — tính biên độ há miệng
 
         if (!nose || !cheekL || !cheekR) {
           canvasCtx.restore();
           return;
         }
 
-        // Vẽ các điểm tracking lên Canvas
+        // Vẽ phản hồi các điểm neo cốt lõi trực quan lên Canvas preview
         const essentialIndices = [4, 13, 14, 10, 116, 345];
         essentialIndices.forEach(index => {
           const point = landmarks[index];
@@ -190,7 +264,7 @@ const Mouse: React.FC = () => {
         const calibrationBounds = currentCalibration?.bounds;
         const userSpeed = userPreferences?.speed ?? 1.0;
 
-        // BƯỚC 2: TÍN HIỆU GÓC XOAY ĐẦU (tự chuẩn hóa theo khoảng cách camera)
+        // --- BƯỚC 2: TÍN HIỆU GÓC XOAY ĐẦU (tự chuẩn hóa theo khoảng cách camera) ---
         const faceCenterX = (cheekL.x + cheekR.x) / 2;
         const upperFaceHeight = Math.abs((cheekL.y + cheekR.y) / 2 - forehead.y) || 1;
         const faceWidth = Math.abs(cheekR.x - cheekL.x) || 1;
@@ -201,7 +275,7 @@ const Mouse: React.FC = () => {
         const rotX = (nose.x - faceCenterX) / faceWidth;
         const rotY = (nose.y - faceCenterY) / faceHeight;
 
-        // BƯỚC 3: EMA RIÊNG CHO VỊ TRÍ KHUÔN MẶT — bù trôi khi ngồi lệch tâm so với lúc calib
+        // --- BƯỚC 3: EMA RIÊNG CHO VỊ TRÍ KHUÔN MẶT — bù trôi khi ngồi lệch tâm so với lúc calib ---
         const FACE_CENTER_SMOOTHING = 0.15; // càng nhỏ càng ổn định nhưng càng chậm nhận ra dịch chuyển thật
         faceCenterFilterRef.current.x += FACE_CENTER_SMOOTHING * (faceCenterX - faceCenterFilterRef.current.x);
         faceCenterFilterRef.current.y += FACE_CENTER_SMOOTHING * (faceCenterY - faceCenterFilterRef.current.y);
@@ -212,7 +286,7 @@ const Mouse: React.FC = () => {
           ? rotX - (faceCenterFilterRef.current.x - refFacePos.x) * DRIFT_COMPENSATION
           : rotX;
 
-        // BƯỚC 4: ÁNH XẠ rotX/rotY SANG % MÀN HÌNH QUA CALIB BOUNDS (mapping tuyến tính độc lập từng trục)
+        // --- BƯỚC 4: ÁNH XẠ rotX/rotY SANG % MÀN HÌNH QUA CALIB BOUNDS (mapping tuyến tính độc lập từng trục) ---
         let percentX = 0.5;
         let percentY = 0.5;
 
@@ -254,14 +328,26 @@ const Mouse: React.FC = () => {
           }
         }
 
-        // BƯỚC 4B: LÀM MƯỢT CURSOR — One Euro Filter chuẩn - áp dụng độc lập cho X và Y.
-        const CURSOR_MIN_CUTOFF_HZ = 0.01;
+        // --- BƯỚC 4B: LÀM MƯỢT CURSOR — One Euro Filter chuẩn (Casiez et al.), áp dụng độc lập cho X và Y.
+        // Thay thế toàn bộ cụm cũ (velocity clamp + EMA + state machine "isMovingIntentionally" + deadzone
+        // snap thủ công): filter này TỰ thích ứng cutoff theo tốc độ tín hiệu, nên không cần dựng thêm state
+        // machine hay ngưỡng deadzone riêng để phân biệt "đứng yên" vs "đang di chuyển" — bản chất toán học
+        // của filter đã làm việc đó liên tục, mượt (không có bước nhảy rời rạc do snap).
+        //
+        // CURSOR_MIN_CUTOFF_HZ: cutoff khi đứng yên (đạo hàm ~0). Giảm giá trị này để triệt jitter mạnh hơn
+        // lúc đứng yên, đổi lại lag nhích lên chút khi bắt đầu di chuyển chậm. 0.5Hz là điểm khởi đầu hợp lý
+        // cho tín hiệu vị trí cursor (tương tự khuyến nghị gốc của paper cho chuyển động tay/con trỏ).
+        // CURSOR_BETA: hệ số phản ứng theo tốc độ. Tăng để giảm lag khi di chuyển nhanh (đổi lại nhạy nhiễu
+        // hơn ở tốc độ cao — nhưng nhiễu tốc độ cao thường không đáng chú ý bằng jitter lúc đứng yên).
+        const CURSOR_MIN_CUTOFF_HZ = 0.2;
         const CURSOR_BETA = 0.5;
         const timeSec = currentTimeMs / 1000;
         const smoothedX = oneEuroFilter(oneEuroStateX.current, percentX, timeSec, CURSOR_MIN_CUTOFF_HZ, CURSOR_BETA);
         const smoothedY = oneEuroFilter(oneEuroStateY.current, percentY, timeSec, CURSOR_MIN_CUTOFF_HZ, CURSOR_BETA);
 
-        // BƯỚC 4C: NGƯỠNG HÁ MIỆNG — normalize theo faceWidth (đã tự bù khoảng cách camera)
+        // --- BƯỚC 4C: NGƯỠNG HÁ MIỆNG — normalize theo faceWidth (đã tự bù khoảng cách camera, cùng cơ chế
+        // như rotX/rotY ở BƯỚC 2). Dùng median-of-3 ở đây vì mouth-gap không cần bám sát tức thời như cursor,
+        // độ trễ nhỏ 1-2 frame chấp nhận được để đổi lấy chống spike tốt hơn cho việc phát hiện há miệng.
         const medianOf3 = (buffer: { a: number; b: number; c: number }, next: number) => {
           const { a, b, c } = buffer;
           buffer.a = b;
@@ -274,7 +360,7 @@ const Mouse: React.FC = () => {
         const rawMouthGap = Math.sqrt(mouthDeltaX * mouthDeltaX + mouthDeltaY * mouthDeltaY) / faceWidth;
         const medianMouthGap = medianOf3(mouthGapMedianBufferRef.current, rawMouthGap);
 
-        const MOUTH_GAP_SMOOTHING = 0.35; // tune: nhỏ hơn = chống nhiễu mạnh hơn nhưng phản ứng há miệng chậm hơn
+        const MOUTH_GAP_SMOOTHING = 0.8; // tune: nhỏ hơn = chống nhiễu mạnh hơn nhưng phản ứng há miệng chậm hơn
         depthRatioRef.current += MOUTH_GAP_SMOOTHING * (medianMouthGap - depthRatioRef.current); // tái dùng ref làm EMA mouth gap
         const currentMouthGapDistance = depthRatioRef.current;
 
@@ -283,15 +369,26 @@ const Mouse: React.FC = () => {
         const schmittTriggerDragThreshold = personalComfortThreshold; // 100% Mốc mỏ neo mở thoải mái
         const schmittTriggerDropThreshold = personalComfortThreshold * 0.5; // 50% Mốc mỏ neo mở thoải mái
 
-        // BƯỚC 5: MAPPING TỐC ĐỘ — nhân tuyến tính đơn giản quanh tâm, KHÔNG dùng gain curve phi tuyến.
+        // --- BƯỚC 5: MAPPING TỐC ĐỘ — nhân tuyến tính đơn giản quanh tâm, KHÔNG dùng gain curve phi tuyến.
+        // Lý do bỏ gain curve hyperbol kiểu cũ: nó áp dụng RIÊNG trên từng trục X/Y, nên khi mũi di chuyển theo
+        // đường chéo, tỉ lệ khuếch đại X và Y khác nhau tại từng thời điểm → méo hướng di chuyển thành hyperbol.
+        // Power curve dưới đây áp dụng lên MAGNITUDE (khoảng cách từ tâm), rồi chia đều lại cho X và Y theo cùng
+        // 1 hệ số — nghĩa là HƯỚNG vector từ tâm không đổi, chỉ ĐỘ DÀI thay đổi. Path do đó luôn thẳng, không méo.
+        // power=1 (speed=1): tuyến tính hoàn toàn. power<1 (speed>1): nhạy hơn ở gần tâm. power>1 (speed<1): kém
+        // nhạy hơn ở gần tâm — nhưng LUÔN đạt đúng 0/1 khi input đạt đúng biên calib, ở MỌI mức speed.
+        // BUG ĐÃ SỬA: dùng magnitude Euclid (hình tròn, chuẩn hóa theo bán kính 0.5) để chuẩn hóa, nhưng vùng
+        // khả dụng thật của percentX/Y là HÌNH VUÔNG [0,1]x[0,1] — ở góc màn hình, magnitude Euclid = 0.5*sqrt(2)
+        // (~0.707) luôn bị clamp về 1 khi chia cho 0.5, khiến curvedMagnitude luôn = 0.5 bất kể speed → chuột
+        // dừng cứng ở ~85% màn hình, tạo thành 1 hình chữ nhật bo góc, không bao giờ chạm 4 góc thật.
+        // Fix: dùng Chebyshev norm (max(|dx|,|dy|)) — khớp đúng hình vuông, nên tại góc màn hình (dx=dy=0.5),
+        // magnitude = 0.5 = đúng max khả dĩ, không bị clamp sai, curvedMagnitude đạt đúng 0.5 => chạm góc thật.
         const applySpeedGain = (x: number, y: number, speed: number) => {
           const dx = x - 0.5;
           const dy = y - 0.5;
           const magnitude = Math.max(Math.abs(dx), Math.abs(dy)); // Chebyshev norm, khớp vùng vuông [0,1]x[0,1]
           if (magnitude === 0) return { x: 0.5, y: 0.5 };
 
-          const safeSpeed = Math.max(0.3, Math.min(2, speed));
-          const power = 1 / safeSpeed; // speed=1 -> power=1 (tuyến tính); speed=2 -> power=0.5 (nhạy hơn ở tâm); speed=0.5 -> power=2 (kém nhạy hơn ở tâm)
+          const power = 1 / speed;
           const normalizedMagnitude = Math.min(1, magnitude / 0.5); // magnitude=0.5 luôn tương ứng đúng biên (cạnh hoặc góc) của hình vuông
           const curvedMagnitude = Math.pow(normalizedMagnitude, power) * 0.5;
           const scale = curvedMagnitude / magnitude;
@@ -381,6 +478,7 @@ const Mouse: React.FC = () => {
             oneEuroStateY.current.derivative = 0;
 
             if (isDraggingRef.current) {
+              // Giải phóng và nhả liên kết Kéo thả an toàn qua phân tách hai ngưỡng Schmitt Trigger
               document.dispatchEvent(
                 new MouseEvent('mouseup', {
                   bubbles: true,
@@ -434,7 +532,7 @@ const Mouse: React.FC = () => {
           );
         }
 
-        // BƯỚC 7: GIẢ LẬP SỰ KIỆN HỆ THỐNG DOM VÀ CƠ CHẾ THROTTLE PERFORMANCE
+        // --- BƯỚC 7: GIẢ LẬP SỰ KIỆN HỆ THỐNG DOM VÀ CƠ CHẾ THROTTLE PERFORMANCE ---
         const moveDeltaDistanceX = finalPixelPositionX - lastDispatchedPosition.current.x;
         const moveDeltaDistanceY = finalPixelPositionY - lastDispatchedPosition.current.y;
         const calculatedMovementDelta = Math.sqrt(
@@ -493,25 +591,36 @@ const Mouse: React.FC = () => {
           const VIEWPORT_EDGE_BUFFER_ZONE = 130; // Vùng đệm biên cấu hình cố định 80px
           const SCROLL_STEP_INTENSITY = 30;
 
-          if (activeScrollableParent && activeScrollableParent !== document.documentElement) {
-            const boundingRectangle = activeScrollableParent.getBoundingClientRect();
-            const PANEL_EDGE_PADDING = 40;
+          // scrollPanelBy: điểm gọi scroll DUY NHẤT cho panel (không phải window) — tự chọn đúng API theo loại
+          // target. DOM dùng scrollBy chuẩn; Blockly dùng workspace.scroll(x, y) vì scrollX/scrollY của Blockly
+          // là TUYỆT ĐỐI (vị trí cuộn hiện tại), không phải delta như scrollBy — nên phải cộng dồn thủ công rồi
+          // gọi lại scroll() với giá trị mới, KHÔNG được truyền thẳng deltaY vào.
+          const scrollPanelBy = (target: ScrollTarget, deltaY: number) => {
+            if (target.kind === 'dom') {
+              target.element.scrollBy({ top: deltaY, behavior: 'auto' });
+            }
+          };
 
+          if (activeScrollableParent) {
+            const boundingRectangle = activeScrollableParent.element.getBoundingClientRect();
+            const PANEL_EDGE_PADDING = 40;
             if (finalPixelPositionX >= boundingRectangle.left && finalPixelPositionX <= boundingRectangle.right) {
               if (
                 finalPixelPositionY >= boundingRectangle.top &&
                 finalPixelPositionY <= boundingRectangle.top + PANEL_EDGE_PADDING
               ) {
-                activeScrollableParent.scrollBy({ top: -SCROLL_STEP_INTENSITY, behavior: 'auto' });
+                scrollPanelBy(activeScrollableParent, -SCROLL_STEP_INTENSITY);
                 updateAction('scrollUpPanel');
               } else if (
                 finalPixelPositionY <= boundingRectangle.bottom &&
                 finalPixelPositionY >= boundingRectangle.bottom - PANEL_EDGE_PADDING
               ) {
-                activeScrollableParent.scrollBy({ top: SCROLL_STEP_INTENSITY, behavior: 'auto' });
+                scrollPanelBy(activeScrollableParent, SCROLL_STEP_INTENSITY);
                 updateAction('scrollDownPanel');
-              } else if (actionKindRef.current.startsWith('scroll')) {
-                updateAction('moving');
+              } else {
+                if (actionKindRef.current.startsWith('scroll')) {
+                  updateAction('moving');
+                }
               }
             }
           } else if (!elementAtCursorPoint?.closest('.workspace-page')) {
@@ -553,6 +662,7 @@ const Mouse: React.FC = () => {
       const currentTimeMs = performance.now();
       // Giới hạn tần suất xử lý khung hình tối đa để cân bằng năng lượng CPU
       if (currentTimeMs - lastFrameTimeRef.current < 16) return;
+      lastFrameTimeRef.current = currentTimeMs;
 
       if (videoElement.readyState < 2 || videoElement.currentTime === lastVideoTime) return;
       lastVideoTime = videoElement.currentTime;
@@ -687,10 +797,8 @@ const Mouse: React.FC = () => {
           }}
         >
           <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>📷</div>
-          <div style={{ fontWeight: 700, marginBottom: '8px', color: '#ff7700' }}>
-            {t('faceControl.noFaceDetectedTitle')}
-          </div>
-          <div style={{ opacity: 0.8, fontSize: '0.95rem' }}>{t('faceControl.noFaceDetectedDesc')}</div>
+          <div style={{ fontWeight: 700, marginBottom: '8px', color: '#ff7700' }}>Không nhận diện được khuôn mặt</div>
+          <div style={{ opacity: 0.8, fontSize: '0.95rem' }}>Hãy ngồi gần camera hơn</div>
         </div>
       )}
 

@@ -8,10 +8,23 @@ import { buildToolbox } from '../blockly/toolbox';
 
 import '../styles/blockly.css';
 
+// Khớp cấu trúc (structural typing) với `BlocklyWorkspaceLike` bên Mouse.tsx — không import chéo
+// giữa 2 component để giữ chúng độc lập.
+type BlocklyWorkspaceLikeForRegistry = {
+  scrollX: number;
+  scrollY: number;
+  scroll: (x: number, y: number) => void;
+  getInjectionDiv?: () => HTMLElement | undefined;
+};
+
 export type BlocklyEditorHandle = {
   getWorkspace: () => Blockly.WorkspaceSvg | null;
   resetWorkspace: () => void;
 };
+
+// Registry các instance WorkspaceSvg đang active — thay thế Blockly.Workspace.getAll() vốn không
+// đáng tin cậy khi bundler split blockly thành nhiều chunk riêng biệt. Type global cho
+// window.__activeBlocklyWorkspaces được khai báo bên Mouse.tsx; file này chỉ gán giá trị.
 
 type BlocklyEditorProps = {
   toolboxConfig?: Record<string, unknown>;
@@ -97,13 +110,22 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
       trashcan: false,
       sounds: false,
       move: {
-        scrollbars: false,
+        // scrollbars: true — bắt buộc phải bật để Blockly khởi tạo metrics-manager hỗ trợ scroll.
+        // Khi false, workspace.scroll() bị bỏ qua/ghi đè, nên cursor ảo (face-tracking) trong Mouse.tsx
+        // không cuộn được panel này dù gọi đúng API. drag/wheel vẫn giữ false như cũ — không đổi cách
+        // tương tác của chuột thật, chỉ mở khoá cơ chế scroll nội bộ để nơi khác (Mouse.tsx) gọi được.
+        scrollbars: true,
         drag: false,
         wheel: false,
       },
     });
 
     workspaceRef.current = workspace;
+
+    // Đăng ký INSTANCE workspace thật vào registry riêng của app, thay vì dựa vào Blockly.Workspace.getAll().
+    window.__activeBlocklyWorkspaces = window.__activeBlocklyWorkspaces ?? new Set();
+    window.__activeBlocklyWorkspaces.add(workspace as unknown as BlocklyWorkspaceLikeForRegistry);
+
     lockWorkspaceScale(workspace);
     workspace.addChangeListener(() => lockWorkspaceScale(workspace));
     workspace.addChangeListener(event => {
@@ -147,6 +169,8 @@ const BlocklyEditor = forwardRef<BlocklyEditorHandle, BlocklyEditorProps>(functi
       host.removeEventListener('wheel', preventBrowserZoom);
       observer.disconnect();
       window.removeEventListener('resize', resize);
+      // TODO: chưa test kỹ unmount/remount qua route (Set + cast có bị lệch phần tử không).
+      window.__activeBlocklyWorkspaces?.delete(workspace as unknown as BlocklyWorkspaceLikeForRegistry);
       workspace.dispose();
       workspaceRef.current = null;
     };
