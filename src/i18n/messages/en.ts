@@ -91,7 +91,7 @@ const en = {
   topics: {
     dashboardTitle: 'Course Dashboard',
     dashboardSubtitle: 'Select a topic to view its lessons.',
-    loadingTopics: 'Topics is loading...',
+    loadingTopics: 'Topics are loading...',
   },
   course: {
     progress: 'Progress',
