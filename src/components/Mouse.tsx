@@ -360,14 +360,14 @@ const Mouse: React.FC = () => {
         const rawMouthGap = Math.sqrt(mouthDeltaX * mouthDeltaX + mouthDeltaY * mouthDeltaY) / faceWidth;
         const medianMouthGap = medianOf3(mouthGapMedianBufferRef.current, rawMouthGap);
 
-        const MOUTH_GAP_SMOOTHING = 0.8; // tune: nhỏ hơn = chống nhiễu mạnh hơn nhưng phản ứng há miệng chậm hơn
+        const MOUTH_GAP_SMOOTHING = 0.5; // tune: nhỏ hơn = chống nhiễu mạnh hơn nhưng phản ứng há miệng chậm hơn
         depthRatioRef.current += MOUTH_GAP_SMOOTHING * (medianMouthGap - depthRatioRef.current); // tái dùng ref làm EMA mouth gap
         const currentMouthGapDistance = depthRatioRef.current;
 
         // Đồng bộ hóa biên độ hiệu chuẩn "Mở thoải mái" cá nhân hóa để chống mỏi hàm sinh học
         const personalComfortThreshold = userPreferences?.mouthDragThreshold ?? 0.03;
-        const schmittTriggerDragThreshold = personalComfortThreshold; // 100% Mốc mỏ neo mở thoải mái
-        const schmittTriggerDropThreshold = personalComfortThreshold * 0.5; // 50% Mốc mỏ neo mở thoải mái
+        const schmittTriggerDragThreshold = personalComfortThreshold;
+        const schmittTriggerDropThreshold = personalComfortThreshold * 0.7;
 
         // --- BƯỚC 5: MAPPING TỐC ĐỘ — nhân tuyến tính đơn giản quanh tâm, KHÔNG dùng gain curve phi tuyến.
         // Lý do bỏ gain curve hyperbol kiểu cũ: nó áp dụng RIÊNG trên từng trục X/Y, nên khi mũi di chuyển theo
