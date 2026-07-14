@@ -388,6 +388,10 @@ const Mouse: React.FC = () => {
           smoothedNoseY,
           faceWidth,
           faceHeight,
+          faceHeightEma: faceHeightEmaRef.current,
+          rawChinForeheadHeight,
+          smoothedMouthGapPixels,
+          mouthCompensationRatio,
           rawRotX,
           rawRotY,
           rotX,
@@ -403,6 +407,9 @@ const Mouse: React.FC = () => {
           };
           console.log(
             `[JITTER n=${L.length}] rawNoseX std=${stdev('rawNoseX').toFixed(5)} rawNoseY std=${stdev('rawNoseY').toFixed(5)} | smoothedNoseX std=${stdev('smoothedNoseX').toFixed(5)} smoothedNoseY std=${stdev('smoothedNoseY').toFixed(5)} | rawRotX std=${stdev('rawRotX').toFixed(5)} rawRotY std=${stdev('rawRotY').toFixed(5)} | rotX std=${stdev('rotX').toFixed(5)} rotY std=${stdev('rotY').toFixed(5)} | faceWidth std=${stdev('faceWidth').toFixed(5)} faceHeight std=${stdev('faceHeight').toFixed(5)}`,
+          );
+          console.log(
+            `[JITTER_FACEHEIGHT n=${L.length}] faceHeightEma std=${stdev('faceHeightEma').toFixed(5)} (nhiễu landmark thô, KHÔNG bù mouth) | faceHeight(final) std=${stdev('faceHeight').toFixed(5)} (SAU bù mouth) | rawChinForeheadHeight std=${stdev('rawChinForeheadHeight').toFixed(5)} | smoothedMouthGapPixels std=${stdev('smoothedMouthGapPixels').toFixed(5)} mean=${(L.reduce((a: number, v: any) => a + v.smoothedMouthGapPixels, 0) / L.length).toFixed(5)} | mouthCompensationRatio=${L[0].mouthCompensationRatio.toFixed(5)}`,
           );
           (window as any).__jitterLog = [];
         }
