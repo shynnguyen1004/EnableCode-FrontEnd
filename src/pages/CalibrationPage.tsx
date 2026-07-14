@@ -243,7 +243,14 @@ export default function CalibrationPage() {
         chinForeheadHeightRawRef.current = Math.abs(chin.y - forehead.y) || 1;
         faceWidthAtCaptureRef.current = faceWidth;
         const MOUTH_NEAR_CLOSED_THRESHOLD = 0.01; // ngưỡng nhỏ, thấp hơn nhiều so với mouthDragThreshold mặc định 0.03
-        if (mouthGapRawRef.current < MOUTH_NEAR_CLOSED_THRESHOLD) {
+        // Chỉ cập nhật baseline liên tục TRƯỚC KHI bước vào calibrating (tức trong lúc countdown, khi mồm
+        // gần như chắc chắn khép tự nhiên). Một khi đã bước vào 'calibrating', KHÔNG ghi đè baseline nữa —
+        // vì ở điểm calib đầu tiên (isMouth=true), user thường há miệng ngay từ đầu dwell và giữ há liên tục
+        // (phản xạ tự nhiên khi thấy hướng dẫn "há miệng"), khiến suốt 3s dwell không có frame nào mồm đủ
+        // khép để refresh baseline -> baseline giữ nguyên = 0 (giá trị reset lúc startCalibration) -> điều
+        // kiện đo ratio phía dưới luôn fail -> mouthCompensationRatio không bao giờ được đo, giữ nguyên giá
+        // trị KẾ THỪA từ lần calib trước (vd 0.5) thay vì giá trị đo thật của user hiện tại.
+        if (stepRef.current !== 'calibrating' && mouthGapRawRef.current < MOUTH_NEAR_CLOSED_THRESHOLD) {
           chinForeheadHeightBaselineRef.current = chinForeheadHeightRawRef.current;
         }
 
@@ -380,6 +387,13 @@ export default function CalibrationPage() {
             const measuredRatio = heightIncreaseFromMouthOpen / currentMouthGapRawUnits;
             // Clamp về khoảng vật lý hợp lý [0, 1] — cằm không thể phình nhiều hơn hoặc ngược hướng mouth gap.
             prefRef.current.mouthCompensationRatio = Math.max(0, Math.min(1, measuredRatio));
+            console.log(
+              `[MOUTH_COMPENSATION_DEBUG] ĐO THÀNH CÔNG | chinAtRest=${chinForeheadHeightAtRest.toFixed(5)} chinWhileOpen=${chinForeheadHeightWhileOpen.toFixed(5)} heightIncrease=${heightIncreaseFromMouthOpen.toFixed(5)} mouthGapRawUnits=${currentMouthGapRawUnits.toFixed(5)} measuredRatio(before clamp)=${measuredRatio.toFixed(5)} -> final=${prefRef.current.mouthCompensationRatio.toFixed(5)}`,
+            );
+          } else {
+            console.log(
+              `[MOUTH_COMPENSATION_DEBUG] ĐO THẤT BẠI — giữ nguyên giá trị kế thừa=${prefRef.current.mouthCompensationRatio.toFixed(5)} | lý do: chinAtRest=${chinForeheadHeightAtRest.toFixed(5)} (cần >0) mouthGapRawUnits=${currentMouthGapRawUnits.toFixed(5)} (cần >0.001)`,
+            );
           }
         }
         if (pointIndex === 0) {
