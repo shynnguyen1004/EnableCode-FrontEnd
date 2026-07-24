@@ -114,7 +114,6 @@ const Mouse: React.FC = () => {
   const actionKindRef = useRef<ActionKind>('moving');
   const isDraggingRef = useRef(false);
   const draggedElementRef = useRef<HTMLElement | SVGElement | null>(null);
-  const depthRatioRef = useRef<number>(0); // EMA cho mouth gap (normalize theo faceWidth) — chống nhiễu tức thời khi phát hiện há miệng
   const faceNotDetectedTimerRef = useRef<number | null>(null);
   const [showFaceWarning, setShowFaceWarning] = useState(false);
 
@@ -127,16 +126,7 @@ const Mouse: React.FC = () => {
   const oneEuroStateNoseX = useRef({ value: 0.5, derivative: 0, lastTimeSec: 0, initialized: false });
   const oneEuroStateNoseY = useRef({ value: 0.5, derivative: 0, lastTimeSec: 0, initialized: false });
 
-  // One Euro Filter RIÊNG cho mouth gap dùng để bù faceHeight (KHÁC với currentMouthGapDistance/depthRatioRef
-  // — cái đó vẫn dùng EMA thường cho ngưỡng drag/drop, không đổi). Cần bộ lọc này vì: nếu không lọc gì,
-  // dao động nhiễu tự nhiên của mouth gap lúc GIỮ há (drag) truyền thẳng vào faceHeight mỗi frame, cộng dồn
-  // với chuyển động đầu thật -> giật mạnh khi vừa há vừa di chuyển. Nhưng nếu lọc bằng EMA thường (trễ pha)
-  // thì lúc CHUYỂN trạng thái ngậm<->há lại bị delay, gây lệch cursor tạm thời (vấn đề đã sửa trước đó).
-  // One Euro giải quyết cả 2: minCutoff thấp -> lọc mượt dao động nhỏ lúc giữ ổn định (giảm nhiễu-giật khi
-  // drag); beta cao -> phản ứng nhanh khi mouth gap đổi NHANH (giảm trễ pha lúc bắt đầu/kết thúc há miệng).
-  const oneEuroStateMouthGap = useRef({ value: 0, derivative: 0, lastTimeSec: 0, initialized: false });
-
-  // EMA cho kích thước hình học khuôn mặt (faceWidth, faceHeight trán-cằm đã bù mouth gap) — dùng làm
+  // EMA cho kích thước hình học khuôn mặt (faceWidth, faceHeight trán-môi trên) — dùng làm
   // MẪU SỐ của rotX/rotY. Làm mượt tại đây để denominator ổn định giữa 2 trục, tránh nhiễu landmark
   // bị khuếch đại vào rotY.
   const faceWidthEmaRef = useRef<number>(0.2);
@@ -144,8 +134,8 @@ const Mouse: React.FC = () => {
 
   // One Euro Filter RIÊNG cho rotX/rotY, áp NGAY SAU khi tính (trước mapping calib ở BƯỚC 3).
   // Khác nguồn nhiễu với oneEuroStateNoseX/Y ở trên: bộ lọc nose thô chỉ triệt nhiễu LANDMARK (input mũi),
-  // còn nhiễu sinh ra bởi chính phép chia cho faceHeight (mẫu số dao động hình học — EMA faceHeight, bù
-  // mouth gap, MIN_FACE_HEIGHT_RATIO clamp...) vẫn truyền thẳng vào rotY mà không qua bộ lọc nào. Đây là
+  // còn nhiễu sinh ra bởi chính phép chia cho faceHeight (mẫu số dao động hình học — EMA faceHeight...)
+  // vẫn truyền thẳng vào rotY mà không qua bộ lọc nào. Đây là
   // nhiễu ở tầng "hình học" (geometry), phát sinh SAU phép chia, khác nguồn với nhiễu landmark ở numerator
   // -> cần 1 tầng lọc riêng đặt sau, không thể gộp chung vào oneEuroStateNoseX/Y phía trên.
   const oneEuroStateRotX = useRef({ value: 0, derivative: 0, lastTimeSec: 0, initialized: false });
@@ -247,7 +237,7 @@ const Mouse: React.FC = () => {
         const cheekL = landmarks[116]; // Má trái — neo hộp sọ
         const cheekR = landmarks[345]; // Má phải — neo hộp sọ
         const forehead = landmarks[10]; // Trán — điểm neo ổn định hình học
-        const chin = landmarks[152]; // Cằm — neo dưới cho faceHeight, cần bù trừ mouth gap vì mô mềm dịch theo miệng
+        const chin = landmarks[152]; // Cằm — chỉ dùng để vẽ landmark preview, không còn dùng để tính faceHeight
         const lipTop = landmarks[13]; // Môi trên
         const lipBottom = landmarks[14]; // Môi dưới
 
@@ -276,8 +266,8 @@ const Mouse: React.FC = () => {
         const userSpeed = userPreferences?.speed ?? 1.0;
 
         // --- BƯỚC 2A: NGƯỠNG HÁ MIỆNG — normalize theo faceWidth. Dùng median-of-3 để chống spike.
-        // Tính TRƯỚC faceHeight vì cần dùng mouth gap để bù trừ độ giãn nở trán-cằm khi há miệng.
-        const timeSec = currentTimeMs / 1000; // khai báo sớm để dùng chung cho One Euro Filter mouth gap + cursor
+        // (faceHeight giờ đo bằng trán-môi trên, không còn phụ thuộc mouth gap nên không cần tính trước nữa.)
+        const timeSec = currentTimeMs / 1000; // khai báo sớm để dùng chung cho One Euro Filter cursor
         const medianOf3 = (buffer: { a: number; b: number; c: number }, next: number) => {
           const { a, b, c } = buffer;
           buffer.a = b;
@@ -289,68 +279,27 @@ const Mouse: React.FC = () => {
         const mouthDeltaY = lipTop.y - lipBottom.y;
         const rawMouthGapPixels = Math.sqrt(mouthDeltaX * mouthDeltaX + mouthDeltaY * mouthDeltaY); // đơn vị normalized landmark thô, CHƯA chia faceWidth
 
-        // Lọc rawMouthGapPixels bằng One Euro Filter TRƯỚC KHI dùng để bù faceHeight (ở BƯỚC 2B bên dưới).
-        // minCutoff thấp -> triệt dao động nhiễu nhỏ khi GIỮ há miệng ổn định lúc drag, tránh giật khi vừa
-        // há vừa di chuyển đầu. beta cao -> vẫn phản ứng nhanh khi mouth gap đổi NHANH (lúc bắt đầu/kết
-        // thúc há miệng), tránh trễ pha giống vấn đề EMA thường đã gặp trước đó. Đây LÀ filter riêng, KHÔNG
-        // dùng chung với currentMouthGapDistance (vẫn EMA thường, dùng cho ngưỡng drag/drop, giữ nguyên).
-        const MOUTH_GAP_COMPENSATION_MIN_CUTOFF_HZ = 0.6;
-        const MOUTH_GAP_COMPENSATION_BETA = 8;
-        const smoothedMouthGapPixels = oneEuroFilter(
-          oneEuroStateMouthGap.current,
-          rawMouthGapPixels,
-          timeSec,
-          MOUTH_GAP_COMPENSATION_MIN_CUTOFF_HZ,
-          MOUTH_GAP_COMPENSATION_BETA,
-        );
-
         const rawMouthGapNormalized = rawMouthGapPixels / (Math.abs(cheekR.x - cheekL.x) || 1); // dùng faceWidth thô vì faceWidth EMA chưa tính ở bước này
-        const medianMouthGap = medianOf3(mouthGapMedianBufferRef.current, rawMouthGapNormalized);
-
-        const MOUTH_GAP_SMOOTHING = 0.35; // tune: nhỏ hơn = chống nhiễu mạnh hơn nhưng phản ứng há miệng chậm hơn
-        depthRatioRef.current += MOUTH_GAP_SMOOTHING * (medianMouthGap - depthRatioRef.current); // tái dùng ref làm EMA mouth gap
-        const currentMouthGapDistance = depthRatioRef.current; // normalized theo faceWidth — dùng cho ngưỡng drag/drop
+        const currentMouthGapDistance = medianOf3(mouthGapMedianBufferRef.current, rawMouthGapNormalized); // normalized theo faceWidth — dùng cho ngưỡng drag/drop
 
         // --- BƯỚC 2B: TÍN HIỆU GÓC XOAY ĐẦU (tự chuẩn hóa theo khoảng cách camera) ---
         const faceCenterX = (cheekL.x + cheekR.x) / 2;
         const rawFaceWidth = Math.abs(cheekR.x - cheekL.x) || 1;
 
-        // faceHeight đo trực tiếp trán-cằm (chính xác hơn suy luận qua má), NHƯNG khi há miệng, môi dưới
-        // kéo giãn mô mềm khiến khoảng trán-cằm phình ra theo đúng bằng khoảng miệng đã mở ra — gây cursor
-        // trôi lệch dù đầu không di chuyển.
-        //
-        // QUAN TRỌNG — thứ tự EMA vs bù trừ: faceHeight gánh 2 vai trò xung đột nhau — (1) EMA chậm để lọc
-        // nhiễu landmark thuần túy (ổn định lâu dài), và (2) bù mouth gap cần phản ứng TỨC THỜI (ngậm miệng
-        // lại là phải về giá trị đầy đủ ngay lập tức). Nếu trừ mouth gap RỒI MỚI đưa qua EMA (như trước),
-        // lúc ngậm miệng lại, faceHeight-đã-bù nhảy vọt về giá trị đầy đủ ngay, nhưng EMA cần vài frame mới
-        // đuổi kịp -> trong lúc đó faceHeight (mẫu số) vẫn còn NHỎ hơn thực tế -> rotY bị phóng đại -> cursor
-        // lệch xuống sau một khoảng delay đúng bằng thời gian EMA đuổi kịp. Đây là nguồn jitter có độ trễ.
-        //
-        // Sửa: EMA CHỈ chạy trên rawChinForeheadHeight thô (chưa bù mouth) để lọc nhiễu landmark nền tảng.
-        // Việc bù mouth gap thực hiện SAU EMA, trừ trực tiếp mỗi frame — không đi qua bộ lọc nào cả, nên
-        // luôn tức thời và không có trễ pha dù há hay ngậm miệng.
-        const rawChinForeheadHeight = Math.abs(chin.y - forehead.y) || 1;
+        // faceHeight đo trực tiếp trán-môi trên (thay vì trán-cằm trước đây). Môi trên hầu như không dịch
+        // chuyển theo độ há miệng (chỉ môi dưới/hàm dưới di chuyển), nên không còn bị phình ra khi há miệng
+        // như trán-cằm từng gặp phải -> KHÔNG cần bù trừ mouth gap nữa, cursor không còn trôi lệch khi há miệng.
+        const rawForeheadLipHeight = Math.abs(lipTop.y - forehead.y) || 1;
 
         // faceWidth (khoảng cách má-má theo X) là phép đo trực tiếp 1 cạnh ổn định -> jitter thấp.
-        // rawChinForeheadHeight (trán-cằm) vẫn là hiệu của 2 tọa độ Y nên còn nhiễu landmark gốc
+        // rawForeheadLipHeight (trán-môi trên) vẫn là hiệu của 2 tọa độ Y nên còn nhiễu landmark gốc
         // -> cần EMA làm mượt để denominator ổn định ngang nhau giữa 2 trục.
         const GEOMETRY_SMOOTHING = 0.15;
         faceWidthEmaRef.current += GEOMETRY_SMOOTHING * (rawFaceWidth - faceWidthEmaRef.current);
-        faceHeightEmaRef.current += GEOMETRY_SMOOTHING * (rawChinForeheadHeight - faceHeightEmaRef.current);
+        faceHeightEmaRef.current += GEOMETRY_SMOOTHING * (rawForeheadLipHeight - faceHeightEmaRef.current);
 
-        // Bù mouth gap SAU EMA của faceHeight, dùng giá trị ĐÃ QUA One Euro Filter (không phải raw thô nữa)
-        // để vừa tức thời khi chuyển trạng thái vừa mượt khi giữ ổn định lúc drag (xem giải thích ở BƯỚC 2A).
-        // Nhân với mouthCompensationRatio ĐO RIÊNG cho từng user ở bước calibration (điểm há miệng),
-        // vì cằm (xương) dịch chuyển ÍT HƠN mouth gap (mô mềm) theo tỷ lệ khác nhau giữa từng khuôn mặt —
-        // trừ nguyên 1:1 (hệ số 1.0) sẽ trừ thừa và làm faceHeight nhỏ hơn thực tế, khiến rotY bị phóng đại.
-        const mouthCompensationRatio = userPreferences?.mouthCompensationRatio ?? 0.3;
-        const MIN_FACE_HEIGHT_RATIO = 0.5; // sàn an toàn: nếu há miệng cực to, tránh faceHeight về gần 0/âm
         const faceWidth = faceWidthEmaRef.current || 1;
-        const faceHeight =
-          Math.max(
-            faceHeightEmaRef.current - smoothedMouthGapPixels * mouthCompensationRatio,
-            faceHeightEmaRef.current * MIN_FACE_HEIGHT_RATIO,
-          ) || 1;
+        const faceHeight = faceHeightEmaRef.current || 1;
         const faceCenterY = forehead.y + faceHeight * 0.5;
 
         // Lọc landmark MŨI THÔ bằng One Euro Filter TRƯỚC khi tính rotX/rotY — tức TRƯỚC phép chia cho
@@ -370,9 +319,8 @@ const Mouse: React.FC = () => {
 
         // Lọc rotX/rotY NGAY SAU khi tính, TRƯỚC khi vào mapping calib (BƯỚC 3). Nhiễu ở đây khác nguồn với
         // nhiễu landmark đã lọc ở oneEuroStateNoseX/Y phía trên: đây là nhiễu sinh ra bởi chính phép CHIA
-        // cho faceHeight — faceHeight dao động do EMA hình học, do bù mouth gap tức thời, do clamp
-        // MIN_FACE_HEIGHT_RATIO — nên dù numerator đã sạch, denom dao động vẫn khuếch đại thành nhiễu ở
-        // rotY. Cutoff thấp hơn & beta thấp hơn tầng nose (numerator đã sạch sẵn, tầng này chỉ cần dọn nốt
+        // cho faceHeight — faceHeight dao động do EMA hình học — nên dù numerator đã sạch, denom dao động
+        // vẫn khuếch đại thành nhiễu ở rotY. Cutoff thấp hơn & beta thấp hơn tầng nose (numerator đã sạch sẵn, tầng này chỉ cần dọn nốt
         // phần nhiễu hình học còn sót, không cần bám nhanh theo tốc độ như tầng nose).
         const ROT_MIN_CUTOFF_HZ = 0.1;
         const ROT_BETA = 2;
@@ -389,9 +337,7 @@ const Mouse: React.FC = () => {
           faceWidth,
           faceHeight,
           faceHeightEma: faceHeightEmaRef.current,
-          rawChinForeheadHeight,
-          smoothedMouthGapPixels,
-          mouthCompensationRatio,
+          rawForeheadLipHeight,
           rawRotX,
           rawRotY,
           rotX,
@@ -409,7 +355,7 @@ const Mouse: React.FC = () => {
             `[JITTER n=${L.length}] rawNoseX std=${stdev('rawNoseX').toFixed(5)} rawNoseY std=${stdev('rawNoseY').toFixed(5)} | smoothedNoseX std=${stdev('smoothedNoseX').toFixed(5)} smoothedNoseY std=${stdev('smoothedNoseY').toFixed(5)} | rawRotX std=${stdev('rawRotX').toFixed(5)} rawRotY std=${stdev('rawRotY').toFixed(5)} | rotX std=${stdev('rotX').toFixed(5)} rotY std=${stdev('rotY').toFixed(5)} | faceWidth std=${stdev('faceWidth').toFixed(5)} faceHeight std=${stdev('faceHeight').toFixed(5)}`,
           );
           console.log(
-            `[JITTER_FACEHEIGHT n=${L.length}] faceHeightEma std=${stdev('faceHeightEma').toFixed(5)} (nhiễu landmark thô, KHÔNG bù mouth) | faceHeight(final) std=${stdev('faceHeight').toFixed(5)} (SAU bù mouth) | rawChinForeheadHeight std=${stdev('rawChinForeheadHeight').toFixed(5)} | smoothedMouthGapPixels std=${stdev('smoothedMouthGapPixels').toFixed(5)} mean=${(L.reduce((a: number, v: any) => a + v.smoothedMouthGapPixels, 0) / L.length).toFixed(5)} | mouthCompensationRatio=${L[0].mouthCompensationRatio.toFixed(5)}`,
+            `[JITTER_FACEHEIGHT n=${L.length}] faceHeightEma std=${stdev('faceHeightEma').toFixed(5)} | faceHeight(final) std=${stdev('faceHeight').toFixed(5)} | rawForeheadLipHeight std=${stdev('rawForeheadLipHeight').toFixed(5)}`,
           );
           (window as any).__jitterLog = [];
         }
@@ -485,10 +431,11 @@ const Mouse: React.FC = () => {
         }
         // ===== END JITTER DEBUG tầng percent =====
 
-        // --- BƯỚC 4C: currentMouthGapDistance đã tính ở BƯỚC 2A (cần trước để bù trừ faceHeight) ---
+        // --- BƯỚC 4C: currentMouthGapDistance đã tính ở BƯỚC 2A (dùng cho ngưỡng drag/drop) ---
 
         // Đồng bộ hóa biên độ hiệu chuẩn "Mở thoải mái" cá nhân hóa để chống mỏi hàm sinh học
-        const dragThreshold = userPreferences?.mouthDragThreshold ?? 0.03;
+        const mouthThreshold = userPreferences?.mouthDragThreshold ?? 0.03;
+        const dragThreshold = mouthThreshold * 0.8;
         const dropThreshold = dragThreshold * 0.7;
 
         // --- BƯỚC 5: GIỚI HẠN TỐC ĐỘ (VELOCITY CLAMP) — giới hạn PIXEL/GIÂY cursor di chuyển tới target,

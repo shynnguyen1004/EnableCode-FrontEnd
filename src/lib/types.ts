@@ -104,7 +104,6 @@ export interface CalibrationBounds {
 export interface CalibrationPreferences {
   speed: number;
   mouthDragThreshold: number;
-  mouthCompensationRatio: number;
 }
 
 export interface Calibration {

@@ -54,12 +54,6 @@ export default function CalibrationPage() {
 
   const latestRawRef = useRef({ x: 0.5, y: 0.5 });
   const mouthGapRawRef = useRef(0);
-  // Khoảng cách trán-cằm ĐO LIÊN TỤC mỗi frame, nhưng CHỈ cập nhật khi miệng đang gần như ngậm
-  // (mouthGap dưới ngưỡng nhỏ) -> giữ giá trị "trạng thái nghỉ" gần nhất trước khi user há miệng ở
-  // điểm calib pointIndex 0. Dùng để so sánh với lúc há miệng, suy ra hệ số bù cá nhân hóa.
-  const chinForeheadHeightBaselineRef = useRef(0);
-  const chinForeheadHeightRawRef = useRef(0);
-  const faceWidthAtCaptureRef = useRef(1); // faceWidth thô mỗi frame, dùng quy đổi đơn vị khi tính hệ số bù
 
   const boundsRef = useRef({
     center: { x: 0, y: 0 },
@@ -68,7 +62,7 @@ export default function CalibrationPage() {
     bottom: { x: 0, y: 0 },
     left: { x: 0, y: 0 },
   });
-  const prefRef = useRef({ mouthDragThreshold: 0.03, speed: 1, mouthCompensationRatio: 0.3 });
+  const prefRef = useRef({ mouthDragThreshold: 0.03, speed: 1 });
   const mouthSamplesRef = useRef<number[]>([]); // lưu threshold đo được ở từng điểm calib
 
   const getSafeTranslation = (key: string, fallbackText: string): string => {
@@ -143,15 +137,12 @@ export default function CalibrationPage() {
   }, [stopCamera]);
 
   const startCalibration = async () => {
-    // Đồng bộ speed + mouthCompensationRatio hiện có từ DB, tránh ghi đè về mặc định khi lưu lại
+    // Đồng bộ speed hiện có từ DB, tránh ghi đè về mặc định khi lưu lại
     prefRef.current = {
       mouthDragThreshold: 0.03,
       speed: calibration?.preferences.speed ?? 0.7,
-      mouthCompensationRatio: calibration?.preferences.mouthCompensationRatio ?? 0.3,
     };
     mouthSamplesRef.current = []; // reset mẫu đo threshold cho lần calibrate mới
-    chinForeheadHeightBaselineRef.current = 0;
-    chinForeheadHeightRawRef.current = 0;
     boundsRef.current = {
       center: { x: 0, y: 0 },
       top: { x: 0, y: 0 },
@@ -218,16 +209,17 @@ export default function CalibrationPage() {
         const topLip = landmarks[13];
         const bottomLip = landmarks[14];
         const forehead = landmarks[10]; // Trán — điểm neo ổn định hình học
-        const chin = landmarks[152]; // Cằm — dùng để đo hệ số bù mouth-compensation cá nhân hóa
+        const chin = landmarks[152]; // Cằm — chỉ dùng để vẽ landmark preview
         const leftCheek = landmarks[116]; // Má trái
         const rightCheek = landmarks[345]; // Má phải
 
-        // Góc quay đầu tương đối, chuẩn hóa theo faceWidth/faceHeight — công thức khớp Mouse.tsx
+        // Góc quay đầu tương đối, chuẩn hóa theo faceWidth/faceHeight — công thức khớp Mouse.tsx.
+        // faceHeight đo trực tiếp trán-môi trên (thay vì trán-cằm trước đây) — môi trên hầu như không dịch
+        // chuyển theo độ há miệng nên không cần bù trừ mouth gap nữa.
         const faceCenterX = (leftCheek.x + rightCheek.x) / 2;
-        const upperFaceHeight = Math.abs((leftCheek.y + rightCheek.y) / 2 - forehead.y) || 1;
         const faceWidth = Math.abs(rightCheek.x - leftCheek.x) || 1;
-        const faceHeight = upperFaceHeight * 2.5;
-        const faceCenterY = forehead.y + upperFaceHeight * 1.25;
+        const faceHeight = Math.abs(topLip.y - forehead.y) || 1;
+        const faceCenterY = forehead.y + faceHeight * 0.5;
 
         const rotX = (noseTip.x - faceCenterX) / faceWidth;
         const rotY = (noseTip.y - faceCenterY) / faceHeight;
@@ -236,23 +228,6 @@ export default function CalibrationPage() {
         // Chuẩn hóa theo faceWidth để khớp đơn vị với rawMouthGap lúc chạy thật ở Mouse.tsx
         mouthGapRawRef.current =
           Math.sqrt(Math.pow(topLip.x - bottomLip.x, 2) + Math.pow(topLip.y - bottomLip.y, 2)) / faceWidth;
-
-        // Đo khoảng trán-cằm THÔ (đơn vị landmark, chưa chia faceWidth — khớp đơn vị rawChinForeheadHeight
-        // trong Mouse.tsx) mỗi frame. Chỉ cập nhật baseline khi miệng đang gần ngậm (< 30% mouthDragThreshold
-        // mặc định) để baseline luôn phản ánh đúng "trạng thái nghỉ", không bị lẫn lúc miệng đang há dở.
-        chinForeheadHeightRawRef.current = Math.abs(chin.y - forehead.y) || 1;
-        faceWidthAtCaptureRef.current = faceWidth;
-        const MOUTH_NEAR_CLOSED_THRESHOLD = 0.01; // ngưỡng nhỏ, thấp hơn nhiều so với mouthDragThreshold mặc định 0.03
-        // Chỉ cập nhật baseline liên tục TRƯỚC KHI bước vào calibrating (tức trong lúc countdown, khi mồm
-        // gần như chắc chắn khép tự nhiên). Một khi đã bước vào 'calibrating', KHÔNG ghi đè baseline nữa —
-        // vì ở điểm calib đầu tiên (isMouth=true), user thường há miệng ngay từ đầu dwell và giữ há liên tục
-        // (phản xạ tự nhiên khi thấy hướng dẫn "há miệng"), khiến suốt 3s dwell không có frame nào mồm đủ
-        // khép để refresh baseline -> baseline giữ nguyên = 0 (giá trị reset lúc startCalibration) -> điều
-        // kiện đo ratio phía dưới luôn fail -> mouthCompensationRatio không bao giờ được đo, giữ nguyên giá
-        // trị KẾ THỪA từ lần calib trước (vd 0.5) thay vì giá trị đo thật của user hiện tại.
-        if (stepRef.current !== 'calibrating' && mouthGapRawRef.current < MOUTH_NEAR_CLOSED_THRESHOLD) {
-          chinForeheadHeightBaselineRef.current = chinForeheadHeightRawRef.current;
-        }
 
         if (stepRef.current === 'calibrating') {
           const pi = pointIndexRef.current;
@@ -371,30 +346,6 @@ export default function CalibrationPage() {
         // cần há hờ) nhưng cực khó trigger drop (ngưỡng drop = 50% ngưỡng này, còn nhỏ hơn nữa).
         if (CAL_POINTS[pointIndex]?.isMouth) {
           mouthSamplesRef.current.push(currentMouth);
-
-          // Đo hệ số bù mouth-compensation CÁ NHÂN HÓA — thay cho hằng số hard-code, vì tỷ lệ dịch chuyển
-          // cằm (xương) so với môi dưới (mô mềm) khác nhau giữa từng người. Công thức: phần trán-cằm đã
-          // phình ra do há miệng (so với baseline lúc ngậm) chia cho chính mouth gap gây ra phần phình đó
-          // -> ra đúng tỷ lệ 1 đơn vị mouth gap tương ứng bao nhiêu đơn vị phình trán-cằm của riêng user này.
-          const chinForeheadHeightWhileOpen = chinForeheadHeightRawRef.current;
-          const chinForeheadHeightAtRest = chinForeheadHeightBaselineRef.current;
-          const heightIncreaseFromMouthOpen = chinForeheadHeightWhileOpen - chinForeheadHeightAtRest;
-          // currentMouth đã normalize theo faceWidth -> quy đổi ngược về đơn vị landmark thô để khớp
-          // đơn vị với heightIncreaseFromMouthOpen (đang tính trên chin.y/forehead.y thô).
-          const currentMouthGapRawUnits = currentMouth * faceWidthAtCaptureRef.current;
-
-          if (chinForeheadHeightAtRest > 0 && currentMouthGapRawUnits > 0.001) {
-            const measuredRatio = heightIncreaseFromMouthOpen / currentMouthGapRawUnits;
-            // Clamp về khoảng vật lý hợp lý [0, 1] — cằm không thể phình nhiều hơn hoặc ngược hướng mouth gap.
-            prefRef.current.mouthCompensationRatio = Math.max(0, Math.min(1, measuredRatio));
-            console.log(
-              `[MOUTH_COMPENSATION_DEBUG] ĐO THÀNH CÔNG | chinAtRest=${chinForeheadHeightAtRest.toFixed(5)} chinWhileOpen=${chinForeheadHeightWhileOpen.toFixed(5)} heightIncrease=${heightIncreaseFromMouthOpen.toFixed(5)} mouthGapRawUnits=${currentMouthGapRawUnits.toFixed(5)} measuredRatio(before clamp)=${measuredRatio.toFixed(5)} -> final=${prefRef.current.mouthCompensationRatio.toFixed(5)}`,
-            );
-          } else {
-            console.log(
-              `[MOUTH_COMPENSATION_DEBUG] ĐO THẤT BẠI — giữ nguyên giá trị kế thừa=${prefRef.current.mouthCompensationRatio.toFixed(5)} | lý do: chinAtRest=${chinForeheadHeightAtRest.toFixed(5)} (cần >0) mouthGapRawUnits=${currentMouthGapRawUnits.toFixed(5)} (cần >0.001)`,
-            );
-          }
         }
         if (pointIndex === 0) {
           boundsRef.current.center = { x: currentX, y: currentY };
