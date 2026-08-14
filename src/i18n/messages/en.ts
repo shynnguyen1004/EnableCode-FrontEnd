@@ -137,6 +137,9 @@ const en = {
     blockLibrary: 'Block Library',
     blocklySoon: 'Blockly integration coming next.',
   },
+  leaderboard: {
+    title: 'Leaderboard',
+  },
   calibration: {
     title: 'Face control setup',
     subtitle: 'Move your head to the center of each screen edge clockwise to set up face control.',
@@ -165,7 +168,7 @@ const en = {
     avatarAlt: 'User Avatar',
     exercises: 'EXERCISES',
     badges: 'BADGES',
-    streak: 'CURRENT LEARNING STREAK',
+    streak: 'STREAK',
     memberSincePrefix: 'Member since',
     levelPrefix: 'Level',
     explorer: 'Explorer',

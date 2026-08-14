@@ -13,6 +13,8 @@ import {
   LogOut,
   Pencil,
   X,
+  Trophy,
+  Flame,
 } from 'lucide-react';
 import LanguageToggle from '../components/LanguageToggle';
 import PageScale from '../components/PageScale';
@@ -21,8 +23,22 @@ import { useAuth } from '../context/AuthContext';
 import { useCalibration } from '../context/CalibrationContext';
 import { profileApi } from '../api/profileApi';
 import { authApi } from '../api/authApi';
+import { leaderboardApi } from '../api/leaderboardApi';
 import { AvatarImageError, processAvatarFile } from '../lib/avatarImage';
 import type { UserProfileResponse } from '../lib/types';
+
+// Interface cho Leaderboard
+export interface LeaderboardEntry {
+  rank?: number;
+  _id: string;
+  name: string;
+  avatar?: string | null;
+  totalScore: number;
+  lessonsCompleted?: number;
+  streak: number;
+  highestStreak?: number;
+  level: number;
+}
 
 function formatDisplayName(name?: string): string {
   const parts = name?.trim().split(/\s+/).filter(Boolean) ?? [];
@@ -36,12 +52,10 @@ function formatDisplayName(name?: string): string {
 
 type SpeedLevel = 'low' | 'medium' | 'high';
 
-// Nguồn duy nhất cho mapping label <-> giá trị số, tránh lệch giữa nơi gửi API và nơi hiển thị
 const SPEED_MAP: Record<SpeedLevel, number> = { low: 0.7, medium: 0.85, high: 1 };
 
 function speedValueToLevel(value: number | undefined): SpeedLevel {
   if (value === undefined) return 'medium';
-  // Tìm mức có giá trị gần nhất, phòng trường hợp DB có giá trị không khớp chính xác 3 mức
   let closest: SpeedLevel = 'medium';
   let minDiff = Infinity;
   (Object.keys(SPEED_MAP) as SpeedLevel[]).forEach(level => {
@@ -60,10 +74,16 @@ export default function ProfilePage() {
   const { calibration, setCalibration } = useCalibration();
   const navigate = useNavigate();
 
-  // State quản lý dữ liệu
+  // State quản lý dữ liệu Profile
   const [profileData, setProfileData] = useState<UserProfileResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
+
+  // State quản lý Leaderboard
+  const [topUsers, setTopUsers] = useState<LeaderboardEntry[]>([]);
+  const [isLeaderboardLoading, setIsLeaderboardLoading] = useState(true);
+
+  // Modal states
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editName, setEditName] = useState('');
@@ -90,7 +110,22 @@ export default function ProfilePage() {
       }
     };
 
+    const fetchLeaderboardData = async () => {
+      setIsLeaderboardLoading(true);
+      try {
+        const lbRes = await leaderboardApi.getLeaderboard(1, 10);
+        if (lbRes && lbRes.leaderboard) {
+          setTopUsers(lbRes.leaderboard);
+        }
+      } catch (error) {
+        console.error('Error fetching leaderboard:', error);
+      } finally {
+        setIsLeaderboardLoading(false);
+      }
+    };
+
     fetchProfileData();
+    fetchLeaderboardData();
   }, [isLoggedIn]);
 
   const handleLogout = async () => {
@@ -102,6 +137,7 @@ export default function ProfilePage() {
     } finally {
       setIsLoggingOut(false);
       logout();
+      navigate('/');
     }
   };
 
@@ -182,10 +218,8 @@ export default function ProfilePage() {
     }
   };
 
-  // -> THÊM HÀM XỬ LÝ ĐỔI TỐC ĐỘ CHUỘT
   const handleSpeedUpdate = async (speed: SpeedLevel) => {
     if (!calibration) return;
-
     try {
       const updated = await profileApi.updateCalibration({
         bounds: calibration.bounds,
@@ -194,7 +228,7 @@ export default function ProfilePage() {
           speed: SPEED_MAP[speed],
         },
       });
-      setCalibration(updated); // mouseSpeed sẽ tự cập nhật vì nó derived từ calibration
+      setCalibration(updated);
     } catch (error) {
       console.error('Failed to update speed:', error);
     }
@@ -258,8 +292,10 @@ export default function ProfilePage() {
   const pointsToNextLevel = 100 - levelProgress;
   const levelProgressPercent = (levelProgress / 100) * 100;
 
-  // Derived trực tiếp từ calibration hiện tại, không cần state/effect riêng -> tránh cascading render
   const mouseSpeed: SpeedLevel = speedValueToLevel(calibration?.preferences.speed);
+
+  // Xác định xem người dùng hiện tại có lọt Top 10 hay không
+  const isUserInTop10 = topUsers.some(u => u._id === profileData?._id);
 
   return (
     <PageScale scale={0.8} className="profile-page">
@@ -315,24 +351,266 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="profile-stats-grid">
-            <article className="profile-stat-card" tabIndex={0}>
-              <CheckCircle size={52} strokeWidth={3} className="icon-green" />
-              <strong>{profileData.lessonsCompleted || 0}</strong>
-              <span>{t('settings.exercises')}</span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '1rem' }}>
+            <article
+              className="profile-stat-card"
+              style={{
+                padding: '24px 8px',
+                minHeight: '130px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+              }}
+              tabIndex={0}
+            >
+              <CheckCircle size={32} strokeWidth={3} className="icon-green" />
+              <strong style={{ fontSize: '1.8rem', lineHeight: 1 }}>{profileData.lessonsCompleted || 0}</strong>
+              <span
+                style={{
+                  fontSize: '0.8rem',
+                  textAlign: 'center',
+                  lineHeight: 1.2,
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                }}
+              >
+                {t('settings.exercises') || 'BÀI TẬP'}
+              </span>
             </article>
-            <article className="profile-stat-card" tabIndex={0}>
-              <Award size={52} strokeWidth={3} className="icon-orange" />
-              <strong>0</strong>
-              <span>{t('settings.badges')}</span>
+            <article
+              className="profile-stat-card"
+              style={{
+                padding: '24px 8px',
+                minHeight: '130px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+              }}
+              tabIndex={0}
+            >
+              <Award size={32} strokeWidth={3} className="icon-orange" />
+              <strong style={{ fontSize: '1.8rem', lineHeight: 1 }}>0</strong>
+              <span
+                style={{
+                  fontSize: '0.8rem',
+                  textAlign: 'center',
+                  lineHeight: 1.2,
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                }}
+              >
+                {t('settings.badges') || 'HUY HIỆU'}
+              </span>
             </article>
-            <article className="profile-stat-card wide" tabIndex={0}>
-              <Target size={52} strokeWidth={3} className="icon-light-green" />
-              <strong>
-                {profileData.streak || 0} {t('settings.streakDays')}
-              </strong>
-              <span>{t('settings.streak')}</span>
+            <article
+              className="profile-stat-card"
+              style={{
+                padding: '24px 8px',
+                minHeight: '130px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+              }}
+              tabIndex={0}
+            >
+              <Target size={32} strokeWidth={3} className="icon-light-green" />
+              <strong style={{ fontSize: '1.8rem', lineHeight: 1 }}>{profileData.streak || 0}</strong>
+              <span
+                style={{
+                  fontSize: '0.8rem',
+                  textAlign: 'center',
+                  lineHeight: 1.2,
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                }}
+              >
+                {t('settings.streak') || 'CHUỖI HỌC'}
+              </span>
             </article>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '16px',
+                marginBottom: '16px',
+                marginTop: '8px',
+              }}
+            >
+              <Trophy size={40} color="#ff7700" strokeWidth={2.5} />
+              <h3
+                style={{
+                  margin: 0,
+                  color: '#FFF9DC',
+                  fontSize: '1.8rem',
+                  fontWeight: 900,
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px',
+                }}
+              >
+                {t('leaderboard.title') || 'Bảng Xếp Hạng'}
+              </h3>
+            </div>
+
+            {isLeaderboardLoading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
+                <Loader2 size={32} className="animate-spin" color="#ff7700" />
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {topUsers.map((u, index) => {
+                  const actualRank = u.rank || index + 1;
+                  const isMe = profileData?._id === u._id;
+
+                  // Xác định màu nền của thanh dựa trên thứ hạng
+                  let rowBg = '#FFF9DC'; // Mặc định nền sáng
+                  if (isMe) {
+                    rowBg = '#2dd4bf'; // Highlight người dùng hiện tại
+                  } else if (actualRank === 1) {
+                    rowBg = '#FFD700'; // Vàng
+                  } else if (actualRank === 2) {
+                    rowBg = '#C0C0C0'; // Bạc
+                  } else if (actualRank === 3) {
+                    rowBg = '#CD7F32'; // Đồng
+                  }
+
+                  return (
+                    <div
+                      key={u._id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        background: rowBg,
+                        border: '3px solid #111',
+                        borderRadius: '16px',
+                        padding: '12px 16px',
+                        boxShadow: '4px 4px 0 #111',
+                        color: '#111',
+                        transition: 'transform 0.2s ease',
+                      }}
+                    >
+                      {/* FIX: Đã bỏ toàn bộ điều kiện Icon, luôn luôn hiển thị thẻ thứ hạng (#1, #2,...) */}
+                      <div
+                        style={{
+                          width: '55px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          fontSize: '1.2rem',
+                          fontWeight: 900,
+                        }}
+                      >
+                        #{actualRank}
+                      </div>
+
+                      <img
+                        src={u.avatar || '/images/profilePicture.jpeg'}
+                        alt="avatar"
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '50%',
+                          border: '2px solid #111',
+                          marginRight: '12px',
+                          objectFit: 'cover',
+                        }}
+                      />
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: '1rem',
+                            fontWeight: 900,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            textTransform: 'uppercase',
+                          }}
+                        >
+                          {formatDisplayName(u.name)}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
+                        <span style={{ fontSize: '1.1rem', fontWeight: 900 }}>{u.totalScore}</span>
+                        <Flame size={18} color={isMe ? '#d95a00' : '#ff7700'} strokeWidth={3} />
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* THÊM VỊ TRÍ USER HIỆN TẠI NẾU KHÔNG LỌT TOP 10 */}
+                {!isUserInTop10 && profileData && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      background: '#2dd4bf', // Màu nổi bật cho user hiện tại
+                      border: '3px solid #111',
+                      borderRadius: '16px',
+                      padding: '12px 16px',
+                      boxShadow: '4px 4px 0 #111',
+                      color: '#111',
+                      transition: 'transform 0.2s ease',
+                      marginTop: '4px', // Thêm margin để tách một xíu với danh sách trên
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '55px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        fontSize: '1.2rem',
+                        fontWeight: 900,
+                      }}
+                    >
+                      -
+                    </div>
+
+                    <img
+                      src={profileData.avatar || '/images/profilePicture.jpeg'}
+                      alt="avatar"
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        border: '2px solid #111',
+                        marginRight: '12px',
+                        objectFit: 'cover',
+                      }}
+                    />
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: '1rem',
+                          fontWeight: 900,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {formatDisplayName(profileData.name)}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
+                      <span style={{ fontSize: '1.1rem', fontWeight: 900 }}>{profileData.totalScore || 0}</span>
+                      <Flame size={18} color="#d95a00" strokeWidth={3} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </aside>
 

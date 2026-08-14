@@ -138,6 +138,9 @@ const vi = {
     blockLibrary: 'Thư viện khối',
     blocklySoon: 'Tích hợp Blockly sẽ có trong bản cập nhật tới.',
   },
+  leaderboard: {
+    title: 'Bảng xếp hạng',
+  },
   calibration: {
     title: 'Thiết lập điều khiển khuôn mặt',
     subtitle:
@@ -167,7 +170,7 @@ const vi = {
     avatarAlt: 'Ảnh đại diện',
     exercises: 'BÀI TẬP',
     badges: 'HUY HIỆU',
-    streak: 'CHUỖI HỌC LIÊN TỤC',
+    streak: 'CHUỖI HỌC',
     memberSincePrefix: 'Thành viên từ',
     levelPrefix: 'Cấp',
     explorer: 'Khám phá',
