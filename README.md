@@ -1,11 +1,14 @@
 # Enable Code — Frontend
 
-Accessible block-based programming platform that lets learners control the interface with their eyes and build programs through visual drag-and-drop blocks. Enable Code is designed for people with motor limitations, so coding does not depend entirely on a mouse and keyboard.
+A hands-free coding platform: control the interface with facial gestures (**Face Control**) and build programs with visual blocks (**Blockly**). Enable Code is built for learners with limited motor ability — a laptop webcam is enough, with no extra assistive hardware.
+
+> **Tagline:** _Code with Face Control_ — build web apps using head gestures and block-based interactions.
 
 ---
 
 ## Table of Contents
 
+- [Demo](#demo)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
@@ -14,7 +17,7 @@ Accessible block-based programming platform that lets learners control the inter
 - [Available Scripts](#available-scripts)
 - [Project Structure](#project-structure)
 - [Application Routes](#application-routes)
-- [Eye Tracking](#eye-tracking)
+- [Face Control](#face-control)
 - [Backend Integration](#backend-integration)
 - [Deployment](#deployment)
 - [Development Guidelines](#development-guidelines)
@@ -23,15 +26,32 @@ Accessible block-based programming platform that lets learners control the inter
 
 ---
 
+## Demo
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <strong>Homepage</strong><br />
+      <img src="docs/screenshots/HomePage.png" alt="Enable Code Homepage" />
+    </td>
+    <td align="center" width="50%">
+      <strong>Code Space</strong><br />
+      <img src="docs/screenshots/CodeSpace.png" alt="Enable Code Workspace" />
+    </td>
+  </tr>
+</table>
+
+---
+
 ## Features
 
-- **Eye-based navigation** — Uses [MediaPipe Face Mesh](https://developers.google.com/mediapipe/solutions/vision/face_landmarker) to track gaze and drive an on-screen cursor. Toggle quickly with `Ctrl/Cmd + M`.
-- **Visual block programming** — Blockly-powered workspace with a large drop zone and custom lesson blocks, optimized for eye-controlled interaction.
-- **Structured learning path** — Topics and lessons with lock/unlock states, progress tracking, hints, and submission flow.
-- **9-point calibration** — Dedicated calibration flow to improve gaze-tracking accuracy before extended use.
+- **Face Control** — [MediaPipe Face Mesh](https://developers.google.com/mediapipe/solutions/vision/face_landmarker) tracks head movement to drive an on-screen cursor; open your mouth to click or drag. Toggle quickly with `Ctrl/Cmd + M`.
+- **Block-based programming** — Blockly workspace with a large drop zone and custom blocks that follow Python-like syntax, optimized for hands-free interaction.
+- **Structured learning path** — Topics and lessons with lock/unlock states, progress tracking, hints, and a submission flow.
+- **9-point calibration** — Per-user calibration for head range and mouth opening before longer sessions.
+- **Face login** — Face recognition sign-in and registration, alongside email and password.
 - **Internationalization** — Full UI support for English and Vietnamese.
-- **Authentication & profiles** — Login, registration, JWT-based sessions with refresh tokens, profile management, and user stats.
-- **Leaderboard** — Global rankings integrated via the backend API.
+- **Profiles & leaderboard** — JWT sessions with refresh tokens, profile management, learning stats, and global rankings.
 
 ---
 
@@ -46,7 +66,7 @@ Accessible block-based programming platform that lets learners control the inter
 | Block editor | Blockly 12                          |
 | Icons        | Lucide React                        |
 | Markdown     | react-markdown                      |
-| Eye tracking | MediaPipe Face Mesh (CDN)           |
+| Face Control | MediaPipe Face Mesh (CDN)           |
 | Deployment   | Vercel (SPA)                        |
 
 ---
@@ -55,7 +75,7 @@ Accessible block-based programming platform that lets learners control the inter
 
 - **Node.js** 18 or later
 - **npm** (or pnpm / yarn)
-- **Webcam** — required for eye-tracking features
+- **Webcam** — required for Face Control and face login
 - **Desktop browser** — mobile devices are intentionally blocked (`MobileUnsupported`)
 
 ---
@@ -82,7 +102,7 @@ To run against a local backend, start the API server first (default: `http://loc
 
 ## Environment Variables
 
-Create a `.env` file in the project root when you need to point at a non-default API:
+Create a `.env` file in the frontend root when you need to point at a non-default API:
 
 ```env
 VITE_API_URL=http://localhost:5000/api
@@ -112,42 +132,48 @@ src/
 ├── api/              # REST clients (auth, lessons, topics, profile, progress, leaderboard)
 ├── blockly/          # Blockly blocks, toolbox, theme, workspace evaluation
 ├── components/       # Shared UI (Mouse cursor, BlocklyEditor, sidebar, toggles, …)
-├── context/          # React context providers (Auth, EyeTracking)
+├── context/          # React context (Auth, EyeTracking / Face Control, Calibration)
 ├── hooks/            # Custom hooks (e.g. useIsMobile)
 ├── i18n/             # Locale messages (en, vi) and I18n provider
 ├── lib/              # Domain helpers (progress, curriculum, avatar, types)
-├── pages/            # Route-level page components
+├── pages/            # Route-level pages
 ├── styles/           # Global CSS, component styles, Blockly overrides
 └── utils/            # Mappers and small utilities
 
-public/               # Static assets (favicon, icons)
+public/               # Static assets (favicon, icons, logo)
+docs/screenshots/     # Product screenshots used in this README
 ```
 
 ---
 
 ## Application Routes
 
-| Path                   | Page        | Description                                                 |
-| ---------------------- | ----------- | ----------------------------------------------------------- |
-| `/`                    | Home        | Product overview, eye-control toggle, call-to-action        |
-| `/login`               | Login       | Email/password sign-in                                      |
-| `/register`            | Register    | Account creation                                            |
-| `/lessons`             | Topics      | Browse learning topics                                      |
-| `/lessons/:topicId`    | Lessons     | Lessons within a topic                                      |
-| `/workspace/:lessonId` | Workspace   | Block editor, objectives, and output panel                  |
-| `/settings`            | Profile     | User profile, stats, language, and eye-tracking preferences |
-| `/calibration`         | Calibration | 9-point gaze calibration                                    |
+| Path                   | Page              | Description                                                 |
+| ---------------------- | ----------------- | ----------------------------------------------------------- |
+| `/`                    | Home              | Product overview, Face Control toggle, Get Started CTA      |
+| `/camera-permission`   | Camera permission | Request webcam access before enabling Face Control          |
+| `/login`               | Login             | Email / password sign-in                                    |
+| `/register`            | Register          | Account creation                                            |
+| `/face-login`          | Face login        | Sign in with face recognition                               |
+| `/face-register`       | Face register     | Register a face embedding                                   |
+| `/forgot-password`     | Forgot password   | Request a password reset                                    |
+| `/reset-password`      | Reset password    | Set a new password                                          |
+| `/lessons`             | Topics            | Browse learning topics                                      |
+| `/lessons/:topicId`    | Lessons           | Lessons within a topic                                      |
+| `/workspace/:lessonId` | Workspace         | Block editor, lesson objectives, and output panel           |
+| `/settings`            | Profile           | User profile, stats, language, and Face Control preferences |
+| `/calibration`         | Calibration       | 9-point gaze / mouth calibration                            |
 
 Protected flows rely on JWT access tokens stored in `localStorage`, with automatic refresh via HTTP-only cookies.
 
 ---
 
-## Eye Tracking
+## Face Control
 
 1. Enable tracking from the home page or press `Ctrl/Cmd + M`.
 2. Grant webcam permission when prompted.
 3. Run calibration at `/calibration` before long sessions for better accuracy.
-4. A virtual cursor follows your gaze; click and drag actions are derived from face landmarks.
+4. A virtual cursor follows your head movement; click and drag actions are derived from face landmarks (mouth opening).
 
 The enabled/disabled state persists in `localStorage` under the key `enablecode.eyeTrackingEnabled`.
 
@@ -160,6 +186,7 @@ The frontend expects a REST API compatible with the clients in `src/api/`. Key e
 | Area          | Endpoints                                                                                   |
 | ------------- | ------------------------------------------------------------------------------------------- |
 | Auth          | `POST /auth/login`, `/auth/register`, `/auth/refresh-token`, `/auth/logout`, password reset |
+| Face auth     | `POST /auth/face-login`, `PUT /auth/embedding`                                              |
 | Topics        | `GET /topics`, `GET /topics/:id/lessons`                                                    |
 | Lessons       | `GET /lessons`, `GET /lessons/:id`, progress, submit, hints, solution                       |
 | Users         | `GET/PUT/DELETE /users/profile`, `GET /users/stats`, calibration settings                   |
