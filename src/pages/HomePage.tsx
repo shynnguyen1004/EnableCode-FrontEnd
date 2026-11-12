@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Eye, MousePointerSquareDashed, BookOpenCheck, ArrowRight, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import FaceControlToggle from '../components/FaceControlToggle';
+import HandControlToggle from '../components/HandControlToggle';
 import PageScale from '../components/PageScale';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../context/AuthContext';
@@ -131,6 +132,7 @@ export default function HomePage() {
 
         <div className="hero-actions">
           <FaceControlToggle />
+          <HandControlToggle />
 
           {/* Nút Get Started đã được nâng cấp */}
           <Link

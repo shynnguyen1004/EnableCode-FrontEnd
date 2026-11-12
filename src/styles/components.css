@@ -108,6 +108,119 @@
   color: var(--accent-green);
 }
 
+.hand-control-toggle--on {
+  background: rgba(13, 148, 136, 0.14);
+  color: #0f766e;
+}
+
+.hand-tracking-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+}
+
+.hand-tracking-cursor {
+  position: absolute;
+  left: -14px;
+  top: -14px;
+  width: 28px;
+  height: 28px;
+  border: 3px solid #fbbf24;
+  border-radius: 50%;
+  background: rgba(251, 191, 36, 0.12);
+  box-shadow: 0 0 16px rgba(251, 191, 36, 0.45);
+  will-change: transform;
+}
+
+.hand-tracking-cursor span {
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: #fbbf24;
+}
+
+.hand-tracking-cursor--grabbing {
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.2);
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.7);
+}
+
+.hand-tracking-cursor--grabbing span {
+  background: #a855f7;
+}
+
+.hand-tracking-preview {
+  position: fixed;
+  right: 24px;
+  bottom: 220px;
+  width: 260px;
+  height: 180px;
+  overflow: hidden;
+  border: 2px solid #1e293b;
+  border-radius: 16px;
+  background: #020617;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+}
+
+.hand-tracking-preview video {
+  display: none;
+}
+
+.hand-tracking-preview canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hand-tracking-status {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  color: #f8fafc;
+  background: rgba(15, 23, 42, 0.8);
+  font-size: 12px;
+  font-weight: 700;
+  backdrop-filter: blur(4px);
+}
+
+.hand-tracking-warning {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  width: 420px;
+  max-width: 90vw;
+  transform: translate(-50%, -50%);
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 48px;
+  border-radius: 16px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.85);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  text-align: center;
+}
+
+.hand-tracking-warning-icon {
+  margin-bottom: 4px;
+  font-size: 2.5rem;
+}
+
+.hand-tracking-warning strong {
+  color: #fbbf24;
+}
+
+.hand-tracking-warning span {
+  opacity: 0.8;
+  font-size: 0.95rem;
+}
+
 .hero {
   text-align: center;
   padding: 4rem 0 5rem;

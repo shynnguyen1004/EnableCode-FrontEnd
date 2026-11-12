@@ -19,10 +19,17 @@ import Mouse from './components/Mouse';
 import MobileUnsupported from './components/MobileUnsupported';
 import { useIsMobile } from './hooks/useIsMobile';
 import { CalibrationProvider } from './context/CalibrationContext';
+import { HandTrackingProvider, useHandTracking } from './context/HandTrackingContext';
+import HandTracker from './components/HandTracker';
 
 function EyeTrackingLayer() {
   const { isEnabled } = useEyeTracking();
   return isEnabled ? <Mouse /> : null;
+}
+
+function HandTrackingLayer() {
+  const { isEnabled } = useHandTracking();
+  return isEnabled ? <HandTracker /> : null;
 }
 
 function AppRoutes() {
@@ -61,6 +68,7 @@ function AppRoutes() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {showEyeTracking && <EyeTrackingLayer />}
+      {showEyeTracking && <HandTrackingLayer />}
     </>
   );
 }
@@ -70,7 +78,9 @@ export default function App() {
     <AuthProvider>
       <CalibrationProvider>
         <EyeTrackingProvider>
-          <AppRoutes />
+          <HandTrackingProvider>
+            <AppRoutes />
+          </HandTrackingProvider>
         </EyeTrackingProvider>
       </CalibrationProvider>
     </AuthProvider>

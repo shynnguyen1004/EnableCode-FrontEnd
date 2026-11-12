@@ -249,6 +249,19 @@ const en = {
     noFaceDetectedTitle: 'Face not detected',
     noFaceDetectedDesc: 'Please move closer to the camera',
   },
+  handTracking: {
+    title: 'Hand Tracking',
+    devMode: '',
+    hint: 'Pinch thumb and index finger to grab a block',
+    enableAria: 'Enable hand tracking',
+    disableAria: 'Disable hand tracking',
+    ready: 'Show your hand',
+    moving: 'Hand moving',
+    grabbing: 'Grabbing block',
+    noHand: 'No hand detected',
+    noHandTitle: 'Hand not detected',
+    noHandDescription: 'Place your hand in front of the camera',
+  },
   faceLogin: {
     title: 'Set up Face Login',
     subtitle:
